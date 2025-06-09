@@ -22,7 +22,13 @@ const CareerAdviceOutputSchema = z.object({
 export type CareerAdviceOutput = z.infer<typeof CareerAdviceOutputSchema>;
 
 export async function getCareerAdvice(input: CareerAdviceInput): Promise<CareerAdviceOutput> {
-  return careerAdviceFlow(input);
+  try {
+    return await careerAdviceFlow(input);
+  } catch (error) {
+    console.error("Error calling careerAdviceFlow from getCareerAdvice:", error);
+    // Ensure the returned object matches the CareerAdviceOutput schema
+    return { advice: "An unexpected error occurred while trying to get career advice. Please try again later." };
+  }
 }
 
 const prompt = ai.definePrompt({
@@ -46,11 +52,20 @@ const careerAdviceFlow = ai.defineFlow(
     inputSchema: CareerAdviceInputSchema,
     outputSchema: CareerAdviceOutputSchema,
   },
-  async (input) => {
-    const {output} = await prompt(input);
-    if (!output) {
-      return {advice: "I'm sorry, I couldn't generate advice for that query. Could you try rephrasing it?"};
+  async (input): Promise<CareerAdviceOutput> => {
+    try {
+      const genkitResponse = await prompt(input);
+      
+      if (!genkitResponse || !genkitResponse.output) {
+        console.error('Genkit careerAdvicePrompt returned no output for query:', input.query);
+        return { advice: "I'm sorry, I couldn't generate advice for that query. Could you try rephrasing it or check back later?" };
+      }
+      return genkitResponse.output;
+    } catch (error) {
+      console.error("Error within careerAdviceFlow execution:", error);
+      // Ensure the returned object matches the CareerAdviceOutput schema
+      return { advice: "An error occurred while processing your career advice request. Please try again later." };
     }
-    return output;
   }
 );
+
