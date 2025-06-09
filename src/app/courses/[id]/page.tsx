@@ -1,12 +1,12 @@
 
 "use client";
 import { useParams, useRouter } from 'next/navigation';
-import { courses as mockDataCourses, type Course, type Lesson, type Module, getPaymentSubmissions, type PaymentSubmission } from '@/data/mockData';
+import { courses as mockDataCourses, type Course, type Lesson, type Module } from '@/data/mockData';
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, PlayCircle, BookOpen, Video, FileText, Loader2, ListChecks, FileVideo, ExternalLink, CheckCircle2, ShoppingCart, Clock, AlertOctagon } from 'lucide-react';
+import { ChevronLeft, PlayCircle, BookOpen, Video, FileText, Loader2, ListChecks, FileVideo, ExternalLink, CheckCircle2, ShoppingCart, AlertOctagon } from 'lucide-react';
 import Link from 'next/link';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -20,49 +20,61 @@ export default function CourseDetailPage() {
   const { user } = useAuth();
   const router = useRouter();
 
+  const [allAppCourses, setAllAppCourses] = useState<Course[]>([]);
+  const [areAppCoursesLoaded, setAreAppCoursesLoaded] = useState(false);
   const [currentCourse, setCurrentCourse] = useState<Course | null>(null);
   const [firstLessonPath, setFirstLessonPath] = useState<string | null>(null);
   const [isLoadingPage, setIsLoadingPage] = useState(true);
   const [completionInfo, setCompletionInfo] = useState<{ date: string; isCompleted: boolean } | null>(null);
-  const [userPaymentSubmission, setUserPaymentSubmission] = useState<PaymentSubmission | null>(null);
+  // userPaymentSubmission state is removed for this revert
 
+  // Effect 1: Load all available courses from localStorage or mockData
   useEffect(() => {
-    // This single effect orchestrates all data loading for the page.
-    // It runs when courseId (from URL) or user (from auth context) changes.
-    
-    setIsLoadingPage(true);
-    setCurrentCourse(null);
-    setFirstLessonPath(null);
-    setCompletionInfo(null);
-    setUserPaymentSubmission(null);
-
-    // Phase 1: Determine the list of all available courses
     let coursesToUse = mockDataCourses;
     const storedCourses = localStorage.getItem('adminCourses');
     if (storedCourses) {
       try {
         const parsedCourses = JSON.parse(storedCourses) as Course[];
-        if (Array.isArray(parsedCourses)) {
+        if (Array.isArray(parsedCourses) && parsedCourses.length > 0) {
           coursesToUse = parsedCourses;
+        } else if (Array.isArray(parsedCourses) && parsedCourses.length === 0) {
+          // If admin saved an empty list, respect that.
+          coursesToUse = [];
         }
       } catch (e) {
         console.error("Failed to parse courses from localStorage on detail page. Using mock data.", e);
         // coursesToUse remains mockDataCourses
       }
     }
+    setAllAppCourses(coursesToUse);
+    setAreAppCoursesLoaded(true); // Signal that courses are ready
+  }, []);
 
-    // Phase 2: Validate courseId and find the specific course
-    if (!courseId) {
-      // courseId from router params might not be available on initial render.
-      // isLoadingPage is true, so loader will show. Effect will re-run when courseId is populated.
-      return; 
+  // Effect 2: Load specific course details and user completion status
+  // This effect depends on courseId, user, and the loaded allAppCourses
+  useEffect(() => {
+    setIsLoadingPage(true); // Start loading
+    setCurrentCourse(null); // Reset previous course data
+    setFirstLessonPath(null);
+    setCompletionInfo(null);
+
+    if (!areAppCoursesLoaded) {
+      // If allAppCourses are not loaded yet, wait. isLoadingPage remains true.
+      return;
     }
 
-    const foundCourse = coursesToUse.find(c => c.id === courseId);
+    if (!courseId) {
+      // If courseId is not available (e.g., initial render before params are set),
+      // we can't load a specific course.
+      setIsLoadingPage(false); // Stop loading, will show "not found" or similar
+      return;
+    }
+
+    const foundCourse = allAppCourses.find(c => c.id === courseId);
 
     if (!foundCourse) {
-      setCurrentCourse(null); // Ensure it's null if not found
-      setIsLoadingPage(false); // Course definitively not found
+      setCurrentCourse(null); // Ensure currentCourse is null if not found
+      setIsLoadingPage(false); // Stop loading, course not found
       return;
     }
 
@@ -74,52 +86,36 @@ export default function CourseDetailPage() {
       if (firstModuleWithLessons && firstModuleWithLessons.lessons && firstModuleWithLessons.lessons.length > 0) {
         setFirstLessonPath(`/courses/${foundCourse.id}/learn/${firstModuleWithLessons.id}/${firstModuleWithLessons.lessons[0].id}`);
       } else {
-        setFirstLessonPath(null);
+        setFirstLessonPath(null); // No lessons in any module
       }
     } else {
-      setFirstLessonPath(null);
+      setFirstLessonPath(null); // No modules
     }
 
-    // Phase 3: Load user-specific data (completion, payment)
-    if (!user) {
-      // No user logged in, so no user-specific data to fetch. Loading is complete.
-      setIsLoadingPage(false);
-      return;
-    }
-
-    // User and foundCourse are available, load their specific data.
-    let isCourseCompleted = false;
-    let completionDate = '';
-    try {
-      const completionKey = `user_${user.id}_completions`;
-      const storedCompletions = localStorage.getItem(completionKey);
-      if (storedCompletions) {
-        const completionsData = JSON.parse(storedCompletions);
-        if (completionsData[foundCourse.id]) {
-          isCourseCompleted = true;
-          completionDate = completionsData[foundCourse.id];
+    // Load completion status if user is logged in
+    if (user) {
+      let isCourseCompleted = false;
+      let completionDate = '';
+      try {
+        const completionKey = `user_${user.id}_completions`;
+        const storedCompletions = localStorage.getItem(completionKey);
+        if (storedCompletions) {
+          const completionsData = JSON.parse(storedCompletions);
+          if (completionsData[foundCourse.id]) {
+            isCourseCompleted = true;
+            completionDate = completionsData[foundCourse.id];
+          }
         }
+      } catch (e) {
+        console.error("Error parsing completions from localStorage", e);
+        // isCourseCompleted remains false, completionDate remains empty
       }
-    } catch (e) {
-      console.error("Error parsing completions from localStorage", e);
-    }
-    setCompletionInfo({ date: completionDate, isCompleted: isCourseCompleted });
-
-    const isPaidCourse = foundCourse.price && foundCourse.price > 0;
-    if (isPaidCourse && !isCourseCompleted) {
-      const allSubmissions = getPaymentSubmissions(); // From mockData.ts, reads localStorage
-      const userCourseSubmissions = allSubmissions
-        .filter(sub => sub.userId === user.id && sub.courseId === foundCourse.id)
-        .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
-      setUserPaymentSubmission(userCourseSubmissions.length > 0 ? userCourseSubmissions[0] : null);
-    } else {
-      setUserPaymentSubmission(null); // Clear if not applicable
+      setCompletionInfo({ date: completionDate, isCompleted: isCourseCompleted });
     }
     
-    // All data loading attempts for this cycle are complete.
-    setIsLoadingPage(false);
+    setIsLoadingPage(false); // All data for this course (or lack thereof) is determined
 
-  }, [courseId, user]); // Effect dependencies
+  }, [courseId, user, allAppCourses, areAppCoursesLoaded]);
 
 
   if (isLoadingPage) {
@@ -154,9 +150,7 @@ export default function CourseDetailPage() {
       let formattedDate = 'a previous date';
       try {
         formattedDate = format(new Date(completionInfo.date), 'PPP');
-      } catch (error) {
-        formattedDate = completionInfo.date;
-      }
+      } catch (error) { /* use default */ }
       return (
         <div className="w-full p-3 text-center bg-green-100 dark:bg-green-900 border border-green-500 text-green-700 dark:text-green-300 rounded-md shadow-sm flex flex-col sm:flex-row items-center justify-center gap-2">
           <CheckCircle2 className="mr-2 h-6 w-6 text-green-600 dark:text-green-400 shrink-0" />
@@ -170,52 +164,10 @@ export default function CourseDetailPage() {
       );
     }
 
+    // If not completed, and there's a first lesson:
     if (firstLessonPath) {
       if (isPaidCourse) {
-        if (user && userPaymentSubmission) {
-          if (userPaymentSubmission.status === 'verified') {
-            return (
-              <div className="w-full p-3 text-center bg-green-100 dark:bg-green-900 border border-green-500 text-green-700 dark:text-green-300 rounded-md shadow-sm flex flex-col sm:flex-row items-center justify-center gap-2">
-                 <CheckCircle2 className="mr-2 h-6 w-6 text-green-600 dark:text-green-400 shrink-0" />
-                 <div className="flex-grow text-center sm:text-left">
-                  <span className="font-semibold">Payment Verified!</span>
-                  <p className="text-sm">You can now start learning this course.</p>
-                 </div>
-                <Button size="lg" asChild className="w-full sm:w-auto mt-2 sm:mt-0 sm:ml-auto bg-primary text-primary-foreground hover:bg-primary/90">
-                  <Link href={firstLessonPath}>
-                    <PlayCircle className="mr-2 h-6 w-6"/> Start Learning
-                  </Link>
-                </Button>
-              </div>
-            );
-          } else if (userPaymentSubmission.status === 'pending') {
-            return (
-              <div className="w-full p-4 text-center bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-500 text-yellow-700 dark:text-yellow-300 rounded-md shadow-sm flex flex-col items-center gap-2">
-                <Clock className="h-7 w-7 text-yellow-600 dark:text-yellow-400" />
-                <span className="font-semibold text-lg">Payment Submitted</span>
-                <p className="text-sm">Your payment proof is pending verification by an admin. Please check back later.</p>
-                <p className="text-xs mt-1">Submitted on: {format(new Date(userPaymentSubmission.submittedAt), 'PPpp')}</p>
-                 <Button size="sm" variant="outline" asChild className="mt-2 border-yellow-600 text-yellow-700 hover:bg-yellow-200 dark:border-yellow-500 dark:text-yellow-300 dark:hover:bg-yellow-800/70">
-                    <Link href={`/courses/${currentCourse.id}/checkout`}>View/Update Submission</Link>
-                 </Button>
-              </div>
-            );
-          } else if (userPaymentSubmission.status === 'rejected') {
-            return (
-              <div className="w-full p-4 text-center bg-red-100 dark:bg-red-900/50 border border-red-500 text-red-700 dark:text-red-300 rounded-md shadow-sm flex flex-col items-center gap-2">
-                <AlertOctagon className="h-7 w-7 text-red-600 dark:text-red-400" />
-                <span className="font-semibold text-lg">Payment Rejected</span>
-                <p className="text-sm">Your previous payment submission was rejected. Please ensure your details are correct and try again.</p>
-                <Button size="lg" asChild className="mt-3 w-full sm:w-auto bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                  <Link href={`/courses/${currentCourse.id}/checkout`}>
-                    <ShoppingCart className="mr-2 h-6 w-6"/> Re-submit Payment
-                  </Link>
-                </Button>
-              </div>
-            );
-          }
-        }
-        // No submission, or submission is not yet actionable for starting the course
+        // Paid course, not completed: Link to checkout
         return (
           <Button size="lg" className="w-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150" asChild>
             <Link href={`/courses/${currentCourse.id}/checkout`}>
@@ -320,10 +272,9 @@ export default function CourseDetailPage() {
                             {module.lessons.map(lesson => {
                               const embeddableUrl = getEmbedUrl(lesson.embedUrl);
                               const isCourseFree = !currentCourse.price || currentCourse.price <= 0;
-                              const isPaymentVerified = userPaymentSubmission?.status === 'verified';
                               const isCourseAlreadyCompleted = completionInfo?.isCompleted;
-
-                              const lessonIsAccessible = isCourseFree || isPaymentVerified || isCourseAlreadyCompleted;
+                              // In this reverted state, access to paid course lessons is only granted if completed or free
+                              const lessonIsAccessible = isCourseFree || isCourseAlreadyCompleted;
                               const lessonLink = `/courses/${currentCourse.id}/learn/${module.id}/${lesson.id}`;
 
                               return (
@@ -345,7 +296,7 @@ export default function CourseDetailPage() {
                                   )}
                                    {!lessonIsAccessible && (currentCourse.price && currentCourse.price > 0) && (
                                     <span className="text-xs text-muted-foreground flex items-center">
-                                        Enrollment or verified payment required.
+                                        Enrollment required for paid course.
                                     </span>
                                   )}
                                 </li>
@@ -363,7 +314,6 @@ export default function CourseDetailPage() {
                 <p className="text-muted-foreground">Modules for this course will be available soon.</p>
               )}
             </div>
-
           </CardContent>
         </Card>
       </div>

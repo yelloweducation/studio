@@ -8,9 +8,10 @@ import VideoManagement from "@/components/admin/VideoManagement";
 import ImageManagement from "@/components/admin/ImageManagement";
 import CategoryManagement from "@/components/admin/CategoryManagement";
 import PaymentSettings from "@/components/admin/PaymentSettings";
-import PaymentSubmissions from "@/components/admin/PaymentSubmissions"; // New
+// PaymentSubmissions import removed
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ListOrdered, Users, BarChart3, Settings, Video as VideoIcon, Image as ImageIcon, Shapes, CreditCard, SendToBack } from "lucide-react"; // Added SendToBack
+import { ListOrdered, Users, BarChart3, Settings, Video as VideoIcon, Image as ImageIcon, Shapes, CreditCard } from "lucide-react";
+// SendToBack icon import removed
 
 export default function AdminDashboardPage() {
   return (
@@ -24,7 +25,7 @@ export default function AdminDashboardPage() {
         </section>
 
         <Tabs defaultValue="courses" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-2 mb-6">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 mb-6"> {/* Adjusted cols for 7 tabs */}
             <TabsTrigger value="courses" className="py-2.5 px-3 text-sm sm:text-base sm:py-3">
               <ListOrdered className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> Courses
             </TabsTrigger>
@@ -40,9 +41,7 @@ export default function AdminDashboardPage() {
             <TabsTrigger value="paymentSettings" className="py-2.5 px-3 text-sm sm:text-base sm:py-3">
               <CreditCard className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> Payment Conf.
             </TabsTrigger>
-            <TabsTrigger value="paymentSubmissions" className="py-2.5 px-3 text-sm sm:text-base sm:py-3">
-              <SendToBack className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> Submissions
-            </TabsTrigger>
+            {/* PaymentSubmissions TabTrigger is removed */}
             <TabsTrigger value="users" className="py-2.5 px-3 text-sm sm:text-base sm:py-3">
               <Users className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> Users
             </TabsTrigger>
@@ -66,9 +65,7 @@ export default function AdminDashboardPage() {
           <TabsContent value="paymentSettings">
             <PaymentSettings />
           </TabsContent>
-          <TabsContent value="paymentSubmissions">
-            <PaymentSubmissions />
-          </TabsContent>
+          {/* PaymentSubmissions TabsContent is removed */}
           <TabsContent value="users">
             <UserManagement />
           </TabsContent>

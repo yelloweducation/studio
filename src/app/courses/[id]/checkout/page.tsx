@@ -1,7 +1,7 @@
 
 "use client";
 import { useParams, useRouter } from 'next/navigation';
-import { courses as allCourses, type Course, type PaymentSettings, addPaymentSubmission } from '@/data/mockData';
+import { courses as allCourses, type Course, type PaymentSettings } from '@/data/mockData';
 import { useEffect, useState, type ChangeEvent } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAuth } from '@/hooks/useAuth'; // Added for user details
+// useAuth is not strictly needed in this reverted version if we're not auto-populating user details or submitting anything
 
 const PAYMENT_SETTINGS_KEY = 'paymentSettings';
 
@@ -20,12 +20,10 @@ export default function CheckoutPage() {
   const router = useRouter();
   const courseId = params.id as string;
   const { toast } = useToast();
-  const { user } = useAuth(); // Get current user
 
   const [course, setCourse] = useState<Course | null>(null);
   const [paymentSettings, setPaymentSettings] = useState<PaymentSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -50,7 +48,7 @@ export default function CheckoutPage() {
       return;
     }
     if (!foundCourse.price || foundCourse.price <= 0) {
-        router.replace(`/courses/${courseId}`);
+        router.replace(`/courses/${courseId}`); // Redirect if course is free or price not set
         return;
     }
     setCourse(foundCourse);
@@ -100,51 +98,22 @@ export default function CheckoutPage() {
       }
       setSelectedFile(file);
       setFileName(file.name);
-      toast({ title: "File Selected", description: `${file.name} is ready for submission.`});
+      toast({ title: "File Selected", description: `${file.name} is ready.`});
     } else {
       setSelectedFile(null);
       setFileName(null);
     }
   };
 
-  const handleSubmitPaymentInfo = () => {
-    if (!user || !course || !fileName) {
-      toast({
-        variant: 'destructive',
-        title: 'Submission Failed',
-        description: 'User, course, or file information is missing. Please select a file.',
-      });
-      return;
-    }
-    setIsSubmitting(true);
-    try {
-      addPaymentSubmission({
-        userId: user.id,
-        userEmail: user.email,
-        courseId: course.id,
-        courseTitle: course.title,
-        fileName: fileName,
-      });
-      toast({
-        title: 'Payment Information Submitted',
-        description: `Details for ${course.title} and file "${fileName}" have been noted. An admin will review it. You may be contacted for the actual screenshot if needed.`,
-        duration: 7000,
-      });
-      // Redirect after a short delay to allow toast to be seen
-      setTimeout(() => {
-        router.push(`/courses/${course.id}`);
-      }, 3000);
-
-    } catch (e) {
-      console.error("Error submitting payment info:", e);
-      toast({
-        variant: 'destructive',
-        title: 'Submission Error',
-        description: 'There was a problem submitting your payment information. Please try again.',
-      });
-      setIsSubmitting(false);
-    }
-    // setIsSubmitting is set to false implicitly by navigation or in catch block
+  const handleInformCompletion = () => {
+    if (!course) return;
+    toast({
+      title: 'Payment Process',
+      description: `You've selected "${fileName || 'your screenshot'}". Please send this along with your payment details to our support team to finalize enrollment for ${course.title}.`,
+      duration: 10000, // Longer duration for this important message
+    });
+    // Optionally navigate, or let user navigate back manually
+    // router.push(`/courses/${course.id}`); 
   };
 
 
@@ -189,8 +158,8 @@ export default function CheckoutPage() {
   const defaultPaymentInstructions = `1. Make the payment to the bank account details provided above.
 2. Ensure to include your email or the course name ("${course.title}") in the payment reference or description.
 3. After completing the payment, select your payment proof (screenshot) using the button below.
-4. Click "Submit Payment Information".
-5. An admin will review your submission. You may be contacted via email to send the actual screenshot if required to finalize your enrollment.`;
+4. Click "Payment Made, Inform Support".
+5. Contact our support team with your payment details and the screenshot to finalize your enrollment. You may be contacted via email if further information is needed.`;
 
 
   return (
@@ -267,14 +236,14 @@ export default function CheckoutPage() {
                         </div>
                     )}
                      <p id="file_input_help" className="mt-1 text-xs text-muted-foreground">
-                        This helps admins verify your payment. You may still need to email the actual file if requested.
+                        This helps admins verify your payment. You will still need to email the actual file to support.
                     </p>
                 </div>
             </div>
             
             <div className="text-sm text-muted-foreground p-3 border-l-4 border-primary bg-primary/10 rounded-r-md">
                 <strong>Important:</strong> This is a manual payment process. Your enrollment will be confirmed once payment is verified by our team.
-                After submitting your payment information, please allow some time for processing.
+                After selecting your file and clicking the button below, please contact support with your payment details.
             </div>
 
           </CardContent>
@@ -282,11 +251,11 @@ export default function CheckoutPage() {
             <Button 
               size="lg" 
               className="w-full" 
-              onClick={handleSubmitPaymentInfo}
-              disabled={!selectedFile || isSubmitting || !user}
+              onClick={handleInformCompletion}
+              disabled={!selectedFile} // Only enable if a file has been selected
             >
-              {isSubmitting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Send className="mr-2 h-5 w-5" />}
-              {isSubmitting ? 'Submitting...' : 'Submit Payment Information'}
+              <Send className="mr-2 h-5 w-5" />
+              Payment Made, Inform Support
             </Button>
           </CardFooter>
         </Card>

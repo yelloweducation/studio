@@ -67,16 +67,7 @@ export interface PaymentSettings {
   paymentInstructions: string;
 }
 
-export interface PaymentSubmission {
-  id: string;
-  userId: string;
-  userEmail: string;
-  courseId: string;
-  courseTitle: string;
-  fileName: string;
-  submittedAt: string; // ISO date string
-  status: 'pending' | 'verified' | 'rejected';
-}
+// PaymentSubmission type and related functions are removed in this revert.
 
 export const courses: Course[] = [
   {
@@ -238,51 +229,8 @@ export const categories: Category[] = [
   { id: 'cat5', name: 'AI & ML', imageUrl: 'https://placehold.co/200x150.png', dataAiHint: 'artificial intelligence', icon: 'BrainCircuit' },
 ];
 
-export const paymentSubmissions: PaymentSubmission[] = []; // Initialize as empty or load from localStorage if needed elsewhere
-
-
-const PAYMENT_SUBMISSIONS_KEY = 'paymentSubmissions';
-
-export const addPaymentSubmission = (submission: Omit<PaymentSubmission, 'id' | 'submittedAt' | 'status'>): PaymentSubmission => {
-  const newSubmission: PaymentSubmission = {
-    ...submission,
-    id: `sub_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-    submittedAt: new Date().toISOString(),
-    status: 'pending',
-  };
-
-  if (typeof window !== 'undefined') {
-    const existingSubmissions = getPaymentSubmissions();
-    existingSubmissions.unshift(newSubmission); // Add to the beginning
-    localStorage.setItem(PAYMENT_SUBMISSIONS_KEY, JSON.stringify(existingSubmissions));
-  }
-  return newSubmission;
-};
-
-export const getPaymentSubmissions = (): PaymentSubmission[] => {
-  if (typeof window !== 'undefined') {
-    const stored = localStorage.getItem(PAYMENT_SUBMISSIONS_KEY);
-    if (stored) {
-      try {
-        return JSON.parse(stored) as PaymentSubmission[];
-      } catch (e) {
-        console.error("Failed to parse payment submissions from localStorage", e);
-        return [];
-      }
-    }
-  }
-  return [];
-};
-
-export const updatePaymentSubmissionStatus = (submissionId: string, status: PaymentSubmission['status']): PaymentSubmission | null => {
-  if (typeof window !== 'undefined') {
-    const submissions = getPaymentSubmissions();
-    const submissionIndex = submissions.findIndex(s => s.id === submissionId);
-    if (submissionIndex > -1) {
-      submissions[submissionIndex].status = status;
-      localStorage.setItem(PAYMENT_SUBMISSIONS_KEY, JSON.stringify(submissions));
-      return submissions[submissionIndex];
-    }
-  }
-  return null;
-};
+// PaymentSubmissions related constants and functions are removed.
+// const PAYMENT_SUBMISSIONS_KEY = 'paymentSubmissions';
+// export const addPaymentSubmission = ...
+// export const getPaymentSubmissions = ...
+// export const updatePaymentSubmissionStatus = ...
