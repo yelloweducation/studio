@@ -1,33 +1,21 @@
 
 "use client";
-import { useState, type FormEvent, useEffect } from 'react';
+import { useState, type FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import CourseCard from '@/components/courses/CourseCard';
-import VideoCard from '@/components/videos/VideoCard';
-import { courses as allCourses, videos as allVideos, type Course, type Video } from '@/data/mockData';
 import { Search, Video as VideoIcon, XCircle } from 'lucide-react';
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [displayedCourses, setDisplayedCourses] = useState<Course[]>([]);
-  const [activeSection, setActiveSection] = useState<'search' | 'videos' | 'none'>('none');
-  const [showResults, setShowResults] = useState(false);
+  const router = useRouter();
 
   const performSearch = () => {
     if (!searchQuery.trim()) {
-      setDisplayedCourses([]);
-      setShowResults(true); 
-      setActiveSection('search');
+      router.push(`/courses/search`); // Navigate even with empty query, let search page handle it
       return;
     }
-    const filteredCourses = allCourses.filter(course =>
-      course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      course.description.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-    setDisplayedCourses(filteredCourses);
-    setActiveSection('search');
-    setShowResults(true);
+    router.push(`/courses/search?query=${encodeURIComponent(searchQuery.trim())}`);
   };
 
   const handleFormSubmit = (e: FormEvent) => {
@@ -36,25 +24,12 @@ export default function Home() {
   };
 
   const handleShowVideos = () => {
-    setActiveSection('videos');
-    setShowResults(false); 
+    router.push('/videos');
   };
   
   const clearSearch = () => {
     setSearchQuery('');
-    setDisplayedCourses([]);
-    setShowResults(false);
-    setActiveSection('none');
   };
-
-  const [animationClass, setAnimationClass] = useState('animate-fade-in');
-
-  useEffect(() => {
-    setAnimationClass(''); 
-    const timer = setTimeout(() => setAnimationClass('animate-fade-in'), 50); 
-    return () => clearTimeout(timer);
-  }, [activeSection, showResults]);
-
 
   return (
     <div className="flex flex-col items-center py-8">
@@ -92,7 +67,7 @@ export default function Home() {
             onClick={performSearch} 
             className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90 shadow-md hover:shadow-sm active:translate-y-px transition-all duration-150"
           >
-            <Search className="mr-2 h-5 w-5" /> Search
+            <Search className="mr-2 h-5 w-5" /> Search Courses
           </Button>
           <Button 
             onClick={handleShowVideos} 
@@ -103,34 +78,6 @@ export default function Home() {
           </Button>
         </div>
       </section>
-
-      {activeSection === 'search' && showResults && (
-        <section className={`w-full ${animationClass}`}>
-          <h2 className="text-3xl font-headline font-semibold mb-6 text-center">Course Results</h2>
-          {displayedCourses.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {displayedCourses.map(course => (
-                <CourseCard key={course.id} course={course} />
-              ))}
-            </div>
-          ) : (
-            <p className="text-center text-muted-foreground py-8">
-              {searchQuery ? "No courses found matching your query." : "Enter a search term to find courses."}
-            </p>
-          )}
-        </section>
-      )}
-
-      {activeSection === 'videos' && (
-         <section className={`w-full max-w-md mx-auto ${animationClass}`}>
-          <h2 className="text-3xl font-headline font-semibold mb-6 text-center">Trending Videos</h2>
-          <div className="h-[450px] sm:h-[550px] md:h-[600px] overflow-y-auto snap-y snap-mandatory space-y-4 rounded-lg p-2 bg-card shadow-inner">
-            {allVideos.map(video => (
-              <VideoCard key={video.id} video={video} />
-            ))}
-          </div>
-        </section>
-      )}
     </div>
   );
 }
