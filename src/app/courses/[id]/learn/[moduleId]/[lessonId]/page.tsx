@@ -39,18 +39,18 @@ export default function LessonViewerPage() {
           setActiveCourses(parsedAdminCourses);
         } else {
           console.error("Stored adminCourses from localStorage is not an array, using default mock courses.");
-          setActiveCourses(allCourses);
+          setActiveCourses(allCourses); // Fallback to default
         }
       } catch (e) {
         console.error("Failed to parse adminCourses from localStorage, using default mock courses.", e);
-        setActiveCourses(allCourses);
+        setActiveCourses(allCourses); // Fallback to default
       }
+    } else {
+       setActiveCourses(allCourses); // Fallback if nothing in localStorage
     }
-    // If not in localStorage, activeCourses remains initialized with allCourses
   }, []);
   
   useEffect(() => {
-    // Ensure loading state is true and error is cleared at the beginning of any data fetch attempt
     setIsLoading(true);
     setError(null);
     setCourse(null);
@@ -58,15 +58,15 @@ export default function LessonViewerPage() {
     setCurrentLesson(null);
 
     if (!courseId || !currentModuleId || !currentLessonId) {
-      // This case might lead to "Lesson Not Found" rather than an error,
-      // but ensure isLoading is false.
       setError("Invalid lesson parameters in URL."); 
       setIsLoading(false);
       return;
     }
 
     if (activeCourses.length === 0) {
-      setError("No course data available to load from.");
+      // This state might occur if localStorage parsing fails or is empty and allCourses is also empty.
+      // Or if initial load of activeCourses hasn't completed (though less likely with current setup).
+      setError("No course data available to load from. Please try again or contact support.");
       setIsLoading(false);
       return;
     }
@@ -95,7 +95,7 @@ export default function LessonViewerPage() {
     setCourse(foundCourse);
     setCurrentModule(foundModule);
     setCurrentLesson(foundLesson);
-    setIsLoading(false); // Only set to false after all data processing is complete
+    setIsLoading(false);
 
   }, [courseId, currentModuleId, currentLessonId, activeCourses]);
 
@@ -154,20 +154,21 @@ export default function LessonViewerPage() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <ProtectedRoute>
+  // The content inside this div will be re-keyed on navigation to ensure fresh state
+  const pageContentKey = `${courseId}-${currentModuleId}-${currentLessonId}`;
+
+  const renderContent = () => {
+    if (isLoading) {
+      return (
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)]">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
           <h1 className="text-2xl font-semibold text-foreground">Loading lesson...</h1>
         </div>
-      </ProtectedRoute>
-    );
-  }
-
-  if (error) {
-    return (
-      <ProtectedRoute>
+      );
+    }
+  
+    if (error) {
+      return (
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center">
           <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
           <h1 className="text-2xl font-semibold text-destructive mb-2">Error Loading Lesson</h1>
@@ -179,13 +180,11 @@ export default function LessonViewerPage() {
             </Link>
           </Button>
         </div>
-      </ProtectedRoute>
-    );
-  }
-
-  if (!course || !currentModule || !currentLesson) {
-     return (
-      <ProtectedRoute>
+      );
+    }
+  
+    if (!course || !currentModule || !currentLesson) {
+       return (
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center">
             <AlertTriangle className="h-12 w-12 text-muted-foreground mb-4" />
             <h1 className="text-2xl font-semibold text-foreground mb-2">Lesson Not Found</h1>
@@ -196,76 +195,84 @@ export default function LessonViewerPage() {
                 </Link>
             </Button>
         </div>
-      </ProtectedRoute>
-    );
-  }
+      );
+    }
+    
+    const embeddableUrl = getEmbedUrl(currentLesson.embedUrl);
   
-  const embeddableUrl = getEmbedUrl(currentLesson.embedUrl);
+    return (
+        <div className="max-w-3xl mx-auto py-8">
+          <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+            <h1 className="text-2xl sm:text-3xl font-headline font-semibold text-foreground">{currentLesson.title}</h1>
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/courses/${course.id}`}>
+                <BookOpen className="mr-2 h-4 w-4" /> Back to Course Overview
+              </Link>
+            </Button>
+          </div>
+  
+          <Card className="shadow-xl overflow-hidden">
+            {embeddableUrl ? (
+              <div className="aspect-video w-full bg-black">
+                <iframe
+                  src={embeddableUrl}
+                  title={currentLesson.title}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  className="w-full h-full border-0"
+                ></iframe>
+              </div>
+            ) : currentLesson.imageUrl && (
+              <div className="relative w-full aspect-video">
+                <Image src={currentLesson.imageUrl} alt={currentLesson.title} layout="fill" objectFit="cover" data-ai-hint="lesson content image" />
+              </div>
+            )}
+            <CardContent className="p-6 space-y-4">
+              <div className="flex justify-between items-center text-sm text-muted-foreground">
+                <span>Module: {currentModule.title}</span>
+                <span>Duration: {currentLesson.duration}</span>
+              </div>
+              {currentLesson.description && (
+                <div className="prose dark:prose-invert max-w-none">
+                  <p>{currentLesson.description}</p>
+                </div>
+              )}
+              {!embeddableUrl && !currentLesson.imageUrl && !currentLesson.description && (
+                <p className="text-muted-foreground text-center py-8">This lesson primarily consists of textual content or its specific media type is not embeddable here.</p>
+              )}
+            </CardContent>
+            <CardFooter className="p-4 sm:p-6 bg-muted/50 border-t flex flex-col sm:flex-row justify-between items-center gap-3">
+              <Button variant="outline" disabled={isFirstLesson || !prevLessonLink} onClick={() => prevLessonLink && router.push(prevLessonLink)}>
+                <ChevronLeft className="mr-2 h-4 w-4" /> Previous Lesson
+              </Button>
+              <Button 
+                variant={isLastLesson ? "default" : "default"} 
+                onClick={() => {
+                  if (nextLessonLink) {
+                    router.push(nextLessonLink);
+                  } else if (isLastLesson) {
+                    handleFinishCourse();
+                  }
+                }}
+                className={isLastLesson ? "bg-green-600 hover:bg-green-700 text-white" : "bg-primary hover:bg-primary/90"}
+                disabled={!isLastLesson && !nextLessonLink && !isFirstLesson} // Prevent disable if it's the only lesson and also the last
+              >
+                {isLastLesson ? 'Finish Course' : 'Next Lesson'}
+                {!isLastLesson && <ChevronRight className="ml-2 h-4 w-4" />}
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+    );
+  };
+
 
   return (
     <ProtectedRoute>
-      <div className="max-w-3xl mx-auto py-8">
-        <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-          <h1 className="text-2xl sm:text-3xl font-headline font-semibold text-foreground">{currentLesson.title}</h1>
-          <Button variant="outline" size="sm" asChild>
-            <Link href={`/courses/${course.id}`}>
-              <BookOpen className="mr-2 h-4 w-4" /> Back to Course Overview
-            </Link>
-          </Button>
-        </div>
-
-        <Card className="shadow-xl overflow-hidden">
-          {embeddableUrl ? (
-            <div className="aspect-video w-full bg-black">
-              <iframe
-                src={embeddableUrl}
-                title={currentLesson.title}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-                className="w-full h-full border-0"
-              ></iframe>
-            </div>
-          ) : currentLesson.imageUrl && (
-            <div className="relative w-full aspect-video">
-              <Image src={currentLesson.imageUrl} alt={currentLesson.title} layout="fill" objectFit="cover" data-ai-hint="lesson content image" />
-            </div>
-          )}
-          <CardContent className="p-6 space-y-4">
-            <div className="flex justify-between items-center text-sm text-muted-foreground">
-              <span>Module: {currentModule.title}</span>
-              <span>Duration: {currentLesson.duration}</span>
-            </div>
-            {currentLesson.description && (
-              <div className="prose dark:prose-invert max-w-none">
-                <p>{currentLesson.description}</p>
-              </div>
-            )}
-            {!embeddableUrl && !currentLesson.imageUrl && !currentLesson.description && (
-              <p className="text-muted-foreground text-center py-8">This lesson primarily consists of textual content or its specific media type is not embeddable here.</p>
-            )}
-          </CardContent>
-          <CardFooter className="p-4 sm:p-6 bg-muted/50 border-t flex flex-col sm:flex-row justify-between items-center gap-3">
-            <Button variant="outline" disabled={isFirstLesson || !prevLessonLink} onClick={() => prevLessonLink && router.push(prevLessonLink)}>
-              <ChevronLeft className="mr-2 h-4 w-4" /> Previous Lesson
-            </Button>
-            <Button 
-              variant={isLastLesson ? "default" : "default"} 
-              onClick={() => {
-                if (nextLessonLink) {
-                  router.push(nextLessonLink);
-                } else if (isLastLesson) {
-                  handleFinishCourse();
-                }
-              }}
-              className={isLastLesson ? "bg-green-600 hover:bg-green-700 text-white" : "bg-primary hover:bg-primary/90"}
-              disabled={!isLastLesson && !nextLessonLink}
-            >
-              {isLastLesson ? 'Finish Course' : 'Next Lesson'}
-              {!isLastLesson && <ChevronRight className="ml-2 h-4 w-4" />}
-            </Button>
-          </CardFooter>
-        </Card>
+      <div key={pageContentKey}>
+        {renderContent()}
       </div>
     </ProtectedRoute>
   );
 }
+
