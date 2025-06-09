@@ -1,3 +1,4 @@
+
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 
@@ -34,8 +35,24 @@ export function getEmbedUrl(url: string | undefined | null): string | null {
       // Expected format: /@username/video/VIDEO_ID
       if (pathParts.length >= 4 && pathParts[2] === 'video') {
         const videoId = pathParts[3];
-        return videoId ? `https://www.tiktok.com/embed/v2/${videoId}` : null;
+        // Ensure videoId is purely numeric for standard TikTok video IDs
+        if (videoId && /^\d+$/.test(videoId)) {
+             return `https://www.tiktok.com/embed/v2/${videoId}`;
+        }
+        // If videoId format is not as expected (e.g., contains non-numeric characters where numeric is expected)
+        return null;
       }
+    }
+
+    // Handle shortened TikTok URLs (e.g., vt.tiktok.com, vm.tiktok.com)
+    // These URLs redirect to the full video page. Extracting the final video ID
+    // for embedding requires following this redirect, which is not reliably feasible
+    // purely client-side due to potential CORS issues or the need for network requests.
+    // Therefore, these URLs will result in a null embed URL, and the UI should fall back
+    // to displaying a thumbnail or placeholder.
+    if (urlObj.hostname === 'vt.tiktok.com' || urlObj.hostname === 'vm.tiktok.com') {
+      // console.warn(`Shortened TikTok URL (${url}) provided. These cannot be directly embedded client-side. Thumbnail fallback will be used.`);
+      return null;
     }
     
     // Handle Google Drive URLs for course lessons (existing logic)
@@ -61,10 +78,6 @@ export function getEmbedUrl(url: string | undefined | null): string | null {
     // console.error("Error parsing or transforming embed URL:", url, error); // Keep for debugging if needed
     return null;
   }
-  // If it's a URL but not one we transform, and not caught by specific handlers,
-  // it might be a direct embed link for other platforms.
-  // However, for safety, let's only return known good patterns or null.
-  // For now, if no specific transformation applies, return null.
-  // This can be expanded if other direct embed types are needed.
+  // If it's a URL but not one we transform, and not caught by specific handlers, return null.
   return null;
 }
