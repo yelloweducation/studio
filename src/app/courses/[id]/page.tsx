@@ -15,42 +15,38 @@ function getEmbedUrl(url: string): string | null {
   if (!url || typeof url !== 'string') return null;
 
   try {
-    // Attempt to construct a URL object. If it fails, it's not a valid URL.
     const urlObj = new URL(url);
 
     if (urlObj.hostname === 'www.youtube.com' && urlObj.pathname === '/watch') {
       const videoId = urlObj.searchParams.get('v');
-      return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
+      return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
     }
     if (urlObj.hostname === 'youtu.be') {
-      const videoId = urlObj.pathname.substring(1); // Remove leading '/'
-      return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
+      const videoId = urlObj.pathname.substring(1);
+      return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
     }
     if (urlObj.hostname === 'drive.google.com') {
       if (urlObj.pathname.includes('/preview')) {
-        return url; // Already a preview URL
+        return url; 
       }
       let fileId: string | null = null;
-      // For links like /file/d/FILE_ID/view or /file/d/FILE_ID
       if (urlObj.pathname.startsWith('/file/d/')) {
-        fileId = urlObj.pathname.split('/')[3]; // e.g., /file/d/FILE_ID/view -> FILE_ID is at index 3
-      } else if (urlObj.searchParams.has('id')) { // For links like /open?id=FILE_ID or /uc?id=FILE_ID&export=view
+        const parts = urlObj.pathname.split('/');
+        if (parts.length > 3) fileId = parts[3];
+      } else if (urlObj.searchParams.has('id')) { 
         fileId = urlObj.searchParams.get('id');
       }
 
       if (fileId) {
         return `https://drive.google.com/file/d/${fileId}/preview`;
       }
+      return null; // If it's Google Drive but not a recognized pattern.
     }
   } catch (error) {
     console.error("Error parsing embed URL, or URL is not standard:", error);
-    // If URL parsing fails (e.g., not a full valid URL for the URL constructor)
-    // or if it's a non-standard URL we don't specifically handle,
-    // return null to avoid passing an invalid URL to the iframe.
     return null;
   }
-  // If no specific rule matches but URL was valid for constructor, return the original URL.
-  return url;
+  return url; // Fallback for other valid URLs (e.g. Vimeo, direct MP4 if supported by iframe)
 }
 
 
@@ -63,11 +59,12 @@ export default function CourseDetailPage() {
 
 
   useEffect(() => {
+    setIsLoading(true); // Set loading true at the start of this effect
     const storedCourses = localStorage.getItem('adminCourses');
     if (storedCourses) {
       try {
         const parsedCourses = JSON.parse(storedCourses) as Course[];
-        setActiveCourses(parsedCourses);
+        setActiveCourses(parsedCourses.length > 0 ? parsedCourses : allCourses);
       } catch (e) {
         console.error("Failed to parse courses from localStorage on detail page", e);
         setActiveCourses(allCourses);
@@ -75,34 +72,40 @@ export default function CourseDetailPage() {
     } else {
       setActiveCourses(allCourses);
     }
-  }, []);
+    // Removed setIsLoading(false) from here; it will be handled in the next effect
+  }, []); // Runs once on mount to load activeCourses list
 
   useEffect(() => {
+    // This effect runs when courseId changes or when activeCourses list is populated/updated.
     if (!courseId) {
       setCourse(null);
       setIsLoading(false);
       return;
     }
     
-    // This effect depends on activeCourses. It will run when activeCourses is populated.
-    // Ensure activeCourses has data before trying to find.
     if (activeCourses.length > 0) {
         const foundCourse = activeCourses.find(c => c.id === courseId);
         setCourse(foundCourse || null);
-    } else if (!localStorage.getItem('adminCourses')) {
-        // If activeCourses is empty AND there was nothing in localStorage
-        // (meaning the first effect set it to allCourses, which might be empty or not have the ID)
-        // we might still be waiting for the first effect to correctly populate from allCourses if localStorage was empty.
-        // However, the dependency on activeCourses should handle this.
-        // If activeCourses is empty because localStorage parse failed and allCourses is also empty, then it's truly not found.
-    }
-    // Always set loading to false after attempting to find, once activeCourses is available.
-    // This check ensures we don't set loading to false prematurely if activeCourses isn't populated yet.
-    if (activeCourses.length > 0 || !localStorage.getItem('adminCourses')) {
-        setIsLoading(false);
+        setIsLoading(false); // Set loading to false after attempting to find the course
+    } else {
+        // If activeCourses is still empty, it means the first effect hasn't completed
+        // or resulted in an empty list. If courseId is present, we should still eventually
+        // set isLoading to false if no courses are ever loaded.
+        // This case can happen if allCourses is also empty and localStorage is empty/invalid.
+        // Setting a timeout as a fallback or ensuring the first effect always sets activeCourses
+        // (even if empty) helps.
+        // The current structure should handle this because setIsLoading(false) is called
+        // after trying to find the course, once activeCourses is available.
+        // If activeCourses remains empty after the first effect, this effect will still run,
+        // find nothing, set course to null, and set isLoading to false.
+         if (!localStorage.getItem('adminCourses') && allCourses.length === 0) {
+            // Only case where activeCourses would remain empty if no localStorage and no mock data
+            setCourse(null);
+            setIsLoading(false);
+        }
     }
     
-  }, [courseId, activeCourses]);
+  }, [courseId, activeCourses]); // Depends on courseId and the populated activeCourses list
 
   if (isLoading) {
     return (
@@ -177,7 +180,7 @@ export default function CourseDetailPage() {
                               <li key={lesson.id} className="p-4 border rounded-md bg-card hover:shadow-md transition-shadow">
                                 <div className="flex justify-between items-center mb-2">
                                   <h4 className="font-medium text-md flex items-center">
-                                    {lesson.embedUrl ? <Video className="mr-2 h-5 w-5 text-accent"/> : <FileText className="mr-2 h-5 w-5 text-accent"/>}
+                                    {getEmbedUrl(lesson.embedUrl || '') ? <Video className="mr-2 h-5 w-5 text-accent"/> : <FileText className="mr-2 h-5 w-5 text-accent"/>}
                                     {lesson.title}
                                   </h4>
                                   <span className="text-xs bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full">{lesson.duration}</span>
@@ -185,7 +188,7 @@ export default function CourseDetailPage() {
                                 {lesson.description && (
                                   <p className="text-sm text-muted-foreground mb-3">{lesson.description}</p>
                                 )}
-                                {lesson.embedUrl && (
+                                {lesson.embedUrl && getEmbedUrl(lesson.embedUrl) && (
                                   <div className="aspect-video rounded-md overflow-hidden border">
                                     <iframe
                                       src={getEmbedUrl(lesson.embedUrl) || ''}
