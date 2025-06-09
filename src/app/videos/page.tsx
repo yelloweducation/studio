@@ -1,13 +1,35 @@
 
 "use client";
-import React from 'react';
+import React, { useEffect, useState } from 'react'; // Added useEffect, useState
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import VideoCard from '@/components/videos/VideoCard';
-import { videos as allVideos } from '@/data/mockData';
-import { ChevronLeft, Video as VideoIcon } from 'lucide-react';
+import { videos as mockVideos, type Video } from '@/data/mockData'; // Renamed for clarity
+import { ChevronLeft, Video as VideoIcon, Loader2 } from 'lucide-react'; // Added Loader2
 
 export default function VideosPage() {
+  const [activeVideos, setActiveVideos] = useState<Video[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    setIsLoading(true);
+    const storedVideosString = localStorage.getItem('adminVideos');
+    let videosToUse = mockVideos;
+    if (storedVideosString) {
+      try {
+        const parsedVideos = JSON.parse(storedVideosString) as Video[];
+        if (Array.isArray(parsedVideos)) { // Basic check
+          videosToUse = parsedVideos;
+        }
+      } catch (e) {
+        console.error("Failed to parse videos from localStorage on videos page", e);
+        // Fallback to mockVideos is already default
+      }
+    }
+    setActiveVideos(videosToUse);
+    setIsLoading(false);
+  }, []);
+
   return (
     <div className="w-full flex flex-col items-center h-full">
       <div className="w-full max-w-4xl flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 px-1 sm:px-0">
@@ -25,8 +47,12 @@ export default function VideosPage() {
         className="w-full max-w-md flex-1 overflow-y-auto snap-y snap-mandatory 
                    rounded-lg bg-card shadow-inner scrollbar-hide"
       >
-        {allVideos.length > 0 ? (
-          allVideos.map(video => (
+        {isLoading ? (
+          <div className="flex items-center justify-center h-full">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          </div>
+        ) : activeVideos.length > 0 ? (
+          activeVideos.map(video => (
             <div key={video.id} className="h-full w-full snap-center shrink-0">
               <VideoCard video={video} />
             </div>

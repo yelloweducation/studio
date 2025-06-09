@@ -4,8 +4,9 @@ import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import CourseManagement from "@/components/admin/CourseManagement";
 import UserManagement from "@/components/admin/UserManagement";
 import EnrollmentStats from "@/components/admin/EnrollmentStats";
+import VideoManagement from "@/components/admin/VideoManagement"; // Added
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ListOrdered, Users, BarChart3, Settings } from "lucide-react";
+import { ListOrdered, Users, BarChart3, Settings, Video as VideoIcon } from "lucide-react"; // Added VideoIcon
 
 export default function AdminDashboardPage() {
   return (
@@ -19,9 +20,12 @@ export default function AdminDashboardPage() {
         </section>
 
         <Tabs defaultValue="courses" className="w-full">
-          <TabsList className="grid w-full grid-cols-1 md:grid-cols-3 gap-2 mb-6">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 gap-2 mb-6">
             <TabsTrigger value="courses" className="py-2.5 px-3 text-sm sm:text-base sm:py-3">
               <ListOrdered className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> Manage Courses
+            </TabsTrigger>
+            <TabsTrigger value="videos" className="py-2.5 px-3 text-sm sm:text-base sm:py-3">
+              <VideoIcon className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> Manage Videos
             </TabsTrigger>
             <TabsTrigger value="users" className="py-2.5 px-3 text-sm sm:text-base sm:py-3">
               <Users className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> Manage Users
@@ -33,6 +37,9 @@ export default function AdminDashboardPage() {
           
           <TabsContent value="courses">
             <CourseManagement />
+          </TabsContent>
+          <TabsContent value="videos">
+            <VideoManagement />
           </TabsContent>
           <TabsContent value="users">
             <UserManagement />
