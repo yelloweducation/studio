@@ -3,25 +3,19 @@
 import React, { useState, type FormEvent, useEffect, Suspense, lazy } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Video as VideoIcon, XCircle, Tv, Loader2, X, Shapes } from 'lucide-react';
+import { Video as VideoIcon, Tv, Loader2, X } from 'lucide-react';
 import VideoCard from '@/components/videos/VideoCard';
-import { videos as mockVideos, type Video, categories as mockCategories, type Category } from '@/data/mockData';
+import { videos as mockVideos, type Video } from '@/data/mockData';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'; 
 import { Skeleton } from '@/components/ui/skeleton';
-import CategoryCard from '@/components/categories/CategoryCard';
 
 const CareerAdviceChatbox = lazy(() => import('@/components/ai/CareerAdviceChatbox'));
 
 
 export default function Home() {
-  const [searchQuery, setSearchQuery] = useState('');
   const router = useRouter();
   
-  const [courseCategories, setCourseCategories] = useState<Category[]>([]);
-  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
-
   const [trendingVideos, setTrendingVideos] = useState<Video[]>([]);
   const [isLoadingTrendingVideos, setIsLoadingTrendingVideos] = useState(true);
 
@@ -31,11 +25,6 @@ export default function Home() {
 
 
   useEffect(() => {
-    // Load course categories directly from mock data
-    setIsLoadingCategories(true);
-    setCourseCategories(mockCategories);
-    setIsLoadingCategories(false);
-
     // Load trending videos directly from mock data
     setIsLoadingTrendingVideos(true);
     setTrendingVideos(mockVideos.slice(0, 3));
@@ -51,19 +40,6 @@ export default function Home() {
     setIsLoadingFeedVideos(false);
   };
 
-  const performSearch = () => {
-    if (!searchQuery.trim()) {
-      router.push(`/courses/search`);
-      return;
-    }
-    router.push(`/courses/search?query=${encodeURIComponent(searchQuery.trim())}`);
-  };
-
-  const handleFormSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    performSearch();
-  };
-
   const handleShowVideos = () => {
     if (allFeedVideos.length === 0) {
       loadAllFeedVideos();
@@ -73,10 +49,6 @@ export default function Home() {
 
   const handleCloseVideoFeed = () => {
     setShowVideoFeed(false);
-  };
-
-  const clearSearch = () => {
-    setSearchQuery('');
   };
 
   if (showVideoFeed) {
@@ -115,40 +87,11 @@ export default function Home() {
     <div className="flex flex-col items-center pb-8">
       <section className="w-full max-w-2xl text-center pt-8 mb-10">
         <h1 className="text-4xl sm:text-5xl font-headline font-bold mb-4 text-foreground">
-          Discover Your Next Passion
+          Welcome to Yellow Institute
         </h1>
         <p className="text-lg sm:text-xl text-muted-foreground mb-8">
-          Explore a world of knowledge with Yellow Institute.
+          Your journey to knowledge and career insights.
         </p>
-        <form onSubmit={handleFormSubmit} className="flex flex-col sm:flex-row gap-3 max-w-xl mx-auto">
-          <div className="relative w-full">
-            <Input
-              type="search"
-              placeholder="Search for courses (e.g., Web Development, Data Science)"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-20 sm:pr-10 py-3 text-base rounded-full shadow-md focus:ring-primary focus:border-primary"
-            />
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            {searchQuery && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-12 sm:right-10 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full hover:bg-muted/50"
-                onClick={clearSearch}
-                aria-label="Clear search"
-              >
-                <XCircle className="h-5 w-5 text-muted-foreground" />
-              </Button>
-            )}
-            <Button type="submit" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 sm:hidden">
-              <Search className="h-5 w-5" />
-            </Button>
-          </div>
-          <Button type="submit" className="hidden sm:inline-flex bg-primary text-primary-foreground hover:bg-primary/90 shadow-md hover:shadow-sm active:translate-y-px transition-all duration-150">
-            <Search className="mr-2 h-5 w-5" /> Search
-          </Button>
-        </form>
       </section>
 
       <section className="w-full max-w-2xl mb-12">
@@ -168,37 +111,6 @@ export default function Home() {
           <CareerAdviceChatbox />
         </Suspense>
       </section>
-
-      <section className="w-full max-w-5xl mt-8 mb-12">
-        <h2 className="text-2xl sm:text-3xl font-headline font-semibold flex items-center mb-6 text-center sm:text-left justify-center sm:justify-start">
-          <Shapes className="mr-2 h-7 w-7 text-primary" /> Explore Categories
-        </h2>
-        {isLoadingCategories ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {[...Array(5)].map((_, i) => (
-              <Card key={i} className="shadow-lg rounded-lg">
-                <Skeleton className="h-24 w-full rounded-t-lg" />
-                <CardContent className="pt-3 pb-3 text-center">
-                  <Skeleton className="h-5 w-3/4 mx-auto" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : courseCategories.length > 0 ? (
-          <div className="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
-            {courseCategories.map(category => (
-              <CategoryCard key={category.id} category={category} />
-            ))}
-          </div>
-        ) : (
-          <Card className="w-full">
-            <CardContent className="pt-6">
-              <p className="text-center text-muted-foreground">No course categories available at the moment.</p>
-            </CardContent>
-          </Card>
-        )}
-      </section>
-
 
       <section className="w-full mt-12">
         <div className="flex justify-between items-center mb-6">

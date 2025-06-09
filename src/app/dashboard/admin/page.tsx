@@ -1,15 +1,15 @@
 
 "use client";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
-import CourseManagement from "@/components/admin/CourseManagement";
+// import CourseManagement from "@/components/admin/CourseManagement"; // Course Management removed
 import UserManagement from "@/components/admin/UserManagement";
 import EnrollmentStats from "@/components/admin/EnrollmentStats";
 import VideoManagement from "@/components/admin/VideoManagement";
 import ImageManagement from "@/components/admin/ImageManagement";
 import CategoryManagement from "@/components/admin/CategoryManagement";
-// import PaymentSettings from "@/components/admin/PaymentSettings"; // Removed
+import PaymentSettings from "@/components/admin/PaymentSettings";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ListOrdered, Users, BarChart3, Settings, Video as VideoIcon, Image as ImageIcon, Shapes } from "lucide-react"; // CreditCard removed
+import { Users, BarChart3, Settings, Video as VideoIcon, Image as ImageIcon, Shapes, CreditCard } from "lucide-react"; // ListOrdered removed
 
 export default function AdminDashboardPage() {
   return (
@@ -22,11 +22,9 @@ export default function AdminDashboardPage() {
             <p className="text-sm md:text-base text-muted-foreground">Manage your learning platform.</p>
         </section>
 
-        <Tabs defaultValue="courses" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 mb-6"> {/* Adjusted grid columns */}
-            <TabsTrigger value="courses" className="py-2.5 px-3 text-sm sm:text-base sm:py-3">
-              <ListOrdered className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> Courses
-            </TabsTrigger>
+        <Tabs defaultValue="categories" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 mb-6">
+            {/* Courses TabTrigger removed */}
             <TabsTrigger value="categories" className="py-2.5 px-3 text-sm sm:text-base sm:py-3">
               <Shapes className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> Categories
             </TabsTrigger>
@@ -36,7 +34,9 @@ export default function AdminDashboardPage() {
              <TabsTrigger value="images" className="py-2.5 px-3 text-sm sm:text-base sm:py-3">
               <ImageIcon className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> Images
             </TabsTrigger>
-            {/* Payment Settings TabTrigger removed */}
+            <TabsTrigger value="payments" className="py-2.5 px-3 text-sm sm:text-base sm:py-3">
+                <CreditCard className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Payment Conf.
+            </TabsTrigger>
             <TabsTrigger value="users" className="py-2.5 px-3 text-sm sm:text-base sm:py-3">
               <Users className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> Users
             </TabsTrigger>
@@ -45,9 +45,7 @@ export default function AdminDashboardPage() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="courses">
-            <CourseManagement />
-          </TabsContent>
+          {/* Courses TabsContent removed */}
           <TabsContent value="categories">
             <CategoryManagement />
           </TabsContent>
@@ -57,7 +55,9 @@ export default function AdminDashboardPage() {
           <TabsContent value="images">
             <ImageManagement />
           </TabsContent>
-          {/* Payment Settings TabsContent removed */}
+          <TabsContent value="payments">
+            <PaymentSettings />
+          </TabsContent>
           <TabsContent value="users">
             <UserManagement />
           </TabsContent>
