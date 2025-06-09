@@ -23,16 +23,14 @@ export default function LessonViewerPage() {
   const currentModuleId = params.moduleId as string;
   const currentLessonId = params.lessonId as string;
 
-  const [activeCourses, setActiveCourses] = useState<Course[]>(allCourses); // Initialize with mockData
+  const [activeCourses, setActiveCourses] = useState<Course[]>(allCourses);
   const [course, setCourse] = useState<Course | null>(null);
   const [currentModule, setCurrentModule] = useState<Module | null>(null);
   const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null);
-  const [isLoading, setIsLoading] = useState(true); // Initialize isLoading to true
+  const [isLoading, setIsLoading] = useState(true); 
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // This effect updates activeCourses based on localStorage.
-    // It runs once on mount.
     const storedCoursesString = localStorage.getItem('adminCourses');
     if (storedCoursesString) {
       try {
@@ -41,34 +39,35 @@ export default function LessonViewerPage() {
           setActiveCourses(parsedAdminCourses);
         } else {
           console.error("Stored adminCourses from localStorage is not an array, using default mock courses.");
-          setActiveCourses(allCourses); // Fallback if parsing results in non-array
+          setActiveCourses(allCourses);
         }
       } catch (e) {
         console.error("Failed to parse adminCourses from localStorage, using default mock courses.", e);
-        setActiveCourses(allCourses); // Fallback if parsing fails
+        setActiveCourses(allCourses);
       }
-    } else {
-      // No adminCourses in localStorage, activeCourses is already initialized with allCourses.
-      // If initial state of activeCourses was [], you might call setActiveCourses(allCourses) here.
     }
+    // If not in localStorage, activeCourses remains initialized with allCourses
   }, []);
   
   useEffect(() => {
-    // This effect loads the specific lesson data based on URL params and activeCourses.
-    setIsLoading(true); // Start loading when dependencies change
-    setError(null);     // Clear any previous errors
-    setCourse(null);    // Clear previous lesson-specific data
+    // Ensure loading state is true and error is cleared at the beginning of any data fetch attempt
+    setIsLoading(true);
+    setError(null);
+    setCourse(null);
     setCurrentModule(null);
     setCurrentLesson(null);
 
     if (!courseId || !currentModuleId || !currentLessonId) {
-      setIsLoading(false); // Not enough info to load, stop loading
+      // This case might lead to "Lesson Not Found" rather than an error,
+      // but ensure isLoading is false.
+      setError("Invalid lesson parameters in URL."); 
+      setIsLoading(false);
       return;
     }
 
     if (activeCourses.length === 0) {
-      // setError("No course data available to load from."); // Or let the !currentLesson fallback handle it
-      setIsLoading(false); // No courses to search within, stop loading
+      setError("No course data available to load from.");
+      setIsLoading(false);
       return;
     }
 
@@ -93,16 +92,15 @@ export default function LessonViewerPage() {
       return;
     }
 
-    // All data found successfully
     setCourse(foundCourse);
     setCurrentModule(foundModule);
     setCurrentLesson(foundLesson);
-    setIsLoading(false); // Finished loading successfully
+    setIsLoading(false); // Only set to false after all data processing is complete
 
   }, [courseId, currentModuleId, currentLessonId, activeCourses]);
 
   const { prevLessonLink, nextLessonLink, isFirstLesson, isLastLesson } = useMemo(() => {
-    if (!course || !currentModule || !currentLesson) { // Rely on state set by the useEffect above
+    if (!course || !currentModule || !currentLesson) {
       return { prevLessonLink: null, nextLessonLink: null, isFirstLesson: true, isLastLesson: true };
     }
 
@@ -128,7 +126,7 @@ export default function LessonViewerPage() {
       isFirstLesson: currentIndex === 0,
       isLastLesson: currentIndex === allLessonsFlat.length - 1,
     };
-  }, [course, currentModule, currentLesson, currentModuleId, currentLessonId]); // currentModuleId and currentLessonId from params are fine here as they define the "current context"
+  }, [course, currentModule, currentLesson, currentModuleId, currentLessonId]);
 
   const handleFinishCourse = () => {
     if (user && course) {
@@ -143,7 +141,7 @@ export default function LessonViewerPage() {
         console.error("Error parsing completions from localStorage", e);
       }
 
-      completions[course.id] = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      completions[course.id] = new Date().toISOString().split('T')[0];
       localStorage.setItem(completionKey, JSON.stringify(completions));
 
       toast({
@@ -260,7 +258,7 @@ export default function LessonViewerPage() {
                 }
               }}
               className={isLastLesson ? "bg-green-600 hover:bg-green-700 text-white" : "bg-primary hover:bg-primary/90"}
-              disabled={!isLastLesson && !nextLessonLink} // Disable if not last and no next link
+              disabled={!isLastLesson && !nextLessonLink}
             >
               {isLastLesson ? 'Finish Course' : 'Next Lesson'}
               {!isLastLesson && <ChevronRight className="ml-2 h-4 w-4" />}
@@ -271,4 +269,3 @@ export default function LessonViewerPage() {
     </ProtectedRoute>
   );
 }
-
