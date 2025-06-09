@@ -2,14 +2,23 @@
 "use client";
 import { useState, type FormEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
+import NextImage from 'next/image'; // Renamed to avoid conflict with local Image type if any
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, Video as VideoIcon, XCircle, Tv, Loader2, X } from 'lucide-react';
 import VideoCard from '@/components/videos/VideoCard';
 import { videos as mockVideos, type Video } from '@/data/mockData';
 import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton'; // Added missing import
+import { Skeleton } from '@/components/ui/skeleton';
+
+const HERO_IMAGE_STORAGE_KEY = 'homePageHeroImageDetails';
+const DEFAULT_HERO_IMAGE_URL = 'https://placehold.co/350x350.png';
+const DEFAULT_HERO_AI_HINT = '3d globe';
+
+type HeroImageData = {
+  imageUrl: string;
+  dataAiHint: string;
+};
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -20,6 +29,27 @@ export default function Home() {
   const [showVideoFeed, setShowVideoFeed] = useState(false);
   const [allFeedVideos, setAllFeedVideos] = useState<Video[]>([]);
   const [isLoadingFeedVideos, setIsLoadingFeedVideos] = useState(false);
+
+  const [heroImageDetails, setHeroImageDetails] = useState<HeroImageData>({ 
+    imageUrl: DEFAULT_HERO_IMAGE_URL, 
+    dataAiHint: DEFAULT_HERO_AI_HINT 
+  });
+
+  useEffect(() => {
+    // Load hero image details from localStorage
+    const storedHeroImage = localStorage.getItem(HERO_IMAGE_STORAGE_KEY);
+    if (storedHeroImage) {
+      try {
+        const parsed = JSON.parse(storedHeroImage) as HeroImageData;
+        if (parsed && parsed.imageUrl && parsed.dataAiHint) {
+          setHeroImageDetails(parsed);
+        }
+      } catch (e) {
+        console.error("Failed to parse hero image data from localStorage for homepage", e);
+        // Fallback to defaults is already handled by initial state
+      }
+    }
+  }, []);
 
   useEffect(() => {
     // Load trending videos
@@ -136,14 +166,15 @@ export default function Home() {
     <div className="flex flex-col items-center pb-8">
       <section className="w-full max-w-2xl text-center mb-12">
         <div className="mb-8 flex justify-center">
-          <Image
-            src="https://placehold.co/350x350.png"
-            alt="Lumina Learn 3D Globe"
+          <NextImage // Use NextImage alias
+            src={heroImageDetails.imageUrl}
+            alt="Yellow Institute 3D Globe"
             width={350}
             height={350}
             priority
             className="rounded-full shadow-2xl"
-            data-ai-hint="3d globe"
+            data-ai-hint={heroImageDetails.dataAiHint}
+            key={heroImageDetails.imageUrl} // Add key to re-render if URL changes
           />
         </div>
         <h1 className="text-4xl sm:text-5xl font-headline font-bold mb-4 text-foreground">
@@ -213,7 +244,7 @@ export default function Home() {
             ))}
           </div>
         ) : (
-          !showVideoFeed && ( // Only show this message if the main feed is not active
+          !showVideoFeed && ( 
             <Card className="w-full max-w-2xl mt-8">
               <CardContent className="pt-6">
                 <p className="text-center text-muted-foreground">No trending videos available at the moment.</p>
