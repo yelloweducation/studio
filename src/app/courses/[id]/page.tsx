@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, PlayCircle, BookOpen, Video, FileText, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import ProtectedRoute from '@/components/auth/ProtectedRoute'; 
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 function getEmbedUrl(url: string): string | null {
@@ -37,7 +37,7 @@ function getEmbedUrl(url: string): string | null {
     }
   } catch (error) {
     console.error("Error parsing embed URL:", error);
-    return url; 
+    return url;
   }
   return url;
 }
@@ -47,57 +47,45 @@ export default function CourseDetailPage() {
   const params = useParams();
   const courseId = params.id as string;
   const [course, setCourse] = useState<Course | null>(null);
-  const [activeCourses, setActiveCourses] = useState<Course[]>([]);
+  const [activeCourses, setActiveCourses] = useState<Course[]>([]); // Initialize as empty
   const [isLoading, setIsLoading] = useState(true);
 
 
   useEffect(() => {
-    // This effect populates activeCourses
+    // This effect populates activeCourses from localStorage or falls back to allCourses
     const storedCourses = localStorage.getItem('adminCourses');
     if (storedCourses) {
       try {
         const parsedCourses = JSON.parse(storedCourses) as Course[];
-        setActiveCourses(parsedCourses); 
+        setActiveCourses(parsedCourses);
       } catch (e) {
         console.error("Failed to parse courses from localStorage on detail page", e);
-        setActiveCourses(allCourses); 
+        setActiveCourses(allCourses); // Fallback if parsing fails
       }
     } else {
-      setActiveCourses(allCourses); 
+      setActiveCourses(allCourses); // Fallback if no localStorage item
     }
-  }, []); 
-
+  }, []); // Load activeCourses list once on mount
 
   useEffect(() => {
-    // This effect finds the specific course once activeCourses is populated
-    // and then sets isLoading to false.
-    if (courseId && activeCourses.length > 0) {
-      const foundCourse = activeCourses.find(c => c.id === courseId);
-      setCourse(foundCourse || null);
-    } else if (courseId) { // activeCourses might be empty if no courses exist
+    // This effect finds the specific course and sets loading state.
+    // It runs when courseId changes or when activeCourses is populated by the first effect.
+
+    if (!courseId) {
       setCourse(null);
-    }
-    // Only set isLoading to false after we've tried to find the course
-    // This depends on activeCourses being populated by the first useEffect
-    if(activeCourses.length > 0 || !localStorage.getItem('adminCourses')) {
-        // Condition to ensure we don't turn off loading too soon if activeCourses is empty
-        // but still waiting for localStorage processing in a theoretical race (though unlikely here)
-        // More simply: set loading false once activeCourses has been processed.
-        setIsLoading(false);
-    }
-     // If activeCourses is still empty AND localStorage had data, it means parsing might have failed or yielded empty.
-    // If activeCourses is empty AND localStorage had NO data, means we used allCourses (which could also be empty).
-    // The isLoading should turn false once we've gone through the logic.
-    // A small delay or a more complex state machine might be needed for extremely rapid navigations,
-    // but for typical use, this should be sufficient.
-    if (activeCourses.length === 0 && localStorage.getItem('adminCourses') === null) {
-        // This case means localStorage was empty, and allCourses was used.
-        // We can safely turn off loading.
-        setIsLoading(false);
+      setIsLoading(false); // No ID, so we're done.
+      return;
     }
 
+    // activeCourses is now populated by the first effect (or is [], if sources were empty).
+    // We can now attempt to find the course and finalize loading state.
+    // Note: If activeCourses is an empty array (e.g. localStorage was '[]' or allCourses is empty),
+    // foundCourse will be undefined, and course will be set to null.
+    const foundCourse = activeCourses.find(c => c.id === courseId);
+    setCourse(foundCourse || null);
+    setIsLoading(false); // We've processed activeCourses, so loading is done.
 
-  }, [courseId, activeCourses]);
+  }, [courseId, activeCourses]); // Depend on courseId and activeCourses
 
   if (isLoading) {
     return (
@@ -133,11 +121,11 @@ export default function CourseDetailPage() {
         <Card className="overflow-hidden shadow-xl">
           {course.imageUrl && (
             <div className="relative w-full h-64 md:h-80">
-              <Image 
-                src={course.imageUrl} 
-                alt={course.title} 
-                layout="fill" 
-                objectFit="cover" 
+              <Image
+                src={course.imageUrl}
+                alt={course.title}
+                layout="fill"
+                objectFit="cover"
                 data-ai-hint={course.dataAiHint || 'education banner'}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
@@ -153,7 +141,7 @@ export default function CourseDetailPage() {
           </CardHeader>
           <CardContent className="px-6 pb-6 space-y-6">
             <p className="text-lg text-foreground/90">{course.description}</p>
-            
+
             <div>
               <h2 className="text-2xl font-headline font-semibold mb-3 flex items-center">
                 <BookOpen className="mr-2 h-6 w-6 text-primary" /> Course Modules
@@ -214,4 +202,3 @@ export default function CourseDetailPage() {
     </ProtectedRoute>
   );
 }
-
