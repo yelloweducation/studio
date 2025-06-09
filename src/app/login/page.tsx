@@ -2,6 +2,7 @@
 import { LoginForm } from "@/components/auth/LoginForm";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
   return (
@@ -24,3 +25,4 @@ export default function LoginPage() {
     </div>
   );
 }
+
