@@ -1,15 +1,46 @@
 
 "use client";
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Video as VideoIcon, XCircle } from 'lucide-react';
+import { Search, Video as VideoIcon, XCircle, Tv, Loader2 } from 'lucide-react';
+import VideoCard from '@/components/videos/VideoCard';
+import { videos as mockVideos, type Video } from '@/data/mockData';
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const router = useRouter();
+  const [trendingVideos, setTrendingVideos] = useState<Video[]>([]);
+  const [isLoadingVideos, setIsLoadingVideos] = useState(true);
+
+  useEffect(() => {
+    setIsLoadingVideos(true);
+    let videosToDisplay: Video[] = [];
+    const storedVideosString = localStorage.getItem('adminVideos');
+
+    if (storedVideosString !== null) {
+      try {
+        const parsedVideos = JSON.parse(storedVideosString) as Video[];
+        if (Array.isArray(parsedVideos)) {
+          videosToDisplay = parsedVideos;
+        } else {
+          console.error("Stored 'adminVideos' in localStorage is not an array for homepage. Using mock videos.", parsedVideos);
+          videosToDisplay = mockVideos;
+        }
+      } catch (e) {
+        console.error("Failed to parse 'adminVideos' from localStorage for homepage. Using mock videos.", e);
+        videosToDisplay = mockVideos;
+      }
+    } else {
+      videosToDisplay = mockVideos;
+    }
+
+    setTrendingVideos(videosToDisplay.slice(0, 3)); // Show first 3 videos as trending
+    setIsLoadingVideos(false);
+  }, []);
+
 
   const performSearch = () => {
     if (!searchQuery.trim()) {
@@ -74,7 +105,7 @@ export default function Home() {
           <Button 
             type="button" 
             onClick={performSearch} 
-            className="flex-1" // Changed: Removed custom accent styles, will use default primary style
+            className="flex-1"
           >
             <Search className="mr-2 h-5 w-5" /> Search Courses
           </Button>
@@ -83,9 +114,34 @@ export default function Home() {
             variant="default"
             className="flex-1"
           >
-            <VideoIcon className="mr-2 h-5 w-5" /> View Videos
+            <VideoIcon className="mr-2 h-5 w-5" /> View All Videos
           </Button>
         </div>
+      </section>
+
+      <section className="w-full max-w-4xl mt-12 md:mt-16">
+        <h2 className="text-2xl md:text-3xl font-headline font-semibold mb-6 flex items-center">
+          <Tv className="mr-3 h-7 w-7 text-primary" /> Trending Videos
+        </h2>
+        {isLoadingVideos ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="aspect-[9/16] bg-muted rounded-lg animate-pulse flex items-center justify-center">
+                <Loader2 className="h-8 w-8 text-primary animate-spin"/>
+              </div>
+            ))}
+          </div>
+        ) : trendingVideos.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {trendingVideos.map(video => (
+              <div key={video.id} className="aspect-[9/16] rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
+                <VideoCard video={video} />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-muted-foreground text-center py-4">No trending videos available right now.</p>
+        )}
       </section>
     </div>
   );
