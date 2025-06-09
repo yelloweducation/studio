@@ -5,29 +5,24 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { ImageIcon, Save } from 'lucide-react'; // Removed Edit3 as it's not directly used here
+import { ImageIcon, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { courses as initialCourses, type Course } from '@/data/mockData';
 import { videos as initialVideos, type Video } from '@/data/mockData';
+import { categories as initialCategoriesData, type Category } from '@/data/mockData'; // Added
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
-
-// Removed HERO_IMAGE_STORAGE_KEY, DEFAULT_HERO_IMAGE_URL, DEFAULT_HERO_AI_HINT
-// Removed HeroImageData type
 
 export default function ImageManagement() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [videos, setVideos] = useState<Video[]>([]);
-  // Removed heroImage, editableHeroImageUrl, editableHeroAiHint states
-  
+  const [categories, setCategories] = useState<Category[]>([]); // Added for categories
+
   const [isCoursesLoaded, setIsCoursesLoaded] = useState(false);
   const [isVideosLoaded, setIsVideosLoaded] = useState(false);
-  // Removed isHeroImageLoaded state
+  const [isCategoriesLoaded, setIsCategoriesLoaded] = useState(false); // Added for categories
 
   const { toast } = useToast();
-
-  // Removed useEffect for loading Hero Image
-  // Removed handleSaveHeroImage function
 
   // Load Courses
   useEffect(() => {
@@ -60,6 +55,23 @@ export default function ImageManagement() {
     }
     setIsVideosLoaded(true);
   }, []);
+
+  // Load Categories
+  useEffect(() => {
+    const storedCategories = localStorage.getItem('adminCategories');
+    if (storedCategories) {
+      try {
+        setCategories(JSON.parse(storedCategories) as Category[]);
+      } catch (e) {
+        console.error("Failed to parse categories from localStorage for image management", e);
+        setCategories(initialCategoriesData);
+      }
+    } else {
+      setCategories(initialCategoriesData);
+    }
+    setIsCategoriesLoaded(true);
+  }, []);
+
 
   const handleCourseImageChange = (courseId: string, field: 'imageUrl' | 'dataAiHint', value: string) => {
     setCourses(prev => prev.map(c => c.id === courseId ? { ...c, [field]: value } : c));
@@ -105,6 +117,28 @@ export default function ImageManagement() {
     }
   };
 
+  const handleCategoryImageChange = (categoryId: string, field: 'imageUrl' | 'dataAiHint', value: string) => {
+    setCategories(prev => prev.map(cat => cat.id === categoryId ? { ...cat, [field]: value } : cat));
+  };
+
+  const handleSaveCategoryImage = (categoryId: string) => {
+    const categoryToSave = categories.find(cat => cat.id === categoryId);
+    if (categoryToSave) {
+      const currentStoredCategories = localStorage.getItem('adminCategories');
+      let allCategories: Category[] = [];
+      if (currentStoredCategories) {
+        try {
+          allCategories = JSON.parse(currentStoredCategories);
+        } catch (e) { allCategories = initialCategoriesData; }
+      } else {
+        allCategories = initialCategoriesData;
+      }
+      const updatedCategories = allCategories.map(cat => cat.id === categoryId ? categoryToSave : cat);
+      localStorage.setItem('adminCategories', JSON.stringify(updatedCategories));
+      toast({ title: "Category Image Updated", description: `Image details for "${categoryToSave.name}" saved.` });
+    }
+  };
+
 
   return (
     <Card className="shadow-lg">
@@ -117,8 +151,6 @@ export default function ImageManagement() {
       <CardContent>
         <ScrollArea className="h-[calc(100vh-20rem)] pr-3">
           <div className="space-y-8">
-            {/* Homepage Hero Image section removed */}
-
             {/* Course Images */}
             <section>
               <h3 className="text-xl font-semibold mb-4 font-headline">Course Images</h3>
@@ -230,6 +262,64 @@ export default function ImageManagement() {
                 <p className="text-muted-foreground">{isVideosLoaded ? 'No videos found. Add videos in "Manage Videos" tab.' : 'Loading videos...'}</p>
               )}
             </section>
+
+            {/* Category Images */}
+            <section>
+              <h3 className="text-xl font-semibold mb-4 font-headline">Category Images</h3>
+              {isCategoriesLoaded && categories.length > 0 ? (
+                <div className="space-y-6">
+                  {categories.map(category => (
+                    <Card key={category.id}>
+                      <form onSubmit={(e) => { e.preventDefault(); handleSaveCategoryImage(category.id); }}>
+                        <CardHeader>
+                          <CardTitle className="text-md font-semibold">{category.name}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="flex flex-col sm:flex-row gap-4 items-start">
+                            <div className="w-full sm:w-1/3 flex-shrink-0">
+                              <Label htmlFor={`categoryImageUrl-${category.id}`}>Current Image</Label>
+                              <div className="mt-1 aspect-[4/3] w-full relative border rounded-md overflow-hidden bg-muted">
+                                {(category.imageUrl || 'https://placehold.co/200x150.png') && (
+                                  <Image src={category.imageUrl || 'https://placehold.co/200x150.png'} alt={category.name} layout="fill" objectFit="cover" key={category.imageUrl} data-ai-hint={category.dataAiHint || 'category image placeholder'} />
+                                )}
+                              </div>
+                            </div>
+                            <div className="w-full sm:w-2/3 space-y-4">
+                              <div>
+                                <Label htmlFor={`categoryImageUrlInput-${category.id}`}>Image URL</Label>
+                                <Input
+                                  id={`categoryImageUrlInput-${category.id}`}
+                                  value={category.imageUrl || ''}
+                                  onChange={e => handleCategoryImageChange(category.id, 'imageUrl', e.target.value)}
+                                  placeholder="https://example.com/image.png"
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor={`categoryAiHint-${category.id}`}>AI Hint</Label>
+                                <Input
+                                  id={`categoryAiHint-${category.id}`}
+                                  value={category.dataAiHint || ''}
+                                  onChange={e => handleCategoryImageChange(category.id, 'dataAiHint', e.target.value)}
+                                  placeholder="e.g. technology abstract"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                        <CardFooter>
+                          <Button type="submit" size="sm">
+                            <Save className="mr-2 h-4 w-4" /> Save Category Image
+                          </Button>
+                        </CardFooter>
+                      </form>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground">{isCategoriesLoaded ? 'No categories found. Add categories in "Manage Categories" tab.' : 'Loading categories...'}</p>
+              )}
+            </section>
+
           </div>
         </ScrollArea>
       </CardContent>
