@@ -12,90 +12,88 @@ h1, h2, h3, h4, h5, h6 {
 
 @layer base {
   :root {
-    --background: 60 56% 91%; /* Very light tan (#F5F5DC) */
-    --foreground: 40 15% 20%; /* Dark brown for text on light tan */
+    --background: 0 0% 100%; /* White */
+    --foreground: 240 10% 3.9%; /* Dark Gray / Almost Black */
 
-    --card: 60 50% 88%; /* Slightly darker tan for card backgrounds */
-    --card-foreground: 40 15% 20%;
+    --card: 0 0% 100%; /* White cards, rely on borders/shadows */
+    --card-foreground: 240 10% 3.9%;
 
-    --popover: 60 50% 86%; /* Popover background */
-    --popover-foreground: 40 15% 20%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
 
-    --primary: 43 100% 36%; /* Muted gold (#B8860B) */
-    --primary-foreground: 43 25% 95%; /* Light color for text on primary */
+    --primary: 43 100% 36%; /* Muted gold */
+    --primary-foreground: 43 85% 95%; /* Very light color for text on primary */
 
-    --secondary: 30 45% 75%; /* Lighter amber for secondary elements */
-    --secondary-foreground: 30 45% 20%; /* Dark text for secondary */
+    --secondary: 240 4.8% 95.9%; /* Light gray */
+    --secondary-foreground: 240 5.9% 10%; /* Dark text for secondary */
 
-    --muted: 60 50% 85%; /* Muted background elements */
-    --muted-foreground: 60 30% 45%; /* Muted text */
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%; /* Grayer text */
 
-    --accent: 30 45% 64%; /* Soft amber (#D4A274) for buttons/highlights */
-    --accent-foreground: 30 25% 15%; /* Dark text for accent */
+    --accent: 30 45% 64%; /* Soft amber */
+    --accent-foreground: 240 5.9% 10%; /* Dark text for accent */
     
     --accent-darker: 30 45% 50%; /* For 3D button effect */
 
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive-foreground: 60 90% 97.8%;
 
-    --border: 43 30% 70%; /* Gold-ish border, slightly lighter */
-    --input: 60 50% 95%; /* Very light input background, almost white */
+    --border: 240 5.9% 90%; /* Light gray border */
+    --input: 240 5.9% 90%; /* Light gray input background */
     --ring: 43 100% 46%; /* Brighter gold for focus rings */
 
     --radius: 0.5rem;
 
     /* Sidebar variables (can be same as main if not distinct sidebar theme) */
-    --sidebar-background: 60 50% 88%;
-    --sidebar-foreground: 40 15% 20%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 240 10% 3.9%;
     --sidebar-primary: 43 100% 36%;
-    --sidebar-primary-foreground: 43 25% 95%;
+    --sidebar-primary-foreground: 43 85% 95%;
     --sidebar-accent: 30 45% 64%;
-    --sidebar-accent-foreground: 30 25% 15%;
-    --sidebar-border: 43 30% 70%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 240 5.9% 90%;
     --sidebar-ring: 43 100% 46%;
   }
 
   .dark {
-    /* For dark mode, we can invert or use a predefined dark palette */
-    /* Keeping it simple for now, can be expanded if dark mode is a requirement */
-    --background: 40 15% 10%; /* Dark brown/black */
-    --foreground: 60 56% 91%; /* Light tan text */
+    --background: 240 10% 3.9%; /* Dark blue/gray */
+    --foreground: 60 90% 97.8%; /* Light text */
 
-    --card: 40 15% 15%;
-    --card-foreground: 60 56% 91%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 60 90% 97.8%;
 
-    --popover: 40 15% 12%;
-    --popover-foreground: 60 56% 91%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 60 90% 97.8%;
 
     --primary: 43 100% 40%; /* Slightly brighter gold for dark mode */
-    --primary-foreground: 40 15% 10%;
+    --primary-foreground: 43 85% 95%; /* Lighter text on primary for dark mode */
 
-    --secondary: 30 45% 50%;
-    --secondary-foreground: 60 56% 91%;
+    --secondary: 240 3.7% 15.9%; /* Darker gray */
+    --secondary-foreground: 60 90% 97.8%;
 
-    --muted: 40 15% 20%;
-    --muted-foreground: 60 40% 70%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
 
     --accent: 30 45% 58%; /* Slightly adjusted amber */
-    --accent-foreground: 40 15% 10%;
+    --accent-foreground: 60 90% 97.8%; /* Light text for accent on dark */
     
     --accent-darker: 30 45% 40%;
 
-    --destructive: 0 70% 50%;
+    --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 43 50% 30%;
-    --input: 40 15% 20%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
     --ring: 43 100% 50%;
 
     /* Sidebar dark variables */
-    --sidebar-background: 40 15% 12%;
-    --sidebar-foreground: 60 56% 91%;
+    --sidebar-background: 240 10% 3.9%;
+    --sidebar-foreground: 60 90% 97.8%;
     --sidebar-primary: 43 100% 40%;
-    --sidebar-primary-foreground: 40 15% 10%;
+    --sidebar-primary-foreground: 43 85% 95%;
     --sidebar-accent: 30 45% 58%;
-    --sidebar-accent-foreground: 40 15% 10%;
-    --sidebar-border: 43 50% 30%;
+    --sidebar-accent-foreground: 60 90% 97.8%;
+    --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 43 100% 50%;
   }
 }

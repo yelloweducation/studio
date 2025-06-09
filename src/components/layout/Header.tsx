@@ -5,11 +5,13 @@ import { useAuth } from '@/hooks/useAuth';
 import LuminaLogo from '@/components/LuminaLogo';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import { Home, LogIn, UserPlus, LayoutDashboard, LogOut } from 'lucide-react';
+import { Home, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon } from 'lucide-react';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const Header = () => {
   const { isAuthenticated, user, role, logout, loading } = useAuth();
   const router = useRouter();
+  const { theme, toggleTheme } = useTheme();
 
   const handleLogout = () => {
     logout();
@@ -57,6 +59,15 @@ const Header = () => {
               </Button>
             </>
           )}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={toggleTheme} 
+            aria-label="Toggle theme" 
+            className="hover:bg-accent/20 w-9 h-9"
+          >
+            {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+          </Button>
         </div>
       </nav>
     </header>
