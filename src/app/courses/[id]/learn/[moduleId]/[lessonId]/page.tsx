@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { courses as allCourses, type Course, type Lesson, type Module } from '@/data/mockData';
 import { useEffect, useState, useMemo } from 'react';
 import Image from 'next/image';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardFooter } from '@/components/ui/card'; // Removed CardDescription, CardHeader, CardTitle as they are not directly used in the new layout
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, BookOpen, Home, Loader2, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
@@ -23,39 +23,54 @@ export default function LessonViewerPage() {
   const currentModuleId = params.moduleId as string;
   const currentLessonId = params.lessonId as string;
 
-  const [activeCourses, setActiveCourses] = useState<Course[]>(allCourses);
+  const [activeCourses, setActiveCourses] = useState<Course[]>([]); // Initialize as empty
+  const [coursesReady, setCoursesReady] = useState(false); // New state to track if activeCourses are loaded
+
   const [course, setCourse] = useState<Course | null>(null);
   const [currentModule, setCurrentModule] = useState<Module | null>(null);
   const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null);
+  
   const [isLoading, setIsLoading] = useState(true); 
   const [error, setError] = useState<string | null>(null);
 
+  // Effect 1: Load global/admin courses from localStorage
   useEffect(() => {
     const storedCoursesString = localStorage.getItem('adminCourses');
+    let coursesToUse: Course[];
     if (storedCoursesString) {
       try {
-        const parsedAdminCourses = JSON.parse(storedCoursesString) as Course[];
+        const parsedAdminCourses = JSON.parse(storedCoursesString);
         if (Array.isArray(parsedAdminCourses)) {
-          setActiveCourses(parsedAdminCourses);
+          coursesToUse = parsedAdminCourses; 
         } else {
           console.error("Stored adminCourses from localStorage is not an array, using default mock courses.");
-          setActiveCourses(allCourses); // Fallback to default
+          coursesToUse = allCourses; 
         }
       } catch (e) {
         console.error("Failed to parse adminCourses from localStorage, using default mock courses.", e);
-        setActiveCourses(allCourses); // Fallback to default
+        coursesToUse = allCourses; 
       }
     } else {
-       setActiveCourses(allCourses); // Fallback if nothing in localStorage
+       coursesToUse = allCourses; 
     }
-  }, []);
+    setActiveCourses(coursesToUse);
+    setCoursesReady(true); // Signal that activeCourses are now determined
+  }, []); // Runs once on mount (or re-mount due to key change from pageContentKey)
   
+  // Effect 2: Load specific lesson data, dependent on coursesReady
   useEffect(() => {
+    // Always start by setting loading true and clearing errors/old data for the new lesson attempt
     setIsLoading(true);
     setError(null);
     setCourse(null);
     setCurrentModule(null);
     setCurrentLesson(null);
+
+    if (!coursesReady) {
+      // If global courses aren't ready, we remain in a loading state.
+      // setIsLoading(true) was already called.
+      return; 
+    }
 
     if (!courseId || !currentModuleId || !currentLessonId) {
       setError("Invalid lesson parameters in URL."); 
@@ -63,9 +78,8 @@ export default function LessonViewerPage() {
       return;
     }
 
+    // coursesReady is true here, so activeCourses is determined (could be empty if admin saved an empty list)
     if (activeCourses.length === 0) {
-      // This state might occur if localStorage parsing fails or is empty and allCourses is also empty.
-      // Or if initial load of activeCourses hasn't completed (though less likely with current setup).
       setError("No course data available to load from. Please try again or contact support.");
       setIsLoading(false);
       return;
@@ -95,9 +109,9 @@ export default function LessonViewerPage() {
     setCourse(foundCourse);
     setCurrentModule(foundModule);
     setCurrentLesson(foundLesson);
-    setIsLoading(false);
+    setIsLoading(false); // Successfully loaded lesson data
 
-  }, [courseId, currentModuleId, currentLessonId, activeCourses]);
+  }, [courseId, currentModuleId, currentLessonId, activeCourses, coursesReady]); // Key dependencies
 
   const { prevLessonLink, nextLessonLink, isFirstLesson, isLastLesson } = useMemo(() => {
     if (!course || !currentModule || !currentLesson) {
@@ -154,11 +168,11 @@ export default function LessonViewerPage() {
     }
   };
 
-  // The content inside this div will be re-keyed on navigation to ensure fresh state
   const pageContentKey = `${courseId}-${currentModuleId}-${currentLessonId}`;
 
   const renderContent = () => {
-    if (isLoading) {
+    // Show loader if still loading specific lesson OR if global courses aren't ready yet.
+    if (isLoading || !coursesReady) {
       return (
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)]">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -167,7 +181,8 @@ export default function LessonViewerPage() {
       );
     }
   
-    if (error) {
+    // Only show error if not loading, global courses are ready, AND an error string exists.
+    if (error) { // Error is already confirmed to be non-null if this block is reached
       return (
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center">
           <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
@@ -183,6 +198,7 @@ export default function LessonViewerPage() {
       );
     }
   
+    // Only show "not found" if not loading, no error, but content objects are missing.
     if (!course || !currentModule || !currentLesson) {
        return (
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center">
@@ -255,7 +271,7 @@ export default function LessonViewerPage() {
                   }
                 }}
                 className={isLastLesson ? "bg-green-600 hover:bg-green-700 text-white" : "bg-primary hover:bg-primary/90"}
-                disabled={!isLastLesson && !nextLessonLink && !isFirstLesson} // Prevent disable if it's the only lesson and also the last
+                disabled={!isLastLesson && !nextLessonLink && !isFirstLesson}
               >
                 {isLastLesson ? 'Finish Course' : 'Next Lesson'}
                 {!isLastLesson && <ChevronRight className="ml-2 h-4 w-4" />}
@@ -269,7 +285,7 @@ export default function LessonViewerPage() {
 
   return (
     <ProtectedRoute>
-      <div key={pageContentKey}>
+      <div key={pageContentKey}> {/* Key to force re-mount on navigation */}
         {renderContent()}
       </div>
     </ProtectedRoute>
