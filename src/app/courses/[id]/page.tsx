@@ -11,12 +11,20 @@ import Link from 'next/link';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
-function getEmbedUrl(url: string): string | null {
+function getEmbedUrl(url: string | undefined | null): string | null {
+  // Check if the URL is null, undefined, or an empty string.
   if (!url || typeof url !== 'string') return null;
+
+  // Basic check: if it doesn't start with http, it's unlikely to be a valid embeddable URL.
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    // console.warn(`Provided embedUrl does not start with http(s): ${url}`); // Optional: for debugging
+    return null;
+  }
 
   try {
     const urlObj = new URL(url);
 
+    // Handle YouTube URLs
     if (urlObj.hostname === 'www.youtube.com' && urlObj.pathname === '/watch') {
       const videoId = urlObj.searchParams.get('v');
       return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
@@ -25,28 +33,31 @@ function getEmbedUrl(url: string): string | null {
       const videoId = urlObj.pathname.substring(1);
       return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
     }
+
+    // Handle Google Drive URLs
     if (urlObj.hostname === 'drive.google.com') {
       if (urlObj.pathname.includes('/preview')) {
-        return url; 
+        return url;
       }
       let fileId: string | null = null;
       if (urlObj.pathname.startsWith('/file/d/')) {
         const parts = urlObj.pathname.split('/');
         if (parts.length > 3) fileId = parts[3];
-      } else if (urlObj.searchParams.has('id')) { 
+      } else if (urlObj.searchParams.has('id')) {
         fileId = urlObj.searchParams.get('id');
       }
 
       if (fileId) {
         return `https://drive.google.com/file/d/${fileId}/preview`;
       }
-      return null; // If it's Google Drive but not a recognized pattern.
+      return null;
     }
   } catch (error) {
-    console.error("Error parsing embed URL, or URL is not standard:", error);
+    console.error("Error parsing embed URL (url might be malformed even after basic checks):", url, error);
     return null;
   }
-  return url; // Fallback for other valid URLs (e.g. Vimeo, direct MP4 if supported by iframe)
+  // Fallback for other valid URLs that might be directly embeddable
+  return url;
 }
 
 
@@ -59,21 +70,24 @@ export default function CourseDetailPage() {
 
 
   useEffect(() => {
-    setIsLoading(true); // Set loading true at the start of this effect
+    // This effect loads the list of available courses.
+    setIsLoading(true);
     const storedCourses = localStorage.getItem('adminCourses');
+    let coursesToUse = allCourses;
     if (storedCourses) {
       try {
         const parsedCourses = JSON.parse(storedCourses) as Course[];
-        setActiveCourses(parsedCourses.length > 0 ? parsedCourses : allCourses);
+        if (parsedCourses.length > 0) {
+          coursesToUse = parsedCourses;
+        }
       } catch (e) {
         console.error("Failed to parse courses from localStorage on detail page", e);
-        setActiveCourses(allCourses);
+        // Fallback to allCourses is already default
       }
-    } else {
-      setActiveCourses(allCourses);
     }
-    // Removed setIsLoading(false) from here; it will be handled in the next effect
-  }, []); // Runs once on mount to load activeCourses list
+    setActiveCourses(coursesToUse);
+    // setIsLoading(false) will be handled in the next effect after course finding attempt
+  }, []);
 
   useEffect(() => {
     // This effect runs when courseId changes or when activeCourses list is populated/updated.
@@ -86,26 +100,13 @@ export default function CourseDetailPage() {
     if (activeCourses.length > 0) {
         const foundCourse = activeCourses.find(c => c.id === courseId);
         setCourse(foundCourse || null);
-        setIsLoading(false); // Set loading to false after attempting to find the course
     } else {
-        // If activeCourses is still empty, it means the first effect hasn't completed
-        // or resulted in an empty list. If courseId is present, we should still eventually
-        // set isLoading to false if no courses are ever loaded.
-        // This case can happen if allCourses is also empty and localStorage is empty/invalid.
-        // Setting a timeout as a fallback or ensuring the first effect always sets activeCourses
-        // (even if empty) helps.
-        // The current structure should handle this because setIsLoading(false) is called
-        // after trying to find the course, once activeCourses is available.
-        // If activeCourses remains empty after the first effect, this effect will still run,
-        // find nothing, set course to null, and set isLoading to false.
-         if (!localStorage.getItem('adminCourses') && allCourses.length === 0) {
-            // Only case where activeCourses would remain empty if no localStorage and no mock data
-            setCourse(null);
-            setIsLoading(false);
-        }
+        // If activeCourses is empty (e.g. initial load or error), set course to null
+        setCourse(null);
     }
+    setIsLoading(false); // Set loading to false after attempting to find the course
     
-  }, [courseId, activeCourses]); // Depends on courseId and the populated activeCourses list
+  }, [courseId, activeCourses]);
 
   if (isLoading) {
     return (
@@ -176,31 +177,34 @@ export default function CourseDetailPage() {
                       <AccordionContent className="pb-4 pt-0">
                         {module.lessons && module.lessons.length > 0 ? (
                           <ul className="space-y-4 pl-2">
-                            {module.lessons.map(lesson => (
-                              <li key={lesson.id} className="p-4 border rounded-md bg-card hover:shadow-md transition-shadow">
-                                <div className="flex justify-between items-center mb-2">
-                                  <h4 className="font-medium text-md flex items-center">
-                                    {getEmbedUrl(lesson.embedUrl || '') ? <Video className="mr-2 h-5 w-5 text-accent"/> : <FileText className="mr-2 h-5 w-5 text-accent"/>}
-                                    {lesson.title}
-                                  </h4>
-                                  <span className="text-xs bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full">{lesson.duration}</span>
-                                </div>
-                                {lesson.description && (
-                                  <p className="text-sm text-muted-foreground mb-3">{lesson.description}</p>
-                                )}
-                                {lesson.embedUrl && getEmbedUrl(lesson.embedUrl) && (
-                                  <div className="aspect-video rounded-md overflow-hidden border">
-                                    <iframe
-                                      src={getEmbedUrl(lesson.embedUrl) || ''}
-                                      title={lesson.title}
-                                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                                      allowFullScreen
-                                      className="w-full h-full"
-                                    ></iframe>
+                            {module.lessons.map(lesson => {
+                              const embeddableUrl = getEmbedUrl(lesson.embedUrl);
+                              return (
+                                <li key={lesson.id} className="p-4 border rounded-md bg-card hover:shadow-md transition-shadow">
+                                  <div className="flex justify-between items-center mb-2">
+                                    <h4 className="font-medium text-md flex items-center">
+                                      {embeddableUrl ? <Video className="mr-2 h-5 w-5 text-accent"/> : <FileText className="mr-2 h-5 w-5 text-accent"/>}
+                                      {lesson.title}
+                                    </h4>
+                                    <span className="text-xs bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full">{lesson.duration}</span>
                                   </div>
-                                )}
-                              </li>
-                            ))}
+                                  {lesson.description && (
+                                    <p className="text-sm text-muted-foreground mb-3">{lesson.description}</p>
+                                  )}
+                                  {lesson.embedUrl && embeddableUrl && (
+                                    <div className="aspect-video rounded-md overflow-hidden border">
+                                      <iframe
+                                        src={embeddableUrl || ''} 
+                                        title={lesson.title}
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                        allowFullScreen
+                                        className="w-full h-full"
+                                      ></iframe>
+                                    </div>
+                                  )}
+                                </li>
+                              );
+                            })}
                           </ul>
                         ) : (
                            <p className="text-sm text-muted-foreground px-4 py-2">No lessons in this module yet.</p>
@@ -222,3 +226,4 @@ export default function CourseDetailPage() {
     </ProtectedRoute>
   );
 }
+
