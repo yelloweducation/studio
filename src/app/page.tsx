@@ -85,9 +85,12 @@ export default function Home() {
             <Search className="mr-2 h-5 w-5" /> Search
           </Button>
         </form>
-        <Button onClick={handleShowVideos} variant="outline" className="border-primary text-primary hover:bg-primary/10">
-          <VideoIcon className="mr-2 h-5 w-5" /> View Videos
-        </Button>
+        {/* Container for buttons to be in parallel */}
+        <div className="flex justify-center gap-2">
+          <Button onClick={handleShowVideos} variant="outline" className="border-primary text-primary hover:bg-primary/10">
+            <VideoIcon className="mr-2 h-5 w-5" /> View Videos
+          </Button>
+        </div>
       </section>
 
       {activeSection === 'search' && showResults && (
