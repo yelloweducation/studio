@@ -22,8 +22,9 @@ export default function CourseDetailPage() {
   const router = useRouter();
 
   const [activeCourses, setActiveCourses] = useState<Course[]>([]);
+  const [initialCoursesLoaded, setInitialCoursesLoaded] = useState(false); // New state
   const [course, setCourse] = useState<Course | null>(null);
-  const [isLoading, setIsLoading] = useState(true); // Initialize isLoading to true
+  const [isLoading, setIsLoading] = useState(true);
   const [firstLessonPath, setFirstLessonPath] = useState<string | null>(null);
   const [completionInfo, setCompletionInfo] = useState<{ date: string; isCompleted: boolean } | null>(null);
   const [userPaymentSubmission, setUserPaymentSubmission] = useState<PaymentSubmission | null>(null);
@@ -43,34 +44,26 @@ export default function CourseDetailPage() {
       }
     }
     setActiveCourses(coursesToUse);
-    // Note: setIsLoading is not set to false here. It's handled by the next effect.
+    setInitialCoursesLoaded(true); // Signal that activeCourses loading attempt is complete
   }, []); 
 
   // Effect 2: Determine the specific course and its first lesson path
   useEffect(() => {
-    setIsLoading(true); // Assume loading until we explicitly know otherwise for this specific courseId/activeCourses combination.
-
-    if (!courseId) {
-      // If courseId is not (yet) available, we can't find a course.
-      // Keep isLoading true and wait. The effect will re-run when courseId populates.
-      // Setting course to null here if it was previously set could be an option,
-      // but the primary goal is to wait for courseId.
-      // If courseId never arrives, isLoading remains true (undesirable, but params should populate).
-      // For safety, if it's truly absent after a cycle, we might need another way to stop loading.
-      // However, Next.js params usually populate.
-      return; 
+    if (!initialCoursesLoaded) {
+      // Wait for activeCourses to be loaded by the first effect.
+      // Ensure isLoading is true during this wait.
+      if (!isLoading) setIsLoading(true);
+      return;
     }
 
-    // If activeCourses is not yet populated, we also need to wait.
-    // This effect will re-run when activeCourses changes.
-    if (activeCourses.length === 0) {
-        // This could mean activeCourses is genuinely empty (e.g. admin saved an empty list)
-        // OR it means the first useEffect hasn't finished setting activeCourses from localStorage.
-        // If it's an admin-saved empty list, the find logic below will correctly result in null.
-        // If it's still loading, we wait.
-        // No ideal way to distinguish "still loading activeCourses" vs "activeCourses is loaded and empty"
-        // without another state variable. For now, we proceed, and if activeCourses is empty,
-        // determinedCourse will be null.
+    setIsLoading(true); 
+    setCourse(null); // Reset previous course data
+    setFirstLessonPath(null);
+
+    if (!courseId) {
+      // If courseId is not available (e.g., router params not ready), stop loading.
+      setIsLoading(false);
+      return; 
     }
     
     let determinedCourse: Course | null = null;
@@ -88,17 +81,17 @@ export default function CourseDetailPage() {
         }
       }
     }
-    // If course not found in activeCourses (or activeCourses was empty), determinedCourse remains null.
-
+    
     setCourse(determinedCourse);
     setFirstLessonPath(determinedPath);
-    setIsLoading(false); // Finish loading attempt for this specific course
+    setIsLoading(false); 
 
-  }, [courseId, activeCourses]); // Re-run if courseId or the list of activeCourses changes
+  }, [courseId, activeCourses, initialCoursesLoaded]); // Depend on initialCoursesLoaded
 
   // Effect 3: Determine completion status and payment submission status
   useEffect(() => {
-    if (!course || !user) { // Only proceed if we have a course and user
+    // Only proceed if initial courses are loaded, not currently loading main course data, and user/course are available
+    if (!initialCoursesLoaded || isLoading || !course || !user) { 
       setCompletionInfo(null);
       setUserPaymentSubmission(null);
       return;
@@ -123,7 +116,7 @@ export default function CourseDetailPage() {
     setCompletionInfo({ date: completionDate, isCompleted: isCourseCompleted });
 
     const isPaidCourse = course.price && course.price > 0;
-    if (isPaidCourse && !isCourseCompleted) { // Only check payment if paid and not completed
+    if (isPaidCourse && !isCourseCompleted) { 
       const allSubmissions = getPaymentSubmissions();
       const userCourseSubmissions = allSubmissions
         .filter(sub => sub.userId === user.id && sub.courseId === course.id)
@@ -131,12 +124,12 @@ export default function CourseDetailPage() {
       
       setUserPaymentSubmission(userCourseSubmissions.length > 0 ? userCourseSubmissions[0] : null);
     } else {
-      setUserPaymentSubmission(null); // Reset if not a paid course or already completed
+      setUserPaymentSubmission(null); 
     }
-  }, [user, course, isLoading]); // Add isLoading here: re-evaluate when course loading is done.
+  }, [user, course, isLoading, initialCoursesLoaded]); // Added initialCoursesLoaded and isLoading
 
 
-  if (isLoading) {
+  if (isLoading || !initialCoursesLoaded) { // Show loader if main loading or initial courses not yet processed
     return (
       <div className="text-center py-20 flex flex-col items-center justify-center min-h-[calc(100vh-200px)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -170,8 +163,7 @@ export default function CourseDetailPage() {
       try {
         formattedDate = format(new Date(completionInfo.date), 'PPP');
       } catch (error) {
-        // console.error("Error formatting completion date:", error);
-        formattedDate = completionInfo.date; // Fallback to raw date string
+        formattedDate = completionInfo.date; 
       }
       return (
         <div className="w-full p-3 text-center bg-green-100 dark:bg-green-900 border border-green-500 text-green-700 dark:text-green-300 rounded-md shadow-sm flex flex-col sm:flex-row items-center justify-center gap-2">
@@ -188,7 +180,6 @@ export default function CourseDetailPage() {
     
     if (firstLessonPath) {
       if (isPaidCourse) {
-        // Check payment submission status if user is logged in
         if (user && userPaymentSubmission) {
           if (userPaymentSubmission.status === 'verified') {
             return (
@@ -232,7 +223,6 @@ export default function CourseDetailPage() {
             );
           }
         }
-        // If no user, or no submission, or unhandled status for a paid course, show enroll button
         return (
           <Button size="lg" className="w-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150" asChild>
             <Link href={`/courses/${course.id}/checkout`}>
@@ -240,7 +230,7 @@ export default function CourseDetailPage() {
             </Link>
           </Button>
         );
-      } else { // Free course
+      } else { 
         return (
           <Button size="lg" className="w-full bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150" asChild>
             <Link href={firstLessonPath}>
@@ -251,7 +241,6 @@ export default function CourseDetailPage() {
       }
     }
 
-    // Default if no firstLessonPath (course has no content)
     return (
       <Button size="lg" className="w-full" disabled>
         <PlayCircle className="mr-2 h-6 w-6"/> Course Content Coming Soon
@@ -385,5 +374,6 @@ export default function CourseDetailPage() {
     </ProtectedRoute>
   );
 }
+    
 
     
