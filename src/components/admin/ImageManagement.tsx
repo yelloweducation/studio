@@ -1,62 +1,33 @@
 
 "use client";
-import { useState, useEffect, type FormEvent, type ChangeEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { ImageIcon, Save, Edit3 } from 'lucide-react';
+import { ImageIcon, Save } from 'lucide-react'; // Removed Edit3 as it's not directly used here
 import { useToast } from '@/hooks/use-toast';
 import { courses as initialCourses, type Course } from '@/data/mockData';
 import { videos as initialVideos, type Video } from '@/data/mockData';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
 
-const HERO_IMAGE_STORAGE_KEY = 'homePageHeroImageDetails';
-const DEFAULT_HERO_IMAGE_URL = 'https://placehold.co/350x350.png';
-const DEFAULT_HERO_AI_HINT = '3d globe';
-
-type HeroImageData = {
-  imageUrl: string;
-  dataAiHint: string;
-};
+// Removed HERO_IMAGE_STORAGE_KEY, DEFAULT_HERO_IMAGE_URL, DEFAULT_HERO_AI_HINT
+// Removed HeroImageData type
 
 export default function ImageManagement() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [videos, setVideos] = useState<Video[]>([]);
-  const [heroImage, setHeroImage] = useState<HeroImageData>({ imageUrl: DEFAULT_HERO_IMAGE_URL, dataAiHint: DEFAULT_HERO_AI_HINT });
+  // Removed heroImage, editableHeroImageUrl, editableHeroAiHint states
   
-  const [editableHeroImageUrl, setEditableHeroImageUrl] = useState(heroImage.imageUrl);
-  const [editableHeroAiHint, setEditableHeroAiHint] = useState(heroImage.dataAiHint);
-
   const [isCoursesLoaded, setIsCoursesLoaded] = useState(false);
   const [isVideosLoaded, setIsVideosLoaded] = useState(false);
-  const [isHeroImageLoaded, setIsHeroImageLoaded] = useState(false);
+  // Removed isHeroImageLoaded state
 
   const { toast } = useToast();
 
-  // Load Hero Image
-  useEffect(() => {
-    const storedHeroImage = localStorage.getItem(HERO_IMAGE_STORAGE_KEY);
-    if (storedHeroImage) {
-      try {
-        const parsed = JSON.parse(storedHeroImage) as HeroImageData;
-        setHeroImage(parsed);
-        setEditableHeroImageUrl(parsed.imageUrl);
-        setEditableHeroAiHint(parsed.dataAiHint);
-      } catch (e) {
-        console.error("Failed to parse hero image data from localStorage", e);
-        setHeroImage({ imageUrl: DEFAULT_HERO_IMAGE_URL, dataAiHint: DEFAULT_HERO_AI_HINT });
-        setEditableHeroImageUrl(DEFAULT_HERO_IMAGE_URL);
-        setEditableHeroAiHint(DEFAULT_HERO_AI_HINT);
-      }
-    } else {
-        setHeroImage({ imageUrl: DEFAULT_HERO_IMAGE_URL, dataAiHint: DEFAULT_HERO_AI_HINT });
-        setEditableHeroImageUrl(DEFAULT_HERO_IMAGE_URL);
-        setEditableHeroAiHint(DEFAULT_HERO_AI_HINT);
-    }
-    setIsHeroImageLoaded(true);
-  }, []);
+  // Removed useEffect for loading Hero Image
+  // Removed handleSaveHeroImage function
 
   // Load Courses
   useEffect(() => {
@@ -90,14 +61,6 @@ export default function ImageManagement() {
     setIsVideosLoaded(true);
   }, []);
 
-  const handleSaveHeroImage = (e: FormEvent) => {
-    e.preventDefault();
-    const newHeroData = { imageUrl: editableHeroImageUrl, dataAiHint: editableHeroAiHint };
-    localStorage.setItem(HERO_IMAGE_STORAGE_KEY, JSON.stringify(newHeroData));
-    setHeroImage(newHeroData); // Update state for immediate reflection if needed elsewhere
-    toast({ title: "Homepage Hero Image Updated", description: "Changes saved successfully." });
-  };
-
   const handleCourseImageChange = (courseId: string, field: 'imageUrl' | 'dataAiHint', value: string) => {
     setCourses(prev => prev.map(c => c.id === courseId ? { ...c, [field]: value } : c));
   };
@@ -105,7 +68,6 @@ export default function ImageManagement() {
   const handleSaveCourseImage = (courseId: string) => {
     const courseToSave = courses.find(c => c.id === courseId);
     if (courseToSave) {
-      // Update the full list in localStorage
       const currentStoredCourses = localStorage.getItem('adminCourses');
       let allCourses: Course[] = [];
       if (currentStoredCourses) {
@@ -155,41 +117,7 @@ export default function ImageManagement() {
       <CardContent>
         <ScrollArea className="h-[calc(100vh-20rem)] pr-3">
           <div className="space-y-8">
-            {/* Homepage Hero Image */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold">Homepage Hero Image</CardTitle>
-              </CardHeader>
-              <form onSubmit={handleSaveHeroImage}>
-                <CardContent className="space-y-4">
-                  <div className="flex flex-col sm:flex-row gap-4 items-start">
-                    <div className="w-full sm:w-1/3 flex-shrink-0">
-                        <Label htmlFor="heroImageUrl">Current Hero Image</Label>
-                        <div className="mt-1 aspect-square w-full max-w-[200px] sm:max-w-full relative border rounded-md overflow-hidden bg-muted">
-                        {editableHeroImageUrl && (
-                            <Image src={editableHeroImageUrl} alt="Homepage hero preview" layout="fill" objectFit="cover" key={editableHeroImageUrl} />
-                        )}
-                        </div>
-                    </div>
-                    <div className="w-full sm:w-2/3 space-y-4">
-                        <div>
-                            <Label htmlFor="heroImageUrl">Image URL</Label>
-                            <Input id="heroImageUrl" value={editableHeroImageUrl} onChange={e => setEditableHeroImageUrl(e.target.value)} />
-                        </div>
-                        <div>
-                            <Label htmlFor="heroAiHint">AI Hint (keywords)</Label>
-                            <Input id="heroAiHint" value={editableHeroAiHint} onChange={e => setEditableHeroAiHint(e.target.value)} placeholder="e.g. 3d globe tech"/>
-                        </div>
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <Button type="submit" size="sm" className="bg-accent text-accent-foreground hover:bg-accent/90">
-                    <Save className="mr-2 h-4 w-4"/> Save Hero Image
-                  </Button>
-                </CardFooter>
-              </form>
-            </Card>
+            {/* Homepage Hero Image section removed */}
 
             {/* Course Images */}
             <section>
@@ -308,4 +236,3 @@ export default function ImageManagement() {
     </Card>
   );
 }
-
