@@ -13,25 +13,25 @@ export default function EnrollmentStats() {
   return (
     <Card className="shadow-lg">
       <CardHeader>
-        <CardTitle className="flex items-center text-2xl font-headline">
-            <BarChart3 className="mr-3 h-7 w-7 text-primary" /> Enrollment Statistics
+        <CardTitle className="flex items-center text-xl md:text-2xl font-headline">
+            <BarChart3 className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Enrollment Statistics
         </CardTitle>
         <CardDescription>Overview of course enrollments and user activity.</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex justify-between p-3 bg-muted/50 rounded-md">
+      <CardContent className="space-y-3 sm:space-y-4">
+        <div className="flex flex-col sm:flex-row justify-between p-2 sm:p-3 bg-muted/50 rounded-md text-sm sm:text-base">
           <span className="font-medium">Total Enrollments:</span>
-          <span className="text-primary font-semibold">{totalEnrollments}</span>
+          <span className="text-primary font-semibold text-right sm:text-left">{totalEnrollments}</span>
         </div>
-        <div className="flex justify-between p-3 bg-muted/50 rounded-md">
+        <div className="flex flex-col sm:flex-row justify-between p-2 sm:p-3 bg-muted/50 rounded-md text-sm sm:text-base">
           <span className="font-medium">Active Students:</span>
-          <span className="text-primary font-semibold">{activeStudents}</span>
+          <span className="text-primary font-semibold text-right sm:text-left">{activeStudents}</span>
         </div>
-        <div className="flex justify-between p-3 bg-muted/50 rounded-md">
+        <div className="flex flex-col sm:flex-row justify-between p-2 sm:p-3 bg-muted/50 rounded-md text-sm sm:text-base">
           <span className="font-medium">Most Popular Course:</span>
-          <span className="text-primary font-semibold">{popularCourse}</span>
+          <span className="text-primary font-semibold text-right sm:text-left">{popularCourse}</span>
         </div>
-        <p className="text-sm text-muted-foreground text-center pt-4">
+        <p className="text-xs sm:text-sm text-muted-foreground text-center pt-2 sm:pt-4">
           More detailed statistics and charts would be available here.
         </p>
       </CardContent>

@@ -49,8 +49,10 @@ const CourseForm = ({ course, onSubmit, onCancel }: { course?: Course, onSubmit:
         <label htmlFor="instructor" className="block text-sm font-medium text-foreground mb-1">Instructor</label>
         <Input id="instructor" value={instructor} onChange={e => setInstructor(e.target.value)} required />
       </div>
-      <DialogFooter>
-        <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+      <DialogFooter className="pt-2">
+        <DialogClose asChild>
+          <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+        </DialogClose>
         <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90">
           {course ? 'Save Changes' : 'Add Course'}
         </Button>
@@ -67,13 +69,18 @@ export default function CourseManagement() {
   const { toast } = useToast();
 
   useEffect(() => {
-    setCourses(initialCourses); // Load initial mock data
+    // Simulating data fetch
+    const timer = setTimeout(() => {
+        setCourses(initialCourses); 
+    }, 500); // Simulate a short delay
+    return () => clearTimeout(timer);
   }, []);
 
   const handleAddCourse = (data: Partial<Course>) => {
     const newCourse = { ...data, id: `course${Date.now()}`, modules: [], imageUrl: 'https://placehold.co/600x400.png?text=New+Course' } as Course;
     setCourses(prev => [newCourse, ...prev]);
     setIsFormOpen(false);
+    setEditingCourse(undefined);
     toast({ title: "Course Added", description: `${newCourse.title} has been successfully added.` });
   };
 
@@ -95,11 +102,16 @@ export default function CourseManagement() {
     setIsFormOpen(true);
   };
 
+  const closeForm = () => {
+    setIsFormOpen(false);
+    setEditingCourse(undefined);
+  }
+
   return (
     <Card className="shadow-lg">
       <CardHeader>
-        <CardTitle className="flex items-center text-2xl font-headline">
-          <ListOrdered className="mr-3 h-7 w-7 text-primary" /> Course Management
+        <CardTitle className="flex items-center text-xl md:text-2xl font-headline">
+          <ListOrdered className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Course Management
         </CardTitle>
         <CardDescription>Add, edit, or delete courses in the system.</CardDescription>
       </CardHeader>
@@ -107,13 +119,13 @@ export default function CourseManagement() {
         <div className="mb-6 text-right">
           <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
             <DialogTrigger asChild>
-              <Button onClick={() => openForm()} className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-md hover:shadow-sm active:translate-y-px transition-all duration-150">
+              <Button onClick={() => openForm()} className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-md hover:shadow-sm active:translate-y-px transition-all duration-150 w-full sm:w-auto">
                 <PlusCircle className="mr-2 h-5 w-5" /> Add New Course
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-lg">
               <DialogHeader>
-                <DialogTitle className="font-headline">{editingCourse ? 'Edit Course' : 'Add New Course'}</DialogTitle>
+                <DialogTitle className="font-headline text-xl md:text-2xl">{editingCourse ? 'Edit Course' : 'Add New Course'}</DialogTitle>
                 <DialogDescription>
                   {editingCourse ? 'Modify the details of the existing course.' : 'Fill in the details for the new course.'}
                 </DialogDescription>
@@ -121,7 +133,7 @@ export default function CourseManagement() {
               <CourseForm 
                 course={editingCourse} 
                 onSubmit={editingCourse ? handleEditCourse : handleAddCourse}
-                onCancel={() => { setIsFormOpen(false); setEditingCourse(undefined); }}
+                onCancel={closeForm}
               />
             </DialogContent>
           </Dialog>
@@ -130,18 +142,38 @@ export default function CourseManagement() {
         {courses.length > 0 ? (
           <ul className="space-y-4">
             {courses.map(course => (
-              <li key={course.id} className="p-4 border rounded-lg bg-card flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center shadow-sm">
+              <li key={course.id} className="p-3 sm:p-4 border rounded-lg bg-card flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex-grow">
-                  <h3 className="font-semibold font-headline text-lg">{course.title}</h3>
-                  <p className="text-sm text-muted-foreground">{course.category} - By {course.instructor}</p>
+                  <h3 className="font-semibold font-headline text-md md:text-lg">{course.title}</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground">{course.category} - By {course.instructor}</p>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:space-x-2 gap-2 sm:gap-0 w-full sm:w-auto">
                   <Button variant="outline" size="sm" onClick={() => openForm(course)} className="w-full sm:w-auto hover:border-primary hover:text-primary">
                     <Edit3 className="mr-1 h-4 w-4" /> Edit
                   </Button>
-                  <Button variant="destructive" size="sm" onClick={() => handleDeleteCourse(course.id)} className="w-full sm:w-auto">
-                    <Trash2 className="mr-1 h-4 w-4" /> Delete
-                  </Button>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                       <Button variant="destructive" size="sm" className="w-full sm:w-auto">
+                        <Trash2 className="mr-1 h-4 w-4" /> Delete
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-xs">
+                      <DialogHeader>
+                        <DialogTitle>Confirm Deletion</DialogTitle>
+                        <DialogDescription>
+                          Are you sure you want to delete the course "{course.title}"? This action cannot be undone.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <DialogFooter className="pt-2">
+                        <DialogClose asChild>
+                          <Button variant="outline">Cancel</Button>
+                        </DialogClose>
+                        <DialogClose asChild>
+                          <Button variant="destructive" onClick={() => handleDeleteCourse(course.id)}>Delete Course</Button>
+                        </DialogClose>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
                 </div>
               </li>
             ))}
