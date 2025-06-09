@@ -2,6 +2,7 @@
 "use client";
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image'; // Added import
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, Video as VideoIcon, XCircle } from 'lucide-react';
@@ -34,10 +35,18 @@ export default function Home() {
   return (
     <div className="flex flex-col items-center py-8">
       <section className="w-full max-w-2xl text-center mb-12">
-        <h1 className="text-4xl md:text-5xl font-headline font-bold mb-4 text-primary">Welcome to Yellow Institute</h1>
-        <p className="text-lg text-foreground/80 mb-8">
-          Discover a world of knowledge. Search for courses or explore trending videos.
-        </p>
+        <div className="mb-8 flex justify-center">
+          <Image
+            src="https://placehold.co/350x350.png"
+            alt="Engaged Student Learning - Yellow Institute"
+            width={350}
+            height={350}
+            className="rounded-lg shadow-xl hover:shadow-2xl transition-shadow duration-300"
+            data-ai-hint="student learning 3d"
+            priority
+          />
+        </div>
+        
         <form onSubmit={handleFormSubmit} className="w-full mb-4">
           <div className="relative flex-grow">
             <Input
@@ -71,8 +80,8 @@ export default function Home() {
           </Button>
           <Button 
             onClick={handleShowVideos} 
-            variant="outline" 
-            className="flex-1 border-primary text-primary hover:bg-primary/10"
+            variant="default" // Changed from outline to default for 3D primary style
+            className="flex-1" // Retain flex-1 for equal width
           >
             <VideoIcon className="mr-2 h-5 w-5" /> View Videos
           </Button>
