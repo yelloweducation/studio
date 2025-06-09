@@ -1,11 +1,25 @@
 
+export type Lesson = {
+  id: string;
+  title: string;
+  duration: string;
+  description?: string;
+  embedUrl?: string;
+};
+
+export type Module = {
+  id: string;
+  title: string;
+  lessons: Lesson[];
+};
+
 export type Course = {
   id: string;
   title: string;
   description: string;
   category: string;
   instructor: string;
-  modules: { id: string; title: string; lessons: { id: string; title: string; duration: string }[] }[];
+  modules: Module[];
   imageUrl?: string;
   dataAiHint?: string;
 };
@@ -45,8 +59,22 @@ export const courses: Course[] = [
     imageUrl: 'https://placehold.co/600x400.png',
     dataAiHint: 'programming code',
     modules: [
-      { id: 'm1', title: 'HTML Basics', lessons: [{ id: 'l1', title: 'Intro to HTML', duration: '10min' }] },
-      { id: 'm2', title: 'CSS Fundamentals', lessons: [{ id: 'l2', title: 'Styling with CSS', duration: '15min' }] },
+      { 
+        id: 'm1c1', 
+        title: 'HTML Basics', 
+        lessons: [
+          { id: 'l1m1c1', title: 'Intro to HTML', duration: '10min', description: 'An overview of HTML structure and tags.', embedUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
+          { id: 'l2m1c1', title: 'HTML Forms', duration: '12min', description: 'Learn how to create forms in HTML.'}
+        ] 
+      },
+      { 
+        id: 'm2c1', 
+        title: 'CSS Fundamentals', 
+        lessons: [
+          { id: 'l1m2c1', title: 'Styling with CSS', duration: '15min', description: 'Introduction to CSS selectors and properties.' },
+          { id: 'l2m2c1', title: 'CSS Box Model', duration: '18min', description: 'Understanding the CSS box model.'}
+        ] 
+      },
     ],
   },
   {
@@ -58,8 +86,21 @@ export const courses: Course[] = [
     imageUrl: 'https://placehold.co/600x400.png',
     dataAiHint: 'abstract javascript',
     modules: [
-      { id: 'm1', title: 'ES6+ Features', lessons: [{ id: 'l1', title: 'Arrow Functions', duration: '20min' }] },
-      { id: 'm2', title: 'Async Programming', lessons: [{ id: 'l2', title: 'Promises & Async/Await', duration: '25min' }] },
+      { 
+        id: 'm1c2', 
+        title: 'ES6+ Features', 
+        lessons: [
+          { id: 'l1m1c2', title: 'Arrow Functions', duration: '20min', description: 'Learn about arrow functions and their syntax.' },
+          { id: 'l2m1c2', title: 'Destructuring', duration: '15min', description: 'Using destructuring for arrays and objects.' }
+        ] 
+      },
+      { 
+        id: 'm2c2', 
+        title: 'Async Programming', 
+        lessons: [
+          { id: 'l1m2c2', title: 'Promises & Async/Await', duration: '25min', description: 'Master asynchronous JavaScript with Promises and async/await.' }
+        ] 
+      },
     ],
   },
   {
@@ -71,8 +112,20 @@ export const courses: Course[] = [
     imageUrl: 'https://placehold.co/600x400.png',
     dataAiHint: 'python data',
     modules: [
-      { id: 'm1', title: 'Python for Data', lessons: [{ id: 'l1', title: 'NumPy & Pandas', duration: '30min' }] },
-      { id: 'm2', title: 'Machine Learning Basics', lessons: [{ id: 'l2', title: 'Intro to Scikit-learn', duration: '35min' }] },
+      { 
+        id: 'm1c3', 
+        title: 'Python for Data', 
+        lessons: [
+          { id: 'l1m1c3', title: 'NumPy & Pandas', duration: '30min', description: 'Introduction to NumPy and Pandas libraries.' }
+        ] 
+      },
+      { 
+        id: 'm2c3', 
+        title: 'Machine Learning Basics', 
+        lessons: [
+          { id: 'l1m2c3', title: 'Intro to Scikit-learn', duration: '35min', description: 'Getting started with Scikit-learn for machine learning.' }
+        ] 
+      },
     ],
   },
 ];
@@ -100,5 +153,9 @@ export const videos: Video[] = [
   { id: 'video8', title: '🎬 Video 8: ShadCN UI Guide', description: 'Building UIs with ShadCN.' , thumbnailUrl: 'https://placehold.co/300x500.png', dataAiHint: 'shadcn ui'},
   { id: 'video9', title: '🎬 Video 9: Firebase Tips', description: 'Quick Firebase integration tips.' , thumbnailUrl: 'https://placehold.co/300x500.png', dataAiHint: 'firebase platform'},
   { id: 'video10', title: '🎬 Video 10: Genkit Intro', description: 'Exploring Genkit for AI.' , thumbnailUrl: 'https://placehold.co/300x500.png', dataAiHint: 'ai technology'},
+  { id: 'video11', title: '🎬 Video 11: Advanced CSS Grids', description: 'Mastering CSS Grid layouts.', thumbnailUrl: 'https://placehold.co/300x500.png', dataAiHint: 'css grid' },
+  { id: 'video12', title: '🎬 Video 12: State Management in React', description: 'Exploring different state management solutions.', thumbnailUrl: 'https://placehold.co/300x500.png', dataAiHint: 'react state' },
+  { id: 'video13', title: '🎬 Video 13: Introduction to Docker', description: 'Learn the basics of Docker and containerization.', thumbnailUrl: 'https://placehold.co/300x500.png', dataAiHint: 'docker logo' },
+  { id: 'video14', title: '🎬 Video 14: GraphQL vs REST', description: 'Comparing GraphQL and REST APIs.', thumbnailUrl: 'https://placehold.co/300x500.png', dataAiHint: 'api comparison' },
+  { id: 'video15', title: '🎬 Video 15: Serverless Functions Explained', description: 'Understanding serverless architecture.', thumbnailUrl: 'https://placehold.co/300x500.png', dataAiHint: 'cloud functions' },
 ];
-
