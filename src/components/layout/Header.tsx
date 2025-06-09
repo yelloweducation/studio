@@ -56,7 +56,7 @@ const Header = () => {
             </SheetTrigger>
             <SheetContent side="right" className="w-[280px] sm:w-[320px] p-0">
               <SheetHeader className="p-4 border-b">
-                <SheetTitle className="text-primary">Menu</SheetTitle>
+                <SheetTitle>Menu</SheetTitle>
               </SheetHeader>
               <div className="flex flex-col space-y-1 p-4">
                 <SheetClose asChild>
