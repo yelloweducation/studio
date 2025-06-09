@@ -10,55 +10,7 @@ import { ChevronLeft, PlayCircle, BookOpen, Video, FileText, Loader2 } from 'luc
 import Link from 'next/link';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-
-function getEmbedUrl(url: string | undefined | null): string | null {
-  // Check if the URL is null, undefined, or an empty string.
-  if (!url || typeof url !== 'string') return null;
-
-  // Basic check: if it doesn't start with http, it's unlikely to be a valid embeddable URL.
-  if (!url.startsWith('http://') && !url.startsWith('https://')) {
-    // console.warn(`Provided embedUrl does not start with http(s): ${url}`); // Optional: for debugging
-    return null;
-  }
-
-  try {
-    const urlObj = new URL(url);
-
-    // Handle YouTube URLs
-    if (urlObj.hostname === 'www.youtube.com' && urlObj.pathname === '/watch') {
-      const videoId = urlObj.searchParams.get('v');
-      return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
-    }
-    if (urlObj.hostname === 'youtu.be') {
-      const videoId = urlObj.pathname.substring(1);
-      return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
-    }
-
-    // Handle Google Drive URLs
-    if (urlObj.hostname === 'drive.google.com') {
-      if (urlObj.pathname.includes('/preview')) {
-        return url;
-      }
-      let fileId: string | null = null;
-      if (urlObj.pathname.startsWith('/file/d/')) {
-        const parts = urlObj.pathname.split('/');
-        if (parts.length > 3) fileId = parts[3];
-      } else if (urlObj.searchParams.has('id')) {
-        fileId = urlObj.searchParams.get('id');
-      }
-
-      if (fileId) {
-        return `https://drive.google.com/file/d/${fileId}/preview`;
-      }
-      return null;
-    }
-  } catch (error) {
-    console.error("Error parsing embed URL (url might be malformed even after basic checks):", url, error);
-    return null;
-  }
-  // Fallback for other valid URLs that might be directly embeddable
-  return url;
-}
+import { getEmbedUrl } from '@/lib/utils';
 
 
 export default function CourseDetailPage() {
@@ -71,13 +23,13 @@ export default function CourseDetailPage() {
 
   useEffect(() => {
     // This effect loads the list of available courses.
-    setIsLoading(true);
-    const storedCourses = localStorage.getItem('adminCourses');
+    // It runs once on component mount.
     let coursesToUse = allCourses;
+    const storedCourses = localStorage.getItem('adminCourses');
     if (storedCourses) {
       try {
         const parsedCourses = JSON.parse(storedCourses) as Course[];
-        if (parsedCourses.length > 0) {
+        if (Array.isArray(parsedCourses) && parsedCourses.length > 0) {
           coursesToUse = parsedCourses;
         }
       } catch (e) {
@@ -194,7 +146,7 @@ export default function CourseDetailPage() {
                                   {lesson.embedUrl && embeddableUrl && (
                                     <div className="aspect-video rounded-md overflow-hidden border">
                                       <iframe
-                                        src={embeddableUrl || ''} 
+                                        src={embeddableUrl || ''}
                                         title={lesson.title}
                                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                                         allowFullScreen
@@ -226,4 +178,3 @@ export default function CourseDetailPage() {
     </ProtectedRoute>
   );
 }
-
