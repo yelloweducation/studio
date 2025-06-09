@@ -6,13 +6,13 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, PlayCircle, BookOpen, Video, FileText } from 'lucide-react';
+import { ChevronLeft, PlayCircle, BookOpen, Video, FileText, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import ProtectedRoute from '@/components/auth/ProtectedRoute'; 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 function getEmbedUrl(url: string): string | null {
-  if (!url) return null;
+  if (!url || typeof url !== 'string') return null;
 
   try {
     if (url.includes('youtube.com/watch?v=')) {
@@ -37,7 +37,7 @@ function getEmbedUrl(url: string): string | null {
     }
   } catch (error) {
     console.error("Error parsing embed URL:", error);
-    return url; // Fallback to original URL on error
+    return url; 
   }
   return url;
 }
@@ -47,35 +47,67 @@ export default function CourseDetailPage() {
   const params = useParams();
   const courseId = params.id as string;
   const [course, setCourse] = useState<Course | null>(null);
-  const [activeCourses, setActiveCourses] = useState<Course[]>([]); // Initialize empty
+  const [activeCourses, setActiveCourses] = useState<Course[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
 
   useEffect(() => {
+    // This effect populates activeCourses
     const storedCourses = localStorage.getItem('adminCourses');
     if (storedCourses) {
       try {
         const parsedCourses = JSON.parse(storedCourses) as Course[];
-        setActiveCourses(parsedCourses); // Use courses from localStorage if they exist
+        setActiveCourses(parsedCourses); 
       } catch (e) {
         console.error("Failed to parse courses from localStorage on detail page", e);
-        setActiveCourses(allCourses); // Fallback to mockData on error
+        setActiveCourses(allCourses); 
       }
     } else {
-      setActiveCourses(allCourses); // Fallback if not in localStorage
+      setActiveCourses(allCourses); 
     }
-  }, []); // Runs once on mount
+  }, []); 
 
 
   useEffect(() => {
+    // This effect finds the specific course once activeCourses is populated
+    // and then sets isLoading to false.
     if (courseId && activeCourses.length > 0) {
       const foundCourse = activeCourses.find(c => c.id === courseId);
       setCourse(foundCourse || null);
-    } else if (courseId && activeCourses.length === 0) {
-      // This case handles when activeCourses is empty (e.g., localStorage was empty or mockData was empty)
+    } else if (courseId) { // activeCourses might be empty if no courses exist
       setCourse(null);
     }
-    // If courseId is not present, course remains null.
+    // Only set isLoading to false after we've tried to find the course
+    // This depends on activeCourses being populated by the first useEffect
+    if(activeCourses.length > 0 || !localStorage.getItem('adminCourses')) {
+        // Condition to ensure we don't turn off loading too soon if activeCourses is empty
+        // but still waiting for localStorage processing in a theoretical race (though unlikely here)
+        // More simply: set loading false once activeCourses has been processed.
+        setIsLoading(false);
+    }
+     // If activeCourses is still empty AND localStorage had data, it means parsing might have failed or yielded empty.
+    // If activeCourses is empty AND localStorage had NO data, means we used allCourses (which could also be empty).
+    // The isLoading should turn false once we've gone through the logic.
+    // A small delay or a more complex state machine might be needed for extremely rapid navigations,
+    // but for typical use, this should be sufficient.
+    if (activeCourses.length === 0 && localStorage.getItem('adminCourses') === null) {
+        // This case means localStorage was empty, and allCourses was used.
+        // We can safely turn off loading.
+        setIsLoading(false);
+    }
+
+
   }, [courseId, activeCourses]);
+
+  if (isLoading) {
+    return (
+      <div className="text-center py-20 flex flex-col items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <h1 className="text-2xl font-semibold text-foreground">Loading course details...</h1>
+        <p className="text-muted-foreground">Please wait a moment.</p>
+      </div>
+    );
+  }
 
   if (!course) {
     return (
@@ -182,3 +214,4 @@ export default function CourseDetailPage() {
     </ProtectedRoute>
   );
 }
+
