@@ -12,6 +12,7 @@ import { videos as mockVideos, type Video, categories as mockCategories, type Ca
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import * as LucideIcons from 'lucide-react';
+import CareerAdviceChatbox from '@/components/ai/CareerAdviceChatbox';
 
 const isValidLucideIcon = (iconName: string): iconName is keyof typeof LucideIcons => {
   return iconName in LucideIcons;
@@ -197,6 +198,10 @@ export default function Home() {
             <Search className="mr-2 h-5 w-5" /> Search
           </Button>
         </form>
+      </section>
+
+      <section className="w-full max-w-2xl mb-12">
+        <CareerAdviceChatbox />
       </section>
 
       <section className="w-full max-w-5xl mt-8 mb-12">
