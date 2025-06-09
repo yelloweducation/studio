@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, PlayCircle, BookOpen, Video, FileText, Loader2, ListChecks, FileVideo, ExternalLink, CheckCircle2, ShoppingCart, AlertOctagon } from 'lucide-react';
+import { ChevronLeft, PlayCircle, BookOpen, Video, FileText, Loader2, ListChecks, FileVideo, ExternalLink, CheckCircle2, AlertOctagon } from 'lucide-react'; // ShoppingCart removed
 import Link from 'next/link';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -18,27 +18,36 @@ export default function CourseDetailPage() {
   const params = useParams();
   const courseId = params.id as string;
   const { user } = useAuth();
-  const router = useRouter();
+  const router = useRouter(); // Keep router if needed for other navigation
 
   const [allAppCourses, setAllAppCourses] = useState<Course[]>([]);
   const [areAppCoursesLoaded, setAreAppCoursesLoaded] = useState(false);
-  
+
   const [currentCourse, setCurrentCourse] = useState<Course | null>(null);
   const [firstLessonPath, setFirstLessonPath] = useState<string | null>(null);
-  
+
   const [completionInfo, setCompletionInfo] = useState<{ date: string; isCompleted: boolean } | null>(null);
-  
+  // userPaymentSubmission state removed
+
   const [isLoadingPage, setIsLoadingPage] = useState(true);
 
+  // Effect 1: Load allAppCourses
   useEffect(() => {
-    setIsLoadingPage(true);
+    setIsLoadingPage(true); // Start loading when courseId changes or on initial load
+    setAreAppCoursesLoaded(false); // Reset this flag
+    setCurrentCourse(null); // Clear previous course details
+    setFirstLessonPath(null);
+    setCompletionInfo(null);
+
     let coursesToUse = mockDataCourses;
     const storedCourses = localStorage.getItem('adminCourses');
     if (storedCourses) {
       try {
         const parsedCourses = JSON.parse(storedCourses) as Course[];
+        // If parsedCourses is an array (even empty), use it.
+        // Fallback to mockDataCourses only if parsing fails or item not found.
         if (Array.isArray(parsedCourses)) {
-          coursesToUse = parsedCourses; 
+          coursesToUse = parsedCourses;
         } else {
            console.error("Stored adminCourses is not an array. Using mock courses.");
         }
@@ -47,22 +56,23 @@ export default function CourseDetailPage() {
       }
     }
     setAllAppCourses(coursesToUse);
-    setAreAppCoursesLoaded(true);
-  }, []);
+    setAreAppCoursesLoaded(true); // Signal that allAppCourses are now determined
+  }, []); // Runs once on mount
 
+  // Effect 2: Set currentCourse and firstLessonPath based on allAppCourses and courseId
   useEffect(() => {
     if (!areAppCoursesLoaded) {
-      setIsLoadingPage(true);
+      setIsLoadingPage(true); // Keep loading if allAppCourses aren't ready
       return;
     }
 
-    setIsLoadingPage(true);
+    setIsLoadingPage(true); // Start loading for specific course finding
     setCurrentCourse(null);
     setFirstLessonPath(null);
-    setCompletionInfo(null);
+    // No need to reset completionInfo or userPaymentSubmission here, handled by Effect 3
 
     if (!courseId) {
-      setIsLoadingPage(false);
+      setIsLoadingPage(false); // No ID, so nothing to load
       return;
     }
 
@@ -70,24 +80,59 @@ export default function CourseDetailPage() {
 
     if (!foundCourse) {
       setCurrentCourse(null);
-      setIsLoadingPage(false);
-      return;
-    }
-
-    setCurrentCourse(foundCourse);
-
-    if (foundCourse.modules && foundCourse.modules.length > 0) {
-      const firstModuleWithLessons = foundCourse.modules.find(m => m.lessons && m.lessons.length > 0);
-      if (firstModuleWithLessons && firstModuleWithLessons.lessons && firstModuleWithLessons.lessons.length > 0) {
-        setFirstLessonPath(`/courses/${foundCourse.id}/learn/${firstModuleWithLessons.id}/${firstModuleWithLessons.lessons[0].id}`);
+      // setIsLoadingPage(false) will be handled by Effect 3 if user is not involved, or after user data in Effect 3
+      // For now, if course not found, Effect 3 will quickly set isLoadingPage to false.
+    } else {
+      setCurrentCourse(foundCourse);
+      if (foundCourse.modules && foundCourse.modules.length > 0) {
+        const firstModuleWithLessons = foundCourse.modules.find(m => m.lessons && m.lessons.length > 0);
+        if (firstModuleWithLessons && firstModuleWithLessons.lessons && firstModuleWithLessons.lessons.length > 0) {
+          setFirstLessonPath(`/courses/${foundCourse.id}/learn/${firstModuleWithLessons.id}/${firstModuleWithLessons.lessons[0].id}`);
+        } else {
+          setFirstLessonPath(null);
+        }
       } else {
         setFirstLessonPath(null);
       }
-    } else {
-      setFirstLessonPath(null);
+    }
+    // setIsLoadingPage(false) will be handled in Effect 3 after user-specific data
+  }, [courseId, allAppCourses, areAppCoursesLoaded]);
+
+  // Effect 3: Load user-specific data (completions) and finalize loading state
+  useEffect(() => {
+    // This effect now depends on currentCourse being set (or determined as null)
+    // and areAppCoursesLoaded being true.
+    if (!areAppCoursesLoaded) {
+        setIsLoadingPage(true); // Still waiting for global courses
+        return;
+    }
+    
+    // If we have processed courseId from Effect 2 and currentCourse is still null (meaning not found)
+    // and allAppCourses are loaded, then we can stop loading.
+    if (areAppCoursesLoaded && courseId && !currentCourse) {
+        setIsLoadingPage(false);
+        return;
     }
 
-    if (user) {
+    // If no courseId, it means we are not on a specific course page (should not happen with this page structure but good check)
+    if(!courseId && areAppCoursesLoaded){
+        setIsLoadingPage(false);
+        return;
+    }
+
+    // If currentCourse is not yet determined by Effect 2, keep loading.
+    if (!currentCourse && courseId) { // courseId exists but currentCourse is not yet set
+        setIsLoadingPage(true);
+        return;
+    }
+    
+    // At this point, currentCourse is either set or null (if not found after check)
+    // and allAppCourses are loaded.
+
+    setCompletionInfo(null); // Reset before fetching
+    // userPaymentSubmission logic removed
+
+    if (user && currentCourse) {
       let isCourseCompleted = false;
       let completionDate = '';
       try {
@@ -95,20 +140,16 @@ export default function CourseDetailPage() {
         const storedCompletions = localStorage.getItem(completionKey);
         if (storedCompletions) {
           const completionsData = JSON.parse(storedCompletions);
-          if (completionsData[foundCourse.id]) {
+          if (completionsData[currentCourse.id]) {
             isCourseCompleted = true;
-            completionDate = completionsData[foundCourse.id];
+            completionDate = completionsData[currentCourse.id];
           }
         }
       } catch (e) { console.error("Error parsing completions from localStorage", e); }
       setCompletionInfo({ date: completionDate, isCompleted: isCourseCompleted });
-    } else {
-      setCompletionInfo(null);
     }
-    
-    setIsLoadingPage(false);
-
-  }, [courseId, user, allAppCourses, areAppCoursesLoaded]);
+    setIsLoadingPage(false); // All data loading attempts are complete
+  }, [user, currentCourse, areAppCoursesLoaded, courseId]);
 
 
   if (isLoadingPage) {
@@ -137,7 +178,7 @@ export default function CourseDetailPage() {
   const totalLessons = currentCourse.modules?.reduce((acc, module) => acc + (module.lessons?.length || 0), 0) || 0;
 
   const renderCTAButton = () => {
-    const isPaidCourse = currentCourse.price && currentCourse.price > 0;
+    // const isPaidCourse = currentCourse.price && currentCourse.price > 0; // Removed
 
     if (completionInfo?.isCompleted && completionInfo.date) {
       let formattedDate = 'a previous date';
@@ -156,25 +197,16 @@ export default function CourseDetailPage() {
         </div>
       );
     }
-    
+
+    // Simplified: if not completed, and has a first lesson, allow starting
     if (firstLessonPath) {
-      if (isPaidCourse) {
-        return (
-          <Button size="lg" className="w-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150" asChild>
-            <Link href={`/courses/${currentCourse.id}/checkout`}>
-              <ShoppingCart className="mr-2 h-6 w-6"/> Enroll & Pay ({currentCourse.price?.toLocaleString()} {currentCourse.currency})
-            </Link>
-          </Button>
-        );
-      } else { // Free course
-        return (
-          <Button size="lg" className="w-full bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150" asChild>
-            <Link href={firstLessonPath}>
-              <PlayCircle className="mr-2 h-6 w-6"/> Start Learning (Free)
-            </Link>
-          </Button>
-        );
-      }
+      return (
+        <Button size="lg" className="w-full bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150" asChild>
+          <Link href={firstLessonPath}>
+            <PlayCircle className="mr-2 h-6 w-6"/> Start Learning
+          </Link>
+        </Button>
+      );
     }
 
     return (
@@ -214,13 +246,7 @@ export default function CourseDetailPage() {
             {!currentCourse.imageUrl && <CardTitle className="text-3xl font-headline">{currentCourse.title}</CardTitle>}
             <div className="flex justify-between items-start">
                 <CardDescription className="text-md">By {currentCourse.instructor}</CardDescription>
-                {currentCourse.price && currentCourse.price > 0 ? (
-                    <span className="text-xl font-semibold text-primary">
-                        {currentCourse.price?.toLocaleString()} {currentCourse.currency}
-                    </span>
-                ) : (
-                    <span className="text-xl font-semibold text-green-600">Free</span>
-                )}
+                {/* Price display removed */}
             </div>
           </CardHeader>
           <CardContent className="px-6 pb-6 space-y-6">
@@ -261,9 +287,8 @@ export default function CourseDetailPage() {
                           <ul className="space-y-3 pl-2">
                             {module.lessons.map(lesson => {
                               const embeddableUrl = getEmbedUrl(lesson.embedUrl);
-                              const isCourseFree = !currentCourse.price || currentCourse.price <= 0;
-                              const isCourseAlreadyCompleted = completionInfo?.isCompleted;
-                              const lessonIsAccessible = isCourseFree || isCourseAlreadyCompleted;
+                              // const isCourseFree = !currentCourse.price || currentCourse.price <= 0; // Removed
+                              const lessonIsAccessible = true; // All courses are effectively free now
                               const lessonLink = `/courses/${currentCourse.id}/learn/${module.id}/${lesson.id}`;
 
                               return (
@@ -278,15 +303,10 @@ export default function CourseDetailPage() {
                                   {lesson.description && (
                                     <p className="text-sm text-muted-foreground mb-2">{lesson.description}</p>
                                   )}
-                                  {lessonIsAccessible && firstLessonPath && (
+                                  {lessonIsAccessible && firstLessonPath && ( // Kept firstLessonPath check to ensure course has content
                                     <Link href={lessonLink} className="text-xs text-primary hover:underline flex items-center">
                                       Watch Lesson <ExternalLink className="ml-1 h-3 w-3" />
                                     </Link>
-                                  )}
-                                   {!lessonIsAccessible && (currentCourse.price && currentCourse.price > 0) && (
-                                    <span className="text-xs text-muted-foreground flex items-center">
-                                        Enrollment required for paid course.
-                                    </span>
                                   )}
                                 </li>
                               );

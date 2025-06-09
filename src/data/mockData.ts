@@ -23,8 +23,7 @@ export type Course = {
   modules: Module[];
   imageUrl?: string;
   dataAiHint?: string;
-  price?: number;
-  currency?: string;
+  // price and currency removed
 };
 
 export type User = {
@@ -32,7 +31,7 @@ export type User = {
   name: string;
   email: string;
   role: 'student' | 'admin';
-  passwordHash: string; 
+  passwordHash: string;
 };
 
 export type Enrollment = {
@@ -48,8 +47,8 @@ export type Video = {
   title: string;
   description: string;
   thumbnailUrl?: string;
-  videoUrl?: string; 
-  embedUrl?: string; 
+  videoUrl?: string;
+  embedUrl?: string;
   dataAiHint?: string;
 };
 
@@ -58,14 +57,10 @@ export type Category = {
   name: string;
   imageUrl?: string;
   dataAiHint?: string;
-  icon?: string; 
+  icon?: string;
 };
 
-export interface PaymentSettings {
-  bankName: string;
-  bankAccountNumber: string;
-  paymentInstructions: string;
-}
+// PaymentSettings interface removed
 
 export const courses: Course[] = [
   {
@@ -76,8 +71,6 @@ export const courses: Course[] = [
     instructor: 'Dr. Web Coder',
     imageUrl: 'https://placehold.co/600x400.png',
     dataAiHint: 'programming code',
-    price: 50000,
-    currency: 'MMK',
     modules: [
       {
         id: 'm1c1',
@@ -113,8 +106,6 @@ export const courses: Course[] = [
     instructor: 'Prof. Script Master',
     imageUrl: 'https://placehold.co/600x400.png',
     dataAiHint: 'abstract javascript',
-    price: 75000,
-    currency: 'MMK',
     modules: [
       {
         id: 'm1c2',
@@ -141,8 +132,6 @@ export const courses: Course[] = [
     instructor: 'Dr. Data Insight',
     imageUrl: 'https://placehold.co/600x400.png',
     dataAiHint: 'python data',
-    price: 0, 
-    currency: 'MMK',
     modules: [
       {
         id: 'm1c3',
@@ -168,8 +157,6 @@ export const courses: Course[] = [
     instructor: 'The Future',
     imageUrl: 'https://placehold.co/600x400.png',
     dataAiHint: 'coming soon abstract',
-    price: 10000,
-    currency: 'MMK',
     modules: [],
   },
   {
@@ -180,8 +167,6 @@ export const courses: Course[] = [
     instructor: 'Curriculum Planner',
     imageUrl: 'https://placehold.co/600x400.png',
     dataAiHint: 'planning document',
-    price: 5000,
-    currency: 'MMK',
     modules: [
       { id: 'm1c5', title: 'Module A - Concepts', lessons: [] },
       { id: 'm2c5', title: 'Module B - Drafts', lessons: [] },

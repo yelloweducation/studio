@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Edit3, Trash2, ListOrdered, BookOpen, Film, FileText, DollarSign, Milestone } from 'lucide-react';
+import { PlusCircle, Edit3, Trash2, ListOrdered, BookOpen, Film, FileText } from 'lucide-react'; // DollarSign, Milestone removed
 import {
   Dialog,
   DialogContent,
@@ -21,14 +21,14 @@ import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '../ui/label';
 
-const CourseForm = ({ 
-  course, 
-  onSubmit, 
-  onCancel 
-}: { 
-  course?: Course, 
-  onSubmit: (data: Course) => void, 
-  onCancel: () => void 
+const CourseForm = ({
+  course,
+  onSubmit,
+  onCancel
+}: {
+  course?: Course,
+  onSubmit: (data: Course) => void,
+  onCancel: () => void
 }) => {
   const [title, setTitle] = useState(course?.title || '');
   const [description, setDescription] = useState(course?.description || '');
@@ -36,9 +36,8 @@ const CourseForm = ({
   const [instructor, setInstructor] = useState(course?.instructor || '');
   const [imageUrl, setImageUrl] = useState(course?.imageUrl || 'https://placehold.co/600x400.png');
   const [dataAiHint, setDataAiHint] = useState(course?.dataAiHint || 'education course');
-  const [price, setPrice] = useState<number>(course?.price ?? 0);
-  const [currency, setCurrency] = useState(course?.currency || 'MMK');
   const [modules, setModules] = useState<Module[]>(course?.modules || []);
+  // price and currency state removed
 
   const handleModuleChange = (index: number, field: keyof Module, value: string) => {
     const newModules = [...modules];
@@ -76,17 +75,16 @@ const CourseForm = ({
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    const courseData: Course = { 
-      id: course?.id || `course${Date.now()}`, 
-      title, 
-      description, 
-      category, 
-      instructor, 
+    const courseData: Course = {
+      id: course?.id || `course${Date.now()}`,
+      title,
+      description,
+      category,
+      instructor,
       modules,
       imageUrl,
       dataAiHint,
-      price: Number(price) || 0,
-      currency,
+      // price and currency removed from submission
     };
     onSubmit(courseData);
   };
@@ -119,32 +117,16 @@ const CourseForm = ({
             <Label htmlFor="dataAiHint">Image AI Hint (keywords)</Label>
             <Input id="dataAiHint" value={dataAiHint} onChange={e => setDataAiHint(e.target.value)} placeholder="e.g. education programming"/>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="price">Price</Label>
-              <div className="relative">
-                <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input id="price" type="number" value={price} onChange={e => setPrice(parseFloat(e.target.value) || 0)} placeholder="e.g., 50000" className="pl-8" />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="currency">Currency</Label>
-               <div className="relative">
-                <Milestone className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input id="currency" value={currency} onChange={e => setCurrency(e.target.value.toUpperCase())} placeholder="e.g., MMK" className="pl-8" />
-              </div>
-            </div>
-          </div>
-
+          {/* Price and Currency inputs removed */}
 
           <div className="space-y-4 pt-4 border-t">
             <h3 className="text-lg font-semibold flex items-center"><BookOpen className="mr-2 h-5 w-5 text-primary"/> Modules</h3>
             {modules.map((module, modIndex) => (
               <Card key={module.id || modIndex} className="p-4 space-y-3 bg-muted/50">
                 <div className="flex justify-between items-center">
-                  <Input 
-                    placeholder={`Module ${modIndex + 1} Title`} 
-                    value={module.title} 
+                  <Input
+                    placeholder={`Module ${modIndex + 1} Title`}
+                    value={module.title}
                     onChange={e => handleModuleChange(modIndex, 'title', e.target.value)}
                     className="flex-grow mr-2"
                   />
@@ -152,15 +134,15 @@ const CourseForm = ({
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
-                
+
                 <div className="space-y-3 pl-4 border-l-2 border-primary/50">
                    <h4 className="text-md font-medium flex items-center"><FileText className="mr-2 h-4 w-4 text-accent"/> Lessons</h4>
                   {module.lessons.map((lesson, lesIndex) => (
                     <Card key={lesson.id || lesIndex} className="p-3 space-y-2 bg-card shadow-sm">
                        <div className="flex justify-between items-center">
-                        <Input 
-                            placeholder={`Lesson ${lesIndex + 1} Title`} 
-                            value={lesson.title} 
+                        <Input
+                            placeholder={`Lesson ${lesIndex + 1} Title`}
+                            value={lesson.title}
                             onChange={e => handleLessonChange(modIndex, lesIndex, 'title', e.target.value)}
                             className="flex-grow mr-2 text-sm"
                         />
@@ -168,21 +150,21 @@ const CourseForm = ({
                             <Trash2 className="h-4 w-4" />
                         </Button>
                        </div>
-                      <Input 
-                        placeholder="Duration (e.g., 10min)" 
-                        value={lesson.duration} 
+                      <Input
+                        placeholder="Duration (e.g., 10min)"
+                        value={lesson.duration}
                         onChange={e => handleLessonChange(modIndex, lesIndex, 'duration', e.target.value)}
                         className="text-sm"
                       />
-                      <Textarea 
-                        placeholder="Lesson Description" 
+                      <Textarea
+                        placeholder="Lesson Description"
                         value={lesson.description || ''}
                         onChange={e => handleLessonChange(modIndex, lesIndex, 'description', e.target.value)}
                         className="text-sm min-h-[60px]"
                       />
                       <div className="relative">
-                        <Input 
-                            placeholder="Video Embed URL (e.g., YouTube, Google Drive)" 
+                        <Input
+                            placeholder="Video Embed URL (e.g., YouTube, Google Drive)"
                             value={lesson.embedUrl || ''}
                             onChange={e => handleLessonChange(modIndex, lesIndex, 'embedUrl', e.target.value)}
                             className="text-sm pl-8"
@@ -220,7 +202,7 @@ export default function CourseManagement() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [editingCourse, setEditingCourse] = useState<Course | undefined>(undefined);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isDataLoaded, setIsDataLoaded] = useState(false); // Flag to track initial load
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -231,16 +213,16 @@ export default function CourseManagement() {
         setCourses(parsedCourses);
       } catch (e) {
         console.error("Failed to parse adminCourses from localStorage in CourseManagement", e);
-        setCourses(initialCourses); 
+        setCourses(initialCourses);
       }
     } else {
-      setCourses(initialCourses); 
+      setCourses(initialCourses);
     }
-    setIsDataLoaded(true); // Indicate that initial loading attempt is complete
+    setIsDataLoaded(true);
   }, []);
 
   useEffect(() => {
-    if (isDataLoaded) { // Only save to localStorage if initial data load has occurred
+    if (isDataLoaded) {
       localStorage.setItem('adminCourses', JSON.stringify(courses));
     }
   }, [courses, isDataLoaded]);
@@ -288,9 +270,9 @@ export default function CourseManagement() {
     setCourses(prev => prev.filter(c => c.id !== courseId));
     toast({ title: "Course Deleted", description: `${courseToDelete?.title} has been deleted.`, variant: "destructive" });
   };
-  
+
   const openForm = (course?: Course) => {
-    setEditingCourse(course ? JSON.parse(JSON.stringify(course)) : undefined); 
+    setEditingCourse(course ? JSON.parse(JSON.stringify(course)) : undefined);
     setIsFormOpen(true);
   };
 
@@ -305,7 +287,7 @@ export default function CourseManagement() {
         <CardTitle className="flex items-center text-xl md:text-2xl font-headline">
           <ListOrdered className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Course Management
         </CardTitle>
-        <CardDescription>Add, edit, or delete courses, their content, and pricing.</CardDescription>
+        <CardDescription>Add, edit, or delete courses and their content.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="mb-6 text-right">
@@ -319,11 +301,11 @@ export default function CourseManagement() {
               <DialogHeader className="pb-4">
                 <DialogTitle className="font-headline text-xl md:text-2xl">{editingCourse ? 'Edit Course' : 'Add New Course'}</DialogTitle>
                 <DialogDescription>
-                  {editingCourse ? 'Modify the details, content, and pricing of the existing course.' : 'Fill in the details, content, and pricing for the new course.'}
+                  {editingCourse ? 'Modify the details and content of the existing course.' : 'Fill in the details and content for the new course.'}
                 </DialogDescription>
               </DialogHeader>
-              <CourseForm 
-                course={editingCourse} 
+              <CourseForm
+                course={editingCourse}
                 onSubmit={editingCourse ? handleEditCourse : handleAddCourse}
                 onCancel={closeForm}
               />
@@ -339,9 +321,7 @@ export default function CourseManagement() {
                   <h3 className="font-semibold font-headline text-md md:text-lg">{course.title}</h3>
                   <p className="text-xs sm:text-sm text-muted-foreground">{course.category} - By {course.instructor}</p>
                   <p className="text-xs sm:text-sm text-muted-foreground">Modules: {course.modules.length}</p>
-                  <p className="text-xs sm:text-sm text-primary font-semibold">
-                    Price: {course.price && course.price > 0 ? `${course.price.toLocaleString()} ${course.currency || 'MMK'}` : 'Free'}
-                  </p>
+                  {/* Price display removed */}
                 </div>
                 <div className="flex flex-col sm:flex-row sm:space-x-2 gap-2 sm:gap-0 w-full sm:w-auto">
                   <Button variant="outline" size="sm" onClick={() => openForm(course)} className="w-full sm:w-auto hover:border-primary hover:text-primary">
