@@ -2,18 +2,16 @@
 "use client";
 import React, { useState, type FormEvent, useEffect, Suspense, lazy } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, Video as VideoIcon, XCircle, Tv, Loader2, X, Shapes } from 'lucide-react';
 import VideoCard from '@/components/videos/VideoCard';
 import { videos as mockVideos, type Video, categories as mockCategories, type Category } from '@/data/mockData';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'; // Added CardFooter
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'; 
 import { Skeleton } from '@/components/ui/skeleton';
 import CategoryCard from '@/components/categories/CategoryCard';
 
-// Lazy load CareerAdviceChatbox
 const CareerAdviceChatbox = lazy(() => import('@/components/ai/CareerAdviceChatbox'));
 
 
@@ -33,42 +31,14 @@ export default function Home() {
 
 
   useEffect(() => {
-    // Load course categories
+    // Load course categories directly from mock data
     setIsLoadingCategories(true);
-    const storedCategoriesString = localStorage.getItem('adminCategories');
-    if (storedCategoriesString) {
-      try {
-        const parsedCategories = JSON.parse(storedCategoriesString) as Category[];
-        setCourseCategories(parsedCategories.length > 0 ? parsedCategories : mockCategories);
-      } catch (e) {
-        console.error("Failed to parse categories from localStorage", e);
-        setCourseCategories(mockCategories);
-      }
-    } else {
-      setCourseCategories(mockCategories);
-    }
+    setCourseCategories(mockCategories);
     setIsLoadingCategories(false);
 
-    // Load trending videos
+    // Load trending videos directly from mock data
     setIsLoadingTrendingVideos(true);
-    let videosToDisplay: Video[] = [];
-    const storedVideosString = localStorage.getItem('adminVideos');
-
-    if (storedVideosString !== null) {
-      try {
-        const parsedVideos = JSON.parse(storedVideosString) as Video[];
-        if (Array.isArray(parsedVideos)) {
-          videosToDisplay = parsedVideos;
-        } else {
-          videosToDisplay = mockVideos;
-        }
-      } catch (e) {
-        videosToDisplay = mockVideos;
-      }
-    } else {
-      videosToDisplay = mockVideos;
-    }
-    setTrendingVideos(videosToDisplay.slice(0, 3));
+    setTrendingVideos(mockVideos.slice(0, 3));
     setIsLoadingTrendingVideos(false);
   }, []);
 
@@ -76,26 +46,8 @@ export default function Home() {
     if (allFeedVideos.length > 0 && !showVideoFeed) return; 
 
     setIsLoadingFeedVideos(true);
-    const storedVideosString = localStorage.getItem('adminVideos');
-    let videosToUse: Video[] = [];
-
-    if (storedVideosString !== null) {
-      try {
-        const parsedVideos = JSON.parse(storedVideosString) as Video[];
-        if (Array.isArray(parsedVideos)) {
-          videosToUse = parsedVideos;
-        } else {
-          console.error("Stored 'adminVideos' in localStorage is not an array for full feed. Using mock videos.", parsedVideos);
-          videosToUse = mockVideos;
-        }
-      } catch (e) {
-        console.error("Failed to parse 'adminVideos' from localStorage for full feed. Using mock videos.", e);
-        videosToUse = mockVideos;
-      }
-    } else {
-      videosToUse = mockVideos;
-    }
-    setAllFeedVideos(videosToUse);
+    // Load all videos directly from mock data for the feed
+    setAllFeedVideos(mockVideos);
     setIsLoadingFeedVideos(false);
   };
 
@@ -151,7 +103,7 @@ export default function Home() {
             </div>
           ) : (
             <div className="flex-grow flex items-center justify-center text-center px-4">
-              <p className="text-muted-foreground">No videos available at the moment. <br /> Admins can add videos in the dashboard.</p>
+              <p className="text-muted-foreground">No videos available at the moment.</p>
             </div>
           )}
         </Card>
@@ -241,7 +193,7 @@ export default function Home() {
         ) : (
           <Card className="w-full">
             <CardContent className="pt-6">
-              <p className="text-center text-muted-foreground">No course categories available at the moment. Admins can add them!</p>
+              <p className="text-center text-muted-foreground">No course categories available at the moment.</p>
             </CardContent>
           </Card>
         )}

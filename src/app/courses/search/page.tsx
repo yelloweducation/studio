@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import CourseCard from '@/components/courses/CourseCard';
-import { courses as mockCourses, type Course } from '@/data/mockData'; // Renamed to mockCourses for clarity
+import { courses as mockCourses, type Course } from '@/data/mockData';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronLeft, Search } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,24 +13,12 @@ import { Card, CardContent } from '@/components/ui/card';
 function SearchResultsContent() {
   const searchParams = useSearchParams();
   const query = searchParams.get('query') || '';
-  const [activeCourses, setActiveCourses] = useState<Course[]>(mockCourses);
+  // Use mockCourses directly, bypassing localStorage for this view
+  const [activeCourses] = useState<Course[]>(mockCourses); 
   const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const storedCourses = localStorage.getItem('adminCourses');
-    if (storedCourses) {
-      try {
-        const parsedCourses = JSON.parse(storedCourses) as Course[];
-        setActiveCourses(parsedCourses.length > 0 ? parsedCourses : mockCourses);
-      } catch (e) {
-        console.error("Failed to parse courses from localStorage", e);
-        setActiveCourses(mockCourses);
-      }
-    } else {
-      setActiveCourses(mockCourses);
-    }
-  }, []);
+  // Removed useEffect that loaded from localStorage for activeCourses
 
   useEffect(() => {
     setIsLoading(true);
@@ -39,8 +27,8 @@ function SearchResultsContent() {
       const results = activeCourses.filter(course =>
         course.title.toLowerCase().includes(lowerCaseQuery) ||
         course.description.toLowerCase().includes(lowerCaseQuery) ||
-        course.category.toLowerCase().includes(lowerCaseQuery) || // This will catch direct category searches
-        course.category.toLowerCase() === lowerCaseQuery // Explicitly match category names
+        course.category.toLowerCase().includes(lowerCaseQuery) || 
+        course.category.toLowerCase() === lowerCaseQuery 
       );
       setFilteredCourses(results);
     } else {

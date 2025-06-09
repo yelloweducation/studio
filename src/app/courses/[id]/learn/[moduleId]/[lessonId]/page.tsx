@@ -1,10 +1,10 @@
 
 "use client";
 import { useParams, useRouter } from 'next/navigation';
-import { courses as allCourses, type Course, type Lesson, type Module } from '@/data/mockData';
+import { courses as allMockCourses, type Course, type Lesson, type Module } from '@/data/mockData'; // Renamed to allMockCourses
 import { useEffect, useState, useMemo } from 'react';
 import Image from 'next/image';
-import { Card, CardContent, CardFooter } from '@/components/ui/card'; // Removed CardDescription, CardHeader, CardTitle as they are not directly used in the new layout
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, BookOpen, Home, Loader2, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
@@ -23,8 +23,9 @@ export default function LessonViewerPage() {
   const currentModuleId = params.moduleId as string;
   const currentLessonId = params.lessonId as string;
 
-  const [activeCourses, setActiveCourses] = useState<Course[]>([]); // Initialize as empty
-  const [coursesReady, setCoursesReady] = useState(false); // New state to track if activeCourses are loaded
+  // Use allMockCourses directly, bypassing localStorage for this view
+  const [activeCourses, setActiveCourses] = useState<Course[]>(allMockCourses); 
+  const [coursesReady, setCoursesReady] = useState(false);
 
   const [course, setCourse] = useState<Course | null>(null);
   const [currentModule, setCurrentModule] = useState<Module | null>(null);
@@ -33,33 +34,14 @@ export default function LessonViewerPage() {
   const [isLoading, setIsLoading] = useState(true); 
   const [error, setError] = useState<string | null>(null);
 
-  // Effect 1: Load global/admin courses from localStorage
+  // Effect 1: Set activeCourses directly from mockData
   useEffect(() => {
-    const storedCoursesString = localStorage.getItem('adminCourses');
-    let coursesToUse: Course[];
-    if (storedCoursesString) {
-      try {
-        const parsedAdminCourses = JSON.parse(storedCoursesString);
-        if (Array.isArray(parsedAdminCourses)) {
-          coursesToUse = parsedAdminCourses; 
-        } else {
-          console.error("Stored adminCourses from localStorage is not an array, using default mock courses.");
-          coursesToUse = allCourses; 
-        }
-      } catch (e) {
-        console.error("Failed to parse adminCourses from localStorage, using default mock courses.", e);
-        coursesToUse = allCourses; 
-      }
-    } else {
-       coursesToUse = allCourses; 
-    }
-    setActiveCourses(coursesToUse);
-    setCoursesReady(true); // Signal that activeCourses are now determined
-  }, []); // Runs once on mount (or re-mount due to key change from pageContentKey)
+    setActiveCourses(allMockCourses); // Using mock data directly
+    setCoursesReady(true); 
+  }, []); 
   
   // Effect 2: Load specific lesson data, dependent on coursesReady
   useEffect(() => {
-    // Always start by setting loading true and clearing errors/old data for the new lesson attempt
     setIsLoading(true);
     setError(null);
     setCourse(null);
@@ -67,8 +49,6 @@ export default function LessonViewerPage() {
     setCurrentLesson(null);
 
     if (!coursesReady) {
-      // If global courses aren't ready, we remain in a loading state.
-      // setIsLoading(true) was already called.
       return; 
     }
 
@@ -78,30 +58,29 @@ export default function LessonViewerPage() {
       return;
     }
 
-    // coursesReady is true here, so activeCourses is determined (could be empty if admin saved an empty list)
     if (activeCourses.length === 0) {
-      setError("No course data available to load from. Please try again or contact support.");
+      setError("No course data available to load from (using default mock data).");
       setIsLoading(false);
       return;
     }
 
     const foundCourse = activeCourses.find(c => c.id === courseId);
     if (!foundCourse) {
-      setError("Course not found.");
+      setError("Course not found in default mock data.");
       setIsLoading(false);
       return;
     }
 
     const foundModule = foundCourse.modules?.find(m => m.id === currentModuleId);
     if (!foundModule) {
-      setError(`Module not found in course "${foundCourse.title}".`);
+      setError(`Module not found in course "${foundCourse.title}" (using default mock data).`);
       setIsLoading(false);
       return;
     }
 
     const foundLesson = foundModule.lessons?.find(l => l.id === currentLessonId);
     if (!foundLesson) {
-      setError(`Lesson not found in module "${foundModule.title}".`);
+      setError(`Lesson not found in module "${foundModule.title}" (using default mock data).`);
       setIsLoading(false);
       return;
     }
@@ -109,9 +88,9 @@ export default function LessonViewerPage() {
     setCourse(foundCourse);
     setCurrentModule(foundModule);
     setCurrentLesson(foundLesson);
-    setIsLoading(false); // Successfully loaded lesson data
+    setIsLoading(false); 
 
-  }, [courseId, currentModuleId, currentLessonId, activeCourses, coursesReady]); // Key dependencies
+  }, [courseId, currentModuleId, currentLessonId, activeCourses, coursesReady]); 
 
   const { prevLessonLink, nextLessonLink, isFirstLesson, isLastLesson } = useMemo(() => {
     if (!course || !currentModule || !currentLesson) {
@@ -171,7 +150,6 @@ export default function LessonViewerPage() {
   const pageContentKey = `${courseId}-${currentModuleId}-${currentLessonId}`;
 
   const renderContent = () => {
-    // Show loader if still loading specific lesson OR if global courses aren't ready yet.
     if (isLoading || !coursesReady) {
       return (
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)]">
@@ -181,8 +159,7 @@ export default function LessonViewerPage() {
       );
     }
   
-    // Only show error if not loading, global courses are ready, AND an error string exists.
-    if (error) { // Error is already confirmed to be non-null if this block is reached
+    if (error) { 
       return (
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center">
           <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
@@ -198,13 +175,12 @@ export default function LessonViewerPage() {
       );
     }
   
-    // Only show "not found" if not loading, no error, but content objects are missing.
     if (!course || !currentModule || !currentLesson) {
        return (
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center">
             <AlertTriangle className="h-12 w-12 text-muted-foreground mb-4" />
             <h1 className="text-2xl font-semibold text-foreground mb-2">Lesson Not Found</h1>
-            <p className="text-muted-foreground mb-6">The requested lesson content could not be found. It might be an invalid link or the content is not available.</p>
+            <p className="text-muted-foreground mb-6">The requested lesson content could not be found. It might be an invalid link or the content is not available in the default dataset.</p>
             <Button asChild variant="outline">
                 <Link href="/">
                 <Home className="mr-2 h-4 w-4" /> Go to Homepage
@@ -291,4 +267,3 @@ export default function LessonViewerPage() {
     </ProtectedRoute>
   );
 }
-

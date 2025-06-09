@@ -20,6 +20,7 @@ export default function CourseDetailPage() {
   const { user } = useAuth();
   const router = useRouter();
 
+  // Use mockDataCourses directly, bypassing localStorage for student-facing course data
   const [allAppCourses, setAllAppCourses] = useState<Course[]>([]);
   const [areAppCoursesLoaded, setAreAppCoursesLoaded] = useState(false);
 
@@ -29,53 +30,25 @@ export default function CourseDetailPage() {
   
   const [isLoadingPage, setIsLoadingPage] = useState(true);
 
-  // Effect 1: Load allAppCourses from localStorage or use mock data
+  // Effect 1: Load allAppCourses directly from mock data
   useEffect(() => {
-    let coursesToUse = mockDataCourses;
-    const storedCourses = localStorage.getItem('adminCourses');
-    if (storedCourses) {
-      try {
-        const parsedCourses = JSON.parse(storedCourses) as Course[];
-        if (Array.isArray(parsedCourses)) { // Use parsedCourses if it's an array (even empty)
-          coursesToUse = parsedCourses;
-        } else {
-           console.error("Stored adminCourses is not an array. Using mock courses.");
-        }
-      } catch (e) {
-        console.error("Failed to parse courses from localStorage. Using mock data.", e);
-      }
-    }
-    setAllAppCourses(coursesToUse);
+    setAllAppCourses(mockDataCourses);
     setAreAppCoursesLoaded(true);
   }, []);
 
   // Effect 2: Set currentCourse and firstLessonPath based on allAppCourses and courseId
   useEffect(() => {
     if (!areAppCoursesLoaded) {
-      // setIsLoadingPage(true) is default, so just wait
       return;
     }
-
-    // At this point, areAppCoursesLoaded is true.
-    // We need to set isLoadingPage true here if we are about to process a courseId
-    // but Effect 3 will ultimately decide when isLoadingPage becomes false.
-
-    setCurrentCourse(null); // Reset before attempting to find
+    setCurrentCourse(null); 
     setFirstLessonPath(null);
 
     if (!courseId) {
-      // No courseId means we can't load a specific course. Effect 3 will handle isLoadingPage.
+      setIsLoadingPage(false); // No courseId, nothing to load specifically
       return;
     }
     
-    // If allAppCourses is empty and we have a courseId, it means the course won't be found.
-    // This is a valid state if an admin cleared all courses.
-    if (allAppCourses.length === 0 && courseId) {
-        setCurrentCourse(null);
-        // Effect 3 will handle isLoadingPage.
-        return;
-    }
-
     const foundCourse = allAppCourses.find(c => c.id === courseId);
 
     if (foundCourse) {
@@ -91,49 +64,38 @@ export default function CourseDetailPage() {
         setFirstLessonPath(null);
       }
     } else {
-      setCurrentCourse(null); // Course not found in allAppCourses
+      setCurrentCourse(null); 
     }
     // isLoadingPage will be finalized in Effect 3
   }, [courseId, allAppCourses, areAppCoursesLoaded]);
 
   // Effect 3: Load user-specific data (completions) and finalize loading state
   useEffect(() => {
-    // This effect depends on currentCourse being set (or determined as null by Effect 2)
-    // and areAppCoursesLoaded being true.
-
     if (!areAppCoursesLoaded) {
-        setIsLoadingPage(true); // Still waiting for global courses
+        setIsLoadingPage(true); 
         return;
     }
     
-    // If we have processed courseId (from Effect 2) and currentCourse is still null (meaning not found),
-    // and allAppCourses are loaded, then we can stop loading.
     if (areAppCoursesLoaded && courseId && !currentCourse) {
         setCompletionInfo(null);
         setIsLoadingPage(false);
         return;
     }
 
-    // If no courseId, it means we are not on a specific course page.
     if(!courseId && areAppCoursesLoaded){
         setCompletionInfo(null);
         setIsLoadingPage(false);
         return;
     }
 
-    // If currentCourse is not yet determined by Effect 2, BUT we have a courseId, keep loading
-    // This case should be less frequent with the new structure, but acts as a safeguard.
-    if (!currentCourse && courseId) {
+    if (!currentCourse && courseId) { // Current course not yet determined from Effect 2
         setIsLoadingPage(true);
         return;
     }
     
-    // At this point, currentCourse is either set or null (if not found after check in Effect 2)
-    // and allAppCourses are loaded.
+    setCompletionInfo(null); 
 
-    setCompletionInfo(null); // Reset before fetching
-
-    if (user && currentCourse) { // Only fetch if user and currentCourse exist
+    if (user && currentCourse) { 
       let isCourseCompleted = false;
       let completionDate = '';
       try {
@@ -149,7 +111,6 @@ export default function CourseDetailPage() {
       } catch (e) { console.error("Error parsing completions from localStorage", e); }
       setCompletionInfo({ date: completionDate, isCourseCompleted });
     }
-    // All data loading attempts are complete for the current state of courseId and currentCourse
     setIsLoadingPage(false); 
   }, [user, currentCourse, areAppCoursesLoaded, courseId]);
 
@@ -169,8 +130,8 @@ export default function CourseDetailPage() {
       <div className="text-center py-10 min-h-[calc(100vh-200px)] flex flex-col items-center justify-center">
         <AlertOctagon className="h-12 w-12 text-destructive mb-4" />
         <h1 className="text-2xl font-semibold text-destructive">Course Not Found</h1>
-        <p className="text-muted-foreground">The course you are looking for (ID: {courseId || 'N/A'}) could not be found or is not available.</p>
-        <p className="text-xs text-muted-foreground mt-1">This might happen if the course was recently removed or the link is incorrect.</p>
+        <p className="text-muted-foreground">The course you are looking for (ID: {courseId || 'N/A'}) could not be found using the default mock data.</p>
+        <p className="text-xs text-muted-foreground mt-1">This might happen if the course ID is incorrect or it's a course that was previously managed by an admin and is no longer in the default set.</p>
         <Button asChild variant="link" className="mt-4">
           <Link href="/">Go back to Homepage</Link>
         </Button>
@@ -199,7 +160,7 @@ export default function CourseDetailPage() {
       );
     }
 
-    // Course is not paid or does not have a price defined
+    // Courses are free in this version
     if (firstLessonPath) {
       return (
         <Button size="lg" className="w-full bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150" asChild>
@@ -288,7 +249,7 @@ export default function CourseDetailPage() {
                           <ul className="space-y-3 pl-2">
                             {module.lessons.map(lesson => {
                               const embeddableUrl = getEmbedUrl(lesson.embedUrl);
-                              const lessonIsAccessible = true; // Since it's non-payment version
+                              const lessonIsAccessible = true; 
                               const lessonLink = `/courses/${currentCourse.id}/learn/${module.id}/${lesson.id}`;
 
                               return (
@@ -329,5 +290,3 @@ export default function CourseDetailPage() {
     </ProtectedRoute>
   );
 }
-
-    

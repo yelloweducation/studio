@@ -2,7 +2,7 @@
 "use client";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/hooks/useAuth";
-import { courses as mockCourses, enrollments as allEnrollments, type Course, type Enrollment } from "@/data/mockData"; // Renamed to mockCourses
+import { courses as mockCourses, enrollments as allEnrollments, type Course, type Enrollment } from "@/data/mockData";
 import CourseCard from "@/components/courses/CourseCard";
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,24 +10,12 @@ import { BookOpenCheck, Forward } from "lucide-react";
 
 export default function StudentDashboardPage() {
   const { user } = useAuth();
-  const [activeCourses, setActiveCourses] = useState<Course[]>(mockCourses);
+  // Use mockCourses directly, bypassing localStorage for this view
+  const [activeCourses, setActiveCourses] = useState<Course[]>(mockCourses); 
   const [enrolledCourses, setEnrolledCourses] = useState<Course[]>([]);
   const [learningContinuations, setLearningContinuations] = useState<Course[]>([]);
 
-  useEffect(() => {
-    const storedCourses = localStorage.getItem('adminCourses');
-    if (storedCourses) {
-      try {
-        const parsedCourses = JSON.parse(storedCourses) as Course[];
-        setActiveCourses(parsedCourses.length > 0 ? parsedCourses : mockCourses);
-      } catch (e) {
-        console.error("Failed to parse courses from localStorage", e);
-        setActiveCourses(mockCourses);
-      }
-    } else {
-      setActiveCourses(mockCourses);
-    }
-  }, []);
+  // Removed useEffect that loaded from localStorage for activeCourses
 
   useEffect(() => {
     if (user && activeCourses.length > 0) {
