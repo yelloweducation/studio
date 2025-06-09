@@ -13,19 +13,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'placehold.co',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'news.utexas.edu',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'monitordata.com',
+        hostname: '**', // Allows any hostname over HTTPS
         port: '',
         pathname: '/**',
       },
