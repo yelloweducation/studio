@@ -20,16 +20,23 @@ export default function CourseDetailPage() {
   const { user } = useAuth();
   const router = useRouter();
 
-  const [allAppCourses, setAllAppCourses] = useState<Course[]>([]);
-  const [areAppCoursesLoaded, setAreAppCoursesLoaded] = useState(false);
   const [currentCourse, setCurrentCourse] = useState<Course | null>(null);
   const [firstLessonPath, setFirstLessonPath] = useState<string | null>(null);
   const [isLoadingPage, setIsLoadingPage] = useState(true);
   const [completionInfo, setCompletionInfo] = useState<{ date: string; isCompleted: boolean } | null>(null);
   const [userPaymentSubmission, setUserPaymentSubmission] = useState<PaymentSubmission | null>(null);
 
-  // Effect 1: Load all available courses (from localStorage or fallback to mock)
   useEffect(() => {
+    // This single effect orchestrates all data loading for the page.
+    // It runs when courseId (from URL) or user (from auth context) changes.
+    
+    setIsLoadingPage(true);
+    setCurrentCourse(null);
+    setFirstLessonPath(null);
+    setCompletionInfo(null);
+    setUserPaymentSubmission(null);
+
+    // Phase 1: Determine the list of all available courses
     let coursesToUse = mockDataCourses;
     const storedCourses = localStorage.getItem('adminCourses');
     if (storedCourses) {
@@ -40,76 +47,57 @@ export default function CourseDetailPage() {
         }
       } catch (e) {
         console.error("Failed to parse courses from localStorage on detail page. Using mock data.", e);
+        // coursesToUse remains mockDataCourses
       }
     }
-    setAllAppCourses(coursesToUse);
-    setAreAppCoursesLoaded(true);
-  }, []);
 
-  // Effect 2: Determine the specific course details (title, modules, etc.)
-  useEffect(() => {
-    if (!areAppCoursesLoaded || !courseId) {
-      setCurrentCourse(null);
-      setFirstLessonPath(null);
-      return; // Wait for app courses and courseId
+    // Phase 2: Validate courseId and find the specific course
+    if (!courseId) {
+      // courseId from router params might not be available on initial render.
+      // isLoadingPage is true, so loader will show. Effect will re-run when courseId is populated.
+      return; 
     }
 
-    const foundCourse = allAppCourses.find(c => c.id === courseId);
+    const foundCourse = coursesToUse.find(c => c.id === courseId);
 
-    if (foundCourse) {
-      setCurrentCourse(foundCourse);
-      if (foundCourse.modules && foundCourse.modules.length > 0) {
-        const firstModuleWithLessons = foundCourse.modules.find(m => m.lessons && m.lessons.length > 0);
-        if (firstModuleWithLessons && firstModuleWithLessons.lessons && firstModuleWithLessons.lessons.length > 0) {
-          setFirstLessonPath(`/courses/${foundCourse.id}/learn/${firstModuleWithLessons.id}/${firstModuleWithLessons.lessons[0].id}`);
-        } else {
-          setFirstLessonPath(null);
-        }
+    if (!foundCourse) {
+      setCurrentCourse(null); // Ensure it's null if not found
+      setIsLoadingPage(false); // Course definitively not found
+      return;
+    }
+
+    setCurrentCourse(foundCourse);
+
+    // Determine first lesson path for the found course
+    if (foundCourse.modules && foundCourse.modules.length > 0) {
+      const firstModuleWithLessons = foundCourse.modules.find(m => m.lessons && m.lessons.length > 0);
+      if (firstModuleWithLessons && firstModuleWithLessons.lessons && firstModuleWithLessons.lessons.length > 0) {
+        setFirstLessonPath(`/courses/${foundCourse.id}/learn/${firstModuleWithLessons.id}/${firstModuleWithLessons.lessons[0].id}`);
       } else {
         setFirstLessonPath(null);
       }
     } else {
-      setCurrentCourse(null);
       setFirstLessonPath(null);
     }
-  }, [courseId, allAppCourses, areAppCoursesLoaded]);
 
-  // Effect 3: Determine completion status, payment submission, and manage final isLoadingPage state.
-  useEffect(() => {
-    setIsLoadingPage(true); // Assume loading until all checks are done
-    setCompletionInfo(null); // Reset
-    setUserPaymentSubmission(null); // Reset
-
-    if (!areAppCoursesLoaded) {
-      // Still waiting for the global list of courses, so keep loading.
-      // setIsLoadingPage(true) was already called.
-      return;
-    }
-
-    if (!currentCourse) {
-      // If Effect 2 found no currentCourse (e.g., invalid courseId or course list empty),
-      // then there's no user-specific data to load for it. We are done with loading efforts.
-      setIsLoadingPage(false);
-      return;
-    }
-
+    // Phase 3: Load user-specific data (completion, payment)
     if (!user) {
-      // No user logged in, so no user-specific data to fetch. Page structure is determined.
+      // No user logged in, so no user-specific data to fetch. Loading is complete.
       setIsLoadingPage(false);
       return;
     }
 
-    // User and currentCourse are available, proceed to load their specific data.
+    // User and foundCourse are available, load their specific data.
     let isCourseCompleted = false;
     let completionDate = '';
     try {
       const completionKey = `user_${user.id}_completions`;
       const storedCompletions = localStorage.getItem(completionKey);
       if (storedCompletions) {
-        const completions = JSON.parse(storedCompletions);
-        if (completions[currentCourse.id]) {
+        const completionsData = JSON.parse(storedCompletions);
+        if (completionsData[foundCourse.id]) {
           isCourseCompleted = true;
-          completionDate = completions[currentCourse.id];
+          completionDate = completionsData[foundCourse.id];
         }
       }
     } catch (e) {
@@ -117,21 +105,21 @@ export default function CourseDetailPage() {
     }
     setCompletionInfo({ date: completionDate, isCompleted: isCourseCompleted });
 
-    const isPaidCourse = currentCourse.price && currentCourse.price > 0;
+    const isPaidCourse = foundCourse.price && foundCourse.price > 0;
     if (isPaidCourse && !isCourseCompleted) {
-      const allSubmissions = getPaymentSubmissions();
+      const allSubmissions = getPaymentSubmissions(); // From mockData.ts, reads localStorage
       const userCourseSubmissions = allSubmissions
-        .filter(sub => sub.userId === user.id && sub.courseId === currentCourse.id)
+        .filter(sub => sub.userId === user.id && sub.courseId === foundCourse.id)
         .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
       setUserPaymentSubmission(userCourseSubmissions.length > 0 ? userCourseSubmissions[0] : null);
     } else {
       setUserPaymentSubmission(null); // Clear if not applicable
     }
     
-    // All data (course and user-specific) is now processed for this context.
+    // All data loading attempts for this cycle are complete.
     setIsLoadingPage(false);
 
-  }, [user, currentCourse, areAppCoursesLoaded]); // Key dependencies
+  }, [courseId, user]); // Effect dependencies
 
 
   if (isLoadingPage) {
@@ -149,7 +137,7 @@ export default function CourseDetailPage() {
       <div className="text-center py-10 min-h-[calc(100vh-200px)] flex flex-col items-center justify-center">
         <AlertOctagon className="h-12 w-12 text-destructive mb-4" />
         <h1 className="text-2xl font-semibold text-destructive">Course Not Found</h1>
-        <p className="text-muted-foreground">The course you are looking for (ID: {courseId}) could not be found or is not available.</p>
+        <p className="text-muted-foreground">The course you are looking for (ID: {courseId || 'N/A'}) could not be found or is not available.</p>
         <Button asChild variant="link" className="mt-4">
           <Link href="/">Go back to Homepage</Link>
         </Button>
@@ -382,5 +370,3 @@ export default function CourseDetailPage() {
     </ProtectedRoute>
   );
 }
-
-    
