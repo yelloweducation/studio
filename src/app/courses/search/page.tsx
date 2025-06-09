@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import CourseCard from '@/components/courses/CourseCard';
-import { courses as allCourses, type Course } from '@/data/mockData';
+import { courses as mockCourses, type Course } from '@/data/mockData'; // Renamed to mockCourses for clarity
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronLeft, Search } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,33 +13,48 @@ import { Card, CardContent } from '@/components/ui/card';
 function SearchResultsContent() {
   const searchParams = useSearchParams();
   const query = searchParams.get('query') || '';
+  const [activeCourses, setActiveCourses] = useState<Course[]>(mockCourses);
   const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    const storedCourses = localStorage.getItem('adminCourses');
+    if (storedCourses) {
+      try {
+        const parsedCourses = JSON.parse(storedCourses) as Course[];
+        setActiveCourses(parsedCourses.length > 0 ? parsedCourses : mockCourses);
+      } catch (e) {
+        console.error("Failed to parse courses from localStorage", e);
+        setActiveCourses(mockCourses);
+      }
+    } else {
+      setActiveCourses(mockCourses);
+    }
+  }, []);
+
+  useEffect(() => {
     setIsLoading(true);
     if (query) {
-      const results = allCourses.filter(course =>
+      const results = activeCourses.filter(course =>
         course.title.toLowerCase().includes(query.toLowerCase()) ||
         course.description.toLowerCase().includes(query.toLowerCase()) ||
         course.category.toLowerCase().includes(query.toLowerCase())
       );
       setFilteredCourses(results);
     } else {
-      setFilteredCourses(allCourses); // Show all courses if query is empty
+      setFilteredCourses(activeCourses); 
     }
-    // Simulate loading delay for better UX perception
     const timer = setTimeout(() => {
       setIsLoading(false);
     }, 300);
     return () => clearTimeout(timer);
-  }, [query]);
+  }, [query, activeCourses]);
 
   return (
     <div className="w-full">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-3 sm:gap-0">
-        <h1 className="text-2xl md:text-3xl font-headline font-semibold flex items-center">
-          <Search className="mr-2 h-6 w-6 md:mr-3 md:h-7 md:w-7 text-primary" />
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-headline font-semibold flex items-center">
+          <Search className="mr-2 h-5 w-5 sm:h-6 sm:w-6 md:mr-3 md:h-7 md:w-7 text-primary" />
           {query ? `Results for "${query}"` : "All Courses"}
         </h1>
         <Button variant="outline" asChild className="self-start sm:self-center">

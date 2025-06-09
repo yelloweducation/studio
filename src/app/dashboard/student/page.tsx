@@ -2,35 +2,50 @@
 "use client";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/hooks/useAuth";
-import { courses as allCourses, enrollments as allEnrollments, type Course, type Enrollment } from "@/data/mockData";
+import { courses as mockCourses, enrollments as allEnrollments, type Course, type Enrollment } from "@/data/mockData"; // Renamed to mockCourses
 import CourseCard from "@/components/courses/CourseCard";
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { BookOpenCheck, Forward } from "lucide-react";
 
 export default function StudentDashboardPage() {
   const { user } = useAuth();
+  const [activeCourses, setActiveCourses] = useState<Course[]>(mockCourses);
   const [enrolledCourses, setEnrolledCourses] = useState<Course[]>([]);
   const [learningContinuations, setLearningContinuations] = useState<Course[]>([]);
 
   useEffect(() => {
-    if (user) {
+    const storedCourses = localStorage.getItem('adminCourses');
+    if (storedCourses) {
+      try {
+        const parsedCourses = JSON.parse(storedCourses) as Course[];
+        setActiveCourses(parsedCourses.length > 0 ? parsedCourses : mockCourses);
+      } catch (e) {
+        console.error("Failed to parse courses from localStorage", e);
+        setActiveCourses(mockCourses);
+      }
+    } else {
+      setActiveCourses(mockCourses);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user && activeCourses.length > 0) {
       const userEnrollments = allEnrollments.filter(e => e.userId === user.id);
       const courses = userEnrollments.map(enrollment => {
-        return allCourses.find(c => c.id === enrollment.courseId);
+        return activeCourses.find(c => c.id === enrollment.courseId);
       }).filter((course): course is Course => course !== undefined);
       
       setEnrolledCourses(courses);
 
-      // Simple "Continue Learning": courses with some progress but not 100%
       const progressCourses = userEnrollments
         .filter(e => e.progress > 0 && e.progress < 100)
-        .map(e => allCourses.find(c => c.id === e.courseId))
+        .map(e => activeCourses.find(c => c.id === e.courseId))
         .filter((course): course is Course => course !== undefined)
-        .slice(0, 3); // Show a few
+        .slice(0, 3); 
       setLearningContinuations(progressCourses);
     }
-  }, [user]);
+  }, [user, activeCourses]);
 
   return (
     <ProtectedRoute allowedRoles={['student']}>

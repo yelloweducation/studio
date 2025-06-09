@@ -20,19 +20,13 @@ function getEmbedUrl(url: string): string | null {
     const videoId = url.split('youtu.be/')[1].split('?')[0];
     return `https://www.youtube.com/embed/${videoId}`;
   }
-  // Basic check for Google Drive public/preview links
   if (url.includes('drive.google.com/') && (url.includes('/file/d/') || url.includes('/open?id='))) {
-    // Google Drive embed URLs are tricky and often need /preview.
-    // This is a simplification. For robust embedding, more complex logic or specific embed links from GDrive are needed.
     if (url.includes('/preview')) return url;
     if (url.includes('/file/d/')) {
         return url.replace('/file/d/', '/preview/').replace('/view?usp=sharing', '').replace('/view','');
     }
-    // This is a very basic attempt and might not work for all GDrive links.
     return url.replace('/open?id=', '/preview/');
   }
-  // For other URLs, assume they are directly embeddable or user knows what they're doing.
-  // Could add more parsers here (Vimeo, etc.)
   return url;
 }
 
@@ -41,21 +35,21 @@ export default function CourseDetailPage() {
   const params = useParams();
   const courseId = params.id as string;
   const [course, setCourse] = useState<Course | null>(null);
-  const [activeCourses, setActiveCourses] = useState<Course[]>(initialCourses);
+  const [activeCourses, setActiveCourses] = useState<Course[]>(allCourses); // Fixed: Use allCourses as initial state
 
 
   useEffect(() => {
-    // Attempt to load courses from localStorage if admin might have updated them
     const storedCourses = localStorage.getItem('adminCourses');
     if (storedCourses) {
       try {
-        setActiveCourses(JSON.parse(storedCourses));
+        const parsedCourses = JSON.parse(storedCourses) as Course[];
+        setActiveCourses(parsedCourses.length > 0 ? parsedCourses : allCourses);
       } catch (e) {
         console.error("Failed to parse courses from localStorage", e);
-        setActiveCourses(allCourses); // Fallback to initial mock data
+        setActiveCourses(allCourses); 
       }
     } else {
-      setActiveCourses(allCourses); // Fallback if nothing in localStorage
+      setActiveCourses(allCourses); 
     }
   }, []);
 
