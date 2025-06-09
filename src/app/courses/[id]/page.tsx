@@ -1,7 +1,7 @@
 
 "use client";
 import { useParams } from 'next/navigation';
-import { courses as allCourses, type Course, type Lesson } from '@/data/mockData';
+import { courses as allCourses, type Course, type Lesson, type Module } from '@/data/mockData'; // Added Module import
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,22 +12,31 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 function getEmbedUrl(url: string): string | null {
+  if (!url) return null; // Guard for null or empty string
+
   if (url.includes('youtube.com/watch?v=')) {
-    const videoId = url.split('v=')[1].split('&')[0];
-    return `https://www.youtube.com/embed/${videoId}`;
+    const videoId = url.split('v=')[1]?.split('&')[0];
+    return videoId ? `https://www.youtube.com/embed/${videoId}` : url; // Fallback to original if parsing fails
   }
   if (url.includes('youtu.be/')) {
-    const videoId = url.split('youtu.be/')[1].split('?')[0];
-    return `https://www.youtube.com/embed/${videoId}`;
+    const videoId = url.split('youtu.be/')[1]?.split('?')[0];
+    return videoId ? `https://www.youtube.com/embed/${videoId}` : url; // Fallback
   }
-  if (url.includes('drive.google.com/') && (url.includes('/file/d/') || url.includes('/open?id='))) {
-    if (url.includes('/preview')) return url;
+  if (url.includes('drive.google.com/')) {
+    if (url.includes('/preview')) return url; // Already a preview link
+
     if (url.includes('/file/d/')) {
-        return url.replace('/file/d/', '/preview/').replace('/view?usp=sharing', '').replace('/view','');
+      let previewUrl = url.replace('/file/d/', '/preview/');
+      previewUrl = previewUrl.split('/view')[0]; // Remove /view and anything after
+      return previewUrl;
     }
-    return url.replace('/open?id=', '/preview/');
+    if (url.includes('/open?id=')) {
+      let previewUrl = url.replace('/open?id=', '/preview/');
+       // Potentially remove other query params if they interfere, but keep it simple for now
+      return previewUrl;
+    }
   }
-  return url;
+  return url; // Return original URL if no specific parsing logic matches
 }
 
 
@@ -35,7 +44,7 @@ export default function CourseDetailPage() {
   const params = useParams();
   const courseId = params.id as string;
   const [course, setCourse] = useState<Course | null>(null);
-  const [activeCourses, setActiveCourses] = useState<Course[]>(allCourses); // Fixed: Use allCourses as initial state
+  const [activeCourses, setActiveCourses] = useState<Course[]>(allCourses); 
 
 
   useEffect(() => {
@@ -58,6 +67,12 @@ export default function CourseDetailPage() {
     if (courseId && activeCourses.length > 0) {
       const foundCourse = activeCourses.find(c => c.id === courseId);
       setCourse(foundCourse || null);
+    } else if (courseId && activeCourses.length === 0 && !localStorage.getItem('adminCourses')) {
+      // If activeCourses is empty AND there was nothing in localStorage,
+      // it implies we might be relying on mock data that hasn't loaded yet or courseId is for a mock course.
+      // However, activeCourses is initialized with allCourses, so this branch might be less common.
+      // For safety, if activeCourses is empty (e.g. after an error or if localStorage was empty array and allCourses was also empty)
+      setCourse(null);
     }
   }, [courseId, activeCourses]);
 
