@@ -56,6 +56,8 @@ export default function VideosPage() {
       <div 
         className="w-full max-w-md flex-1 overflow-y-auto snap-y snap-mandatory 
                    rounded-lg bg-card shadow-inner scrollbar-hide"
+        // Set a specific height or ensure parent provides enough height for scrolling
+        // For example, style={{ height: 'calc(100vh - 200px)' }} if header/footer are fixed height
       >
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
@@ -68,8 +70,8 @@ export default function VideosPage() {
             </div>
           ))
         ) : (
-          <div className="flex items-center justify-center h-full">
-            <p className="text-muted-foreground">No videos available at the moment.</p>
+          <div className="flex items-center justify-center h-full text-center px-4">
+            <p className="text-muted-foreground">No videos available at the moment. <br/> Admins can add videos in the dashboard.</p>
           </div>
         )}
       </div>
