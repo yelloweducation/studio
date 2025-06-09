@@ -182,7 +182,7 @@ export default function Home() {
             variant="default"
             className="flex-1"
           >
-            <VideoIcon className="mr-2 h-5 w-5" /> View All Videos
+            <VideoIcon className="mr-2 h-5 w-5" /> View Reels
           </Button>
         </div>
       </section>
