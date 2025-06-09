@@ -1,12 +1,12 @@
 
 "use client";
 import { useParams, useRouter } from 'next/navigation';
-import { courses as allCourses, type Course, type Lesson, type Module } from '@/data/mockData';
+import { courses as allCourses, type Course, type Lesson, type Module, getPaymentSubmissions, type PaymentSubmission } from '@/data/mockData';
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, PlayCircle, BookOpen, Video, FileText, Loader2, ListChecks, FileVideo, ExternalLink, CheckCircle2, ShoppingCart } from 'lucide-react';
+import { ChevronLeft, PlayCircle, BookOpen, Video, FileText, Loader2, ListChecks, FileVideo, ExternalLink, CheckCircle2, ShoppingCart, Clock, AlertOctagon } from 'lucide-react';
 import Link from 'next/link';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -26,6 +26,7 @@ export default function CourseDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [firstLessonPath, setFirstLessonPath] = useState<string | null>(null);
   const [completionInfo, setCompletionInfo] = useState<{ date: string; isCompleted: boolean } | null>(null);
+  const [userPaymentSubmission, setUserPaymentSubmission] = useState<PaymentSubmission | null>(null);
 
 
   useEffect(() => {
@@ -74,25 +75,40 @@ export default function CourseDetailPage() {
 
   useEffect(() => {
     if (user && course) {
+      // Check for course completion
       const completionKey = `user_${user.id}_completions`;
+      let isCourseCompleted = false;
+      let completionDate = '';
       try {
         const storedCompletions = localStorage.getItem(completionKey);
         if (storedCompletions) {
           const completions = JSON.parse(storedCompletions);
           if (completions[course.id]) {
-            setCompletionInfo({ date: completions[course.id], isCompleted: true });
-          } else {
-            setCompletionInfo({ date: '', isCompleted: false });
+            isCourseCompleted = true;
+            completionDate = completions[course.id];
           }
-        } else {
-          setCompletionInfo({ date: '', isCompleted: false });
         }
       } catch (e) {
         console.error("Error parsing completions from localStorage", e);
-        setCompletionInfo({ date: '', isCompleted: false });
+      }
+      setCompletionInfo({ date: completionDate, isCompleted: isCourseCompleted });
+  
+      // If course is paid and not completed by this user, check for payment submission
+      const isPaidCourse = course.price && course.price > 0;
+      if (isPaidCourse && !isCourseCompleted) {
+        const allSubmissions = getPaymentSubmissions();
+        // Find the most recent submission for this user and course
+        const userCourseSubmissions = allSubmissions
+          .filter(sub => sub.userId === user.id && sub.courseId === course.id)
+          .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+        
+        setUserPaymentSubmission(userCourseSubmissions.length > 0 ? userCourseSubmissions[0] : null);
+      } else {
+        setUserPaymentSubmission(null); // Clear if course is free, or completed, or no user
       }
     } else {
-      setCompletionInfo(null); // Reset if no user or course, or user logs out
+      setCompletionInfo(null);
+      setUserPaymentSubmission(null);
     }
   }, [user, course]);
 
@@ -120,9 +136,11 @@ export default function CourseDetailPage() {
   }
 
   const totalLessons = course.modules?.reduce((acc, module) => acc + (module.lessons?.length || 0), 0) || 0;
-  const isPaidCourse = course.price && course.price > 0;
+  
 
   const renderCTAButton = () => {
+    const isPaidCourse = course.price && course.price > 0;
+
     if (completionInfo?.isCompleted && completionInfo.date) {
       let formattedDate = 'a previous date';
       try {
@@ -143,8 +161,54 @@ export default function CourseDetailPage() {
         </div>
       );
     }
+    
+    // If course has content
     if (firstLessonPath) {
       if (isPaidCourse) {
+        if (userPaymentSubmission) {
+          if (userPaymentSubmission.status === 'verified') {
+            return (
+              <div className="w-full p-3 text-center bg-green-100 dark:bg-green-900 border border-green-500 text-green-700 dark:text-green-300 rounded-md shadow-sm flex flex-col sm:flex-row items-center justify-center gap-2">
+                 <CheckCircle2 className="mr-2 h-6 w-6 text-green-600 dark:text-green-400 shrink-0" />
+                 <div className="flex-grow text-center sm:text-left">
+                  <span className="font-semibold">Payment Verified!</span>
+                  <p className="text-sm">You can now start learning this course.</p>
+                 </div>
+                <Button size="lg" asChild className="w-full sm:w-auto mt-2 sm:mt-0 sm:ml-auto bg-primary text-primary-foreground hover:bg-primary/90">
+                  <Link href={firstLessonPath}>
+                    <PlayCircle className="mr-2 h-6 w-6"/> Start Learning
+                  </Link>
+                </Button>
+              </div>
+            );
+          } else if (userPaymentSubmission.status === 'pending') {
+            return (
+              <div className="w-full p-4 text-center bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-500 text-yellow-700 dark:text-yellow-300 rounded-md shadow-sm flex flex-col items-center gap-2">
+                <Clock className="h-7 w-7 text-yellow-600 dark:text-yellow-400" />
+                <span className="font-semibold text-lg">Payment Submitted</span>
+                <p className="text-sm">Your payment proof is pending verification by an admin. Please check back later.</p>
+                <p className="text-xs mt-1">Submitted on: {format(new Date(userPaymentSubmission.submittedAt), 'PPpp')}</p>
+                 <Button size="sm" variant="outline" asChild className="mt-2 border-yellow-600 text-yellow-700 hover:bg-yellow-200 dark:border-yellow-500 dark:text-yellow-300 dark:hover:bg-yellow-800/70">
+                    <Link href={`/courses/${course.id}/checkout`}>View/Update Submission</Link>
+                 </Button>
+              </div>
+            );
+          } else if (userPaymentSubmission.status === 'rejected') {
+            return (
+              <div className="w-full p-4 text-center bg-red-100 dark:bg-red-900/50 border border-red-500 text-red-700 dark:text-red-300 rounded-md shadow-sm flex flex-col items-center gap-2">
+                <AlertOctagon className="h-7 w-7 text-red-600 dark:text-red-400" />
+                <span className="font-semibold text-lg">Payment Rejected</span>
+                <p className="text-sm">Your previous payment submission was rejected. Please ensure your details are correct and try again.</p>
+                <Button size="lg" asChild className="mt-3 w-full sm:w-auto bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  <Link href={`/courses/${course.id}/checkout`}>
+                    <ShoppingCart className="mr-2 h-6 w-6"/> Re-submit Payment
+                  </Link>
+                </Button>
+              </div>
+            );
+          }
+        }
+        // Default for paid course, no submission or unhandled status
         return (
           <Button size="lg" className="w-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150" asChild>
             <Link href={`/courses/${course.id}/checkout`}>
@@ -152,15 +216,18 @@ export default function CourseDetailPage() {
             </Link>
           </Button>
         );
+      } else { // Free course
+        return (
+          <Button size="lg" className="w-full bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150" asChild>
+            <Link href={firstLessonPath}>
+              <PlayCircle className="mr-2 h-6 w-6"/> Start Learning (Free)
+            </Link>
+          </Button>
+        );
       }
-      return (
-        <Button size="lg" className="w-full bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150" asChild>
-          <Link href={firstLessonPath}>
-            <PlayCircle className="mr-2 h-6 w-6"/> Start Learning (Free)
-          </Link>
-        </Button>
-      );
     }
+
+    // Fallback if no firstLessonPath (course has no content)
     return (
       <Button size="lg" className="w-full" disabled>
         <PlayCircle className="mr-2 h-6 w-6"/> Course Content Coming Soon
@@ -199,7 +266,7 @@ export default function CourseDetailPage() {
             {!course.imageUrl && <CardTitle className="text-3xl font-headline">{course.title}</CardTitle>}
             <div className="flex justify-between items-start">
                 <CardDescription className="text-md">By {course.instructor}</CardDescription>
-                {isPaidCourse ? (
+                {course.price && course.price > 0 ? (
                     <span className="text-xl font-semibold text-primary">
                         {course.price?.toLocaleString()} {course.currency}
                     </span>
@@ -246,9 +313,10 @@ export default function CourseDetailPage() {
                           <ul className="space-y-3 pl-2">
                             {module.lessons.map(lesson => {
                               const embeddableUrl = getEmbedUrl(lesson.embedUrl);
-                              // For paid courses, if not enrolled/paid, links here could be disabled or show a lock icon.
-                              // For this iteration, links are active, payment page is informational.
-                              const lessonIsAccessible = !isPaidCourse || completionInfo?.isCompleted; 
+                              // For paid courses, access depends on completion or verified payment.
+                              // For free courses, always accessible.
+                              const isPaidAndNotVerified = (course.price && course.price > 0) && userPaymentSubmission?.status !== 'verified';
+                              const lessonIsAccessible = (!isPaidAndNotVerified || completionInfo?.isCompleted); 
                               const lessonLink = `/courses/${course.id}/learn/${module.id}/${lesson.id}`;
 
                               return (
@@ -268,9 +336,9 @@ export default function CourseDetailPage() {
                                       Watch Lesson <ExternalLink className="ml-1 h-3 w-3" />
                                     </Link>
                                   )}
-                                   {!lessonIsAccessible && isPaidCourse && (
+                                   {!lessonIsAccessible && (course.price && course.price > 0) && (
                                     <span className="text-xs text-muted-foreground flex items-center">
-                                        Enroll to access this lesson.
+                                        Enrollment or verified payment required.
                                     </span>
                                   )}
                                 </li>
@@ -295,3 +363,4 @@ export default function CourseDetailPage() {
     </ProtectedRoute>
   );
 }
+
