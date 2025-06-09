@@ -20,60 +20,39 @@ export default function CourseDetailPage() {
   const { user } = useAuth();
   const router = useRouter();
 
-  // State for all courses available in the app
   const [allAppCourses, setAllAppCourses] = useState<Course[]>([]);
-  // Flag to indicate if allAppCourses has been loaded
   const [areAppCoursesLoaded, setAreAppCoursesLoaded] = useState(false);
-
-  // State for the specific course being viewed
   const [currentCourse, setCurrentCourse] = useState<Course | null>(null);
-  // State for the path to the first lesson of the current course
   const [firstLessonPath, setFirstLessonPath] = useState<string | null>(null);
-
-  // Overall loading state for the page
   const [isLoadingPage, setIsLoadingPage] = useState(true);
-
-  // User-specific states for the current course
   const [completionInfo, setCompletionInfo] = useState<{ date: string; isCompleted: boolean } | null>(null);
   const [userPaymentSubmission, setUserPaymentSubmission] = useState<PaymentSubmission | null>(null);
 
   // Effect 1: Load all available courses (from localStorage or fallback to mock)
-  // This runs once on mount or when dependencies change (none in this case, so effectively once).
   useEffect(() => {
-    let coursesToUse = mockDataCourses; // Default to mock data
+    let coursesToUse = mockDataCourses;
     const storedCourses = localStorage.getItem('adminCourses');
     if (storedCourses) {
       try {
         const parsedCourses = JSON.parse(storedCourses) as Course[];
-        // Ensure parsedCourses is an array. If it's an empty array from admin, respect that.
         if (Array.isArray(parsedCourses)) {
           coursesToUse = parsedCourses;
         }
       } catch (e) {
         console.error("Failed to parse courses from localStorage on detail page. Using mock data.", e);
-        // Fallback to mockDataCourses is already handled by initial coursesToUse
       }
     }
     setAllAppCourses(coursesToUse);
-    setAreAppCoursesLoaded(true); // Signal that master course list loading attempt is complete
+    setAreAppCoursesLoaded(true);
   }, []);
 
-  // Effect 2: Determine the specific course details once allAppCourses are loaded and courseId is available.
+  // Effect 2: Determine the specific course details (title, modules, etc.)
   useEffect(() => {
-    // Guard: Wait for the master list of all courses to be loaded and for courseId to be available.
     if (!areAppCoursesLoaded || !courseId) {
-      // If still waiting for these, ensure the page remains in a loading state.
-      // If isLoadingPage is somehow false, set it back to true.
-      if (!isLoadingPage) setIsLoadingPage(true);
-      setCurrentCourse(null); // Clear any stale specific course data
+      setCurrentCourse(null);
       setFirstLessonPath(null);
-      return;
+      return; // Wait for app courses and courseId
     }
-
-    // Start the process of finding the specific course.
-    setIsLoadingPage(true);
-    setCurrentCourse(null); // Reset previous specific course data
-    setFirstLessonPath(null);
 
     const foundCourse = allAppCourses.find(c => c.id === courseId);
 
@@ -83,29 +62,48 @@ export default function CourseDetailPage() {
         const firstModuleWithLessons = foundCourse.modules.find(m => m.lessons && m.lessons.length > 0);
         if (firstModuleWithLessons && firstModuleWithLessons.lessons && firstModuleWithLessons.lessons.length > 0) {
           setFirstLessonPath(`/courses/${foundCourse.id}/learn/${firstModuleWithLessons.id}/${firstModuleWithLessons.lessons[0].id}`);
+        } else {
+          setFirstLessonPath(null);
         }
+      } else {
+        setFirstLessonPath(null);
       }
     } else {
-      // Course not found in allAppCourses, currentCourse will remain null.
+      setCurrentCourse(null);
+      setFirstLessonPath(null);
     }
-    setIsLoadingPage(false); // Finished attempting to load/find the specific course.
+  }, [courseId, allAppCourses, areAppCoursesLoaded]);
 
-  }, [courseId, allAppCourses, areAppCoursesLoaded]); // Key dependencies for re-running this effect.
-
-  // Effect 3: Determine completion status and payment submission status for the currentCourse.
-  // This depends on the currentCourse being loaded (isLoadingPage is false) and the user being available.
+  // Effect 3: Determine completion status, payment submission, and manage final isLoadingPage state.
   useEffect(() => {
-    if (isLoadingPage || !currentCourse || !user) {
-      setCompletionInfo(null);
-      setUserPaymentSubmission(null);
+    setIsLoadingPage(true); // Assume loading until all checks are done
+    setCompletionInfo(null); // Reset
+    setUserPaymentSubmission(null); // Reset
+
+    if (!areAppCoursesLoaded) {
+      // Still waiting for the global list of courses, so keep loading.
+      // setIsLoadingPage(true) was already called.
       return;
     }
 
-    // Check for course completion
-    const completionKey = `user_${user.id}_completions`;
+    if (!currentCourse) {
+      // If Effect 2 found no currentCourse (e.g., invalid courseId or course list empty),
+      // then there's no user-specific data to load for it. We are done with loading efforts.
+      setIsLoadingPage(false);
+      return;
+    }
+
+    if (!user) {
+      // No user logged in, so no user-specific data to fetch. Page structure is determined.
+      setIsLoadingPage(false);
+      return;
+    }
+
+    // User and currentCourse are available, proceed to load their specific data.
     let isCourseCompleted = false;
     let completionDate = '';
     try {
+      const completionKey = `user_${user.id}_completions`;
       const storedCompletions = localStorage.getItem(completionKey);
       if (storedCompletions) {
         const completions = JSON.parse(storedCompletions);
@@ -125,12 +123,15 @@ export default function CourseDetailPage() {
       const userCourseSubmissions = allSubmissions
         .filter(sub => sub.userId === user.id && sub.courseId === currentCourse.id)
         .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
-
       setUserPaymentSubmission(userCourseSubmissions.length > 0 ? userCourseSubmissions[0] : null);
     } else {
-      setUserPaymentSubmission(null);
+      setUserPaymentSubmission(null); // Clear if not applicable
     }
-  }, [user, currentCourse, isLoadingPage]); // Depend on isLoadingPage to run after specific course is processed.
+    
+    // All data (course and user-specific) is now processed for this context.
+    setIsLoadingPage(false);
+
+  }, [user, currentCourse, areAppCoursesLoaded]); // Key dependencies
 
 
   if (isLoadingPage) {
@@ -166,7 +167,6 @@ export default function CourseDetailPage() {
       try {
         formattedDate = format(new Date(completionInfo.date), 'PPP');
       } catch (error) {
-        // If date format is invalid, use the raw date string
         formattedDate = completionInfo.date;
       }
       return (
@@ -382,3 +382,5 @@ export default function CourseDetailPage() {
     </ProtectedRoute>
   );
 }
+
+    
