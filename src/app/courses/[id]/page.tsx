@@ -15,30 +15,41 @@ function getEmbedUrl(url: string): string | null {
   if (!url || typeof url !== 'string') return null;
 
   try {
-    if (url.includes('youtube.com/watch?v=')) {
-      const videoId = url.split('v=')[1]?.split('&')[0];
+    // Attempt to construct a URL object. If it fails, it's not a valid URL.
+    const urlObj = new URL(url);
+
+    if (urlObj.hostname === 'www.youtube.com' && urlObj.pathname === '/watch') {
+      const videoId = urlObj.searchParams.get('v');
       return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
     }
-    if (url.includes('youtu.be/')) {
-      const videoId = url.split('youtu.be/')[1]?.split('?')[0];
+    if (urlObj.hostname === 'youtu.be') {
+      const videoId = urlObj.pathname.substring(1); // Remove leading '/'
       return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
     }
-    if (url.includes('drive.google.com/')) {
-      if (url.includes('/preview')) return url;
-      if (url.includes('/file/d/')) {
-        let previewUrl = url.replace('/file/d/', '/preview/');
-        previewUrl = previewUrl.split('/view')[0];
-        return previewUrl;
+    if (urlObj.hostname === 'drive.google.com') {
+      if (urlObj.pathname.includes('/preview')) {
+        return url; // Already a preview URL
       }
-      if (url.includes('/open?id=')) {
-        let previewUrl = url.replace('/open?id=', '/preview/');
-        return previewUrl;
+      let fileId: string | null = null;
+      // For links like /file/d/FILE_ID/view or /file/d/FILE_ID
+      if (urlObj.pathname.startsWith('/file/d/')) {
+        fileId = urlObj.pathname.split('/')[3]; // e.g., /file/d/FILE_ID/view -> FILE_ID is at index 3
+      } else if (urlObj.searchParams.has('id')) { // For links like /open?id=FILE_ID or /uc?id=FILE_ID&export=view
+        fileId = urlObj.searchParams.get('id');
+      }
+
+      if (fileId) {
+        return `https://drive.google.com/file/d/${fileId}/preview`;
       }
     }
   } catch (error) {
-    console.error("Error parsing embed URL:", error);
+    console.error("Error parsing embed URL, or URL is not standard:", error);
+    // If URL parsing fails (e.g., not a full valid URL for the URL constructor)
+    // or if it's a non-standard URL we don't specifically handle,
+    // we return the original URL. It might be directly embeddable or an error.
     return url;
   }
+  // If no specific rule matches, return the original URL.
   return url;
 }
 
@@ -47,12 +58,11 @@ export default function CourseDetailPage() {
   const params = useParams();
   const courseId = params.id as string;
   const [course, setCourse] = useState<Course | null>(null);
-  const [activeCourses, setActiveCourses] = useState<Course[]>([]); // Initialize as empty
+  const [activeCourses, setActiveCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
 
   useEffect(() => {
-    // This effect populates activeCourses from localStorage or falls back to allCourses
     const storedCourses = localStorage.getItem('adminCourses');
     if (storedCourses) {
       try {
@@ -60,32 +70,26 @@ export default function CourseDetailPage() {
         setActiveCourses(parsedCourses);
       } catch (e) {
         console.error("Failed to parse courses from localStorage on detail page", e);
-        setActiveCourses(allCourses); // Fallback if parsing fails
+        setActiveCourses(allCourses);
       }
     } else {
-      setActiveCourses(allCourses); // Fallback if no localStorage item
+      setActiveCourses(allCourses);
     }
-  }, []); // Load activeCourses list once on mount
+  }, []);
 
   useEffect(() => {
-    // This effect finds the specific course and sets loading state.
-    // It runs when courseId changes or when activeCourses is populated by the first effect.
-
     if (!courseId) {
       setCourse(null);
-      setIsLoading(false); // No ID, so we're done.
+      setIsLoading(false);
       return;
     }
-
-    // activeCourses is now populated by the first effect (or is [], if sources were empty).
-    // We can now attempt to find the course and finalize loading state.
-    // Note: If activeCourses is an empty array (e.g. localStorage was '[]' or allCourses is empty),
-    // foundCourse will be undefined, and course will be set to null.
+    
+    // This effect depends on activeCourses. It will run when activeCourses is populated.
     const foundCourse = activeCourses.find(c => c.id === courseId);
     setCourse(foundCourse || null);
-    setIsLoading(false); // We've processed activeCourses, so loading is done.
-
-  }, [courseId, activeCourses]); // Depend on courseId and activeCourses
+    setIsLoading(false); // Always set loading to false after attempting to find.
+    
+  }, [courseId, activeCourses]);
 
   if (isLoading) {
     return (
