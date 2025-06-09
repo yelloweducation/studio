@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, PlayCircle, BookOpen, Video, FileText, Loader2 } from 'lucide-react';
+import { ChevronLeft, PlayCircle, BookOpen, Video, FileText, Loader2, ListChecks, FileVideo } from 'lucide-react';
 import Link from 'next/link';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -82,6 +82,8 @@ export default function CourseDetailPage() {
     );
   }
 
+  const totalLessons = course.modules?.reduce((acc, module) => acc + (module.lessons?.length || 0), 0) || 0;
+
   return (
     <ProtectedRoute>
       <div className="max-w-4xl mx-auto">
@@ -114,6 +116,21 @@ export default function CourseDetailPage() {
           </CardHeader>
           <CardContent className="px-6 pb-6 space-y-6">
             <p className="text-lg text-foreground/90">{course.description}</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-4 p-4 border rounded-lg bg-muted/5 shadow-sm">
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground flex items-center mb-1">
+                  <ListChecks className="mr-2 h-5 w-5 text-primary" /> Modules
+                </h3>
+                <p className="text-xl font-semibold text-foreground">{course.modules?.length || 0}</p>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground flex items-center mb-1">
+                  <FileVideo className="mr-2 h-5 w-5 text-primary" /> Lessons
+                </h3>
+                <p className="text-xl font-semibold text-foreground">{totalLessons}</p>
+              </div>
+            </div>
 
             <div>
               <h2 className="text-2xl font-headline font-semibold mb-3 flex items-center">
