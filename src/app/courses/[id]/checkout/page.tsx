@@ -2,16 +2,14 @@
 "use client";
 import { useParams, useRouter } from 'next/navigation';
 import { courses as allCourses, type Course, type PaymentSettings } from '@/data/mockData';
-import { useEffect, useState, type ChangeEvent } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, Loader2, AlertTriangle, Landmark, Copy, Check, UploadCloud, FileImage, Send } from 'lucide-react';
+import { ChevronLeft, Loader2, AlertTriangle, Landmark, Copy, Check } from 'lucide-react';
 import Link from 'next/link';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useToast } from '@/hooks/use-toast';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-// useAuth is not strictly needed in this reverted version if we're not auto-populating user details or submitting anything
+// No useAuth import here for this reverted version, as user isn't directly used for submission
 
 const PAYMENT_SETTINGS_KEY = 'paymentSettings';
 
@@ -26,12 +24,10 @@ export default function CheckoutPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [fileName, setFileName] = useState<string | null>(null);
 
   useEffect(() => {
     setIsLoading(true);
-    setError(null);
+    setError(null); // Clear previous errors on new load
 
     const storedCourses = localStorage.getItem('adminCourses');
     let coursesToUse = allCourses;
@@ -47,8 +43,9 @@ export default function CheckoutPage() {
       setIsLoading(false);
       return;
     }
+    // If course is free or has no price, redirect back to course page
     if (!foundCourse.price || foundCourse.price <= 0) {
-        router.replace(`/courses/${courseId}`); // Redirect if course is free or price not set
+        router.replace(`/courses/${courseId}`);
         return;
     }
     setCourse(foundCourse);
@@ -78,42 +75,15 @@ export default function CheckoutPage() {
     });
   };
 
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      const file = event.target.files[0];
-      // Basic validation for image type and size (optional)
-      if (!file.type.startsWith('image/')) {
-        toast({ variant: "destructive", title: "Invalid File Type", description: "Please select an image file." });
-        setSelectedFile(null);
-        setFileName(null);
-        if(event.target) event.target.value = ''; // Reset file input
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
-         toast({ variant: "destructive", title: "File Too Large", description: "Please select an image smaller than 5MB." });
-        setSelectedFile(null);
-        setFileName(null);
-        if(event.target) event.target.value = ''; // Reset file input
-        return;
-      }
-      setSelectedFile(file);
-      setFileName(file.name);
-      toast({ title: "File Selected", description: `${file.name} is ready.`});
-    } else {
-      setSelectedFile(null);
-      setFileName(null);
+  const handleUnderstood = () => {
+    if (course) {
+      toast({
+        title: 'Payment Process',
+        description: `Please proceed with the manual bank transfer. Contact support with your payment proof to finalize enrollment for ${course.title}.`,
+        duration: 10000, 
+      });
+      router.push(`/courses/${course.id}`);
     }
-  };
-
-  const handleInformCompletion = () => {
-    if (!course) return;
-    toast({
-      title: 'Payment Process',
-      description: `You've selected "${fileName || 'your screenshot'}". Please send this along with your payment details to our support team to finalize enrollment for ${course.title}.`,
-      duration: 10000, // Longer duration for this important message
-    });
-    // Optionally navigate, or let user navigate back manually
-    // router.push(`/courses/${course.id}`); 
   };
 
 
@@ -143,7 +113,8 @@ export default function CheckoutPage() {
   }
 
   if (!course || !paymentSettings) {
-    return (
+    // This case should ideally be caught by the error states or redirection above
+     return (
          <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center">
             <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
             <h1 className="text-2xl font-semibold text-destructive mb-2">Information Missing</h1>
@@ -155,11 +126,10 @@ export default function CheckoutPage() {
     );
   }
 
-  const defaultPaymentInstructions = `1. Make the payment to the bank account details provided above.
+  const defaultPaymentInstructions = `1. Make the payment to the bank account details provided.
 2. Ensure to include your email or the course name ("${course.title}") in the payment reference or description.
-3. After completing the payment, select your payment proof (screenshot) using the button below.
-4. Click "Payment Made, Inform Support".
-5. Contact our support team with your payment details and the screenshot to finalize your enrollment. You may be contacted via email if further information is needed.`;
+3. After completing the payment, contact our support team with your payment details and proof of payment (e.g., screenshot) to finalize your enrollment.
+4. You may be contacted via email if further information is needed.`;
 
 
   return (
@@ -211,51 +181,16 @@ export default function CheckoutPage() {
                 <p className="whitespace-pre-line">{paymentSettings.paymentInstructions || defaultPaymentInstructions}</p>
               </div>
             </div>
-
-            <div>
-                <h3 className="text-xl font-semibold mb-2">Attach Payment Proof (Screenshot)</h3>
-                <div className="p-4 border rounded-lg bg-muted/30 space-y-3">
-                    <Label htmlFor="paymentProof" className="text-sm font-medium text-foreground">
-                        Select your payment screenshot (image file, max 5MB):
-                    </Label>
-                    <div className="relative">
-                      <Input 
-                          id="paymentProof" 
-                          type="file" 
-                          accept="image/*" 
-                          onChange={handleFileChange} 
-                          className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
-                          aria-describedby="file_input_help"
-                      />
-                      <UploadCloud className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
-                    </div>
-                    {fileName && (
-                        <div className="text-sm text-muted-foreground flex items-center">
-                            <FileImage className="mr-2 h-4 w-4 text-green-600" />
-                            Selected: <span className="font-medium text-foreground ml-1">{fileName}</span>
-                        </div>
-                    )}
-                     <p id="file_input_help" className="mt-1 text-xs text-muted-foreground">
-                        This helps admins verify your payment. You will still need to email the actual file to support.
-                    </p>
-                </div>
-            </div>
             
             <div className="text-sm text-muted-foreground p-3 border-l-4 border-primary bg-primary/10 rounded-r-md">
                 <strong>Important:</strong> This is a manual payment process. Your enrollment will be confirmed once payment is verified by our team.
-                After selecting your file and clicking the button below, please contact support with your payment details.
+                Please follow the instructions carefully and contact support with your payment details.
             </div>
 
           </CardContent>
           <CardFooter>
-            <Button 
-              size="lg" 
-              className="w-full" 
-              onClick={handleInformCompletion}
-              disabled={!selectedFile} // Only enable if a file has been selected
-            >
-              <Send className="mr-2 h-5 w-5" />
-              Payment Made, Inform Support
+            <Button size="lg" className="w-full" onClick={handleUnderstood}>
+              I Understand, Proceed to Payment
             </Button>
           </CardFooter>
         </Card>

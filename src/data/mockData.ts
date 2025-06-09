@@ -5,7 +5,7 @@ export type Lesson = {
   duration: string;
   description?: string;
   embedUrl?: string;
-  imageUrl?: string; // Added for lessons that might be image-focused
+  imageUrl?: string;
 };
 
 export type Module = {
@@ -23,8 +23,8 @@ export type Course = {
   modules: Module[];
   imageUrl?: string;
   dataAiHint?: string;
-  price?: number; // New field for course price
-  currency?: string; // New field for currency, e.g., "MMK"
+  price?: number;
+  currency?: string;
 };
 
 export type User = {
@@ -32,7 +32,7 @@ export type User = {
   name: string;
   email: string;
   role: 'student' | 'admin';
-  passwordHash: string; // In a real app, this would be a hash
+  passwordHash: string; 
 };
 
 export type Enrollment = {
@@ -48,8 +48,8 @@ export type Video = {
   title: string;
   description: string;
   thumbnailUrl?: string;
-  videoUrl?: string; // Placeholder for direct video file, not used by iframe embed
-  embedUrl?: string; // URL for embedding (e.g., YouTube watch URL, TikTok video URL)
+  videoUrl?: string; 
+  embedUrl?: string; 
   dataAiHint?: string;
 };
 
@@ -58,7 +58,7 @@ export type Category = {
   name: string;
   imageUrl?: string;
   dataAiHint?: string;
-  icon?: string; // Lucide icon name
+  icon?: string; 
 };
 
 export interface PaymentSettings {
@@ -67,14 +67,12 @@ export interface PaymentSettings {
   paymentInstructions: string;
 }
 
-// PaymentSubmission type and related functions are removed in this revert.
-
 export const courses: Course[] = [
   {
     id: 'course1',
     title: 'Introduction to Web Development',
     description: 'Learn the fundamentals of HTML, CSS, and JavaScript.',
-    category: 'Web Development', // Updated category name for consistency
+    category: 'Web Development',
     instructor: 'Dr. Web Coder',
     imageUrl: 'https://placehold.co/600x400.png',
     dataAiHint: 'programming code',
@@ -111,7 +109,7 @@ export const courses: Course[] = [
     id: 'course2',
     title: 'Advanced JavaScript Techniques',
     description: 'Dive deep into modern JavaScript features and patterns.',
-    category: 'JavaScript', // Updated category name for consistency
+    category: 'JavaScript',
     instructor: 'Prof. Script Master',
     imageUrl: 'https://placehold.co/600x400.png',
     dataAiHint: 'abstract javascript',
@@ -143,7 +141,7 @@ export const courses: Course[] = [
     instructor: 'Dr. Data Insight',
     imageUrl: 'https://placehold.co/600x400.png',
     dataAiHint: 'python data',
-    price: 0, // Free course
+    price: 0, 
     currency: 'MMK',
     modules: [
       {
@@ -172,7 +170,7 @@ export const courses: Course[] = [
     dataAiHint: 'coming soon abstract',
     price: 10000,
     currency: 'MMK',
-    modules: [], // No modules
+    modules: [],
   },
   {
     id: 'course5-empty-modules',
@@ -192,8 +190,8 @@ export const courses: Course[] = [
 ];
 
 export const users: User[] = [
-  { id: 'user1', name: 'Student User', email: 'student@example.com', role: 'student', passwordHash: 'password123' }, // Plain text for demo
-  { id: 'user2', name: 'Admin User', email: 'admin@example.com', role: 'admin', passwordHash: 'adminpass' }, // Plain text for demo
+  { id: 'user1', name: 'Student User', email: 'student@example.com', role: 'student', passwordHash: 'password123' },
+  { id: 'user2', name: 'Admin User', email: 'admin@example.com', role: 'admin', passwordHash: 'adminpass' },
   { id: 'user3', name: 'Jane Doe', email: 'jane@example.com', role: 'student', passwordHash: 'password123' },
 ];
 
@@ -209,16 +207,6 @@ export const videos: Video[] = [
   { id: 'video3', title: '🎬 JavaScript Snippet', description: 'Useful JavaScript function in 60s.' , thumbnailUrl: 'https://placehold.co/360x640.png', dataAiHint: 'developer coding'},
   { id: 'video4', title: '🎬 Python Short', description: 'A quick Python data trick.' , thumbnailUrl: 'https://placehold.co/360x640.png', dataAiHint: 'data visualization'},
   { id: 'video5', title: '🎬 React Tip', description: 'Optimize your React components.' , thumbnailUrl: 'https://placehold.co/360x640.png', dataAiHint: 'react logo'},
-  { id: 'video6', title: '🎬 Next.js News', description: 'Latest updates in Next.js world.' , thumbnailUrl: 'https://placehold.co/360x640.png', dataAiHint: 'nextjs framework'},
-  { id: 'video7', title: '🎬 Tailwind Power', description: 'Unlock Tailwind CSS potential.' , thumbnailUrl: 'https://placehold.co/360x640.png', dataAiHint: 'tailwind css'},
-  { id: 'video8', title: '🎬 ShadCN UI Guide', description: 'Building UIs with ShadCN.' , thumbnailUrl: 'https://placehold.co/360x640.png', dataAiHint: 'shadcn ui'},
-  { id: 'video9', title: '🎬 Firebase Tips', description: 'Quick Firebase integration tips.' , thumbnailUrl: 'https://placehold.co/360x640.png', dataAiHint: 'firebase platform'},
-  { id: 'video10', title: '🎬 Genkit Intro', description: 'Exploring Genkit for AI.' , thumbnailUrl: 'https://placehold.co/360x640.png', dataAiHint: 'ai technology'},
-  { id: 'video11', title: '🎬 Advanced CSS Grids', description: 'Mastering CSS Grid layouts.', thumbnailUrl: 'https://placehold.co/360x640.png', dataAiHint: 'css grid' },
-  { id: 'video12', title: '🎬 State Management in React', description: 'Exploring different state management solutions.', thumbnailUrl: 'https://placehold.co/360x640.png', dataAiHint: 'react state' },
-  { id: 'video13', title: '🎬 Introduction to Docker', description: 'Learn the basics of Docker and containerization.', thumbnailUrl: 'https://placehold.co/360x640.png', dataAiHint: 'docker logo' },
-  { id: 'video14', title: '🎬 GraphQL vs REST', description: 'Comparing GraphQL and REST APIs.', thumbnailUrl: 'https://placehold.co/360x640.png', dataAiHint: 'api comparison' },
-  { id: 'video15', title: '🎬 Serverless Functions Explained', description: 'Understanding serverless architecture.', thumbnailUrl: 'https://placehold.co/360x640.png', dataAiHint: 'cloud functions' },
 ];
 
 export const categories: Category[] = [
@@ -228,9 +216,3 @@ export const categories: Category[] = [
   { id: 'cat4', name: 'Cloud Computing', imageUrl: 'https://placehold.co/200x150.png', dataAiHint: 'cloud network', icon: 'Cloud' },
   { id: 'cat5', name: 'AI & ML', imageUrl: 'https://placehold.co/200x150.png', dataAiHint: 'artificial intelligence', icon: 'BrainCircuit' },
 ];
-
-// PaymentSubmissions related constants and functions are removed.
-// const PAYMENT_SUBMISSIONS_KEY = 'paymentSubmissions';
-// export const addPaymentSubmission = ...
-// export const getPaymentSubmissions = ...
-// export const updatePaymentSubmissionStatus = ...

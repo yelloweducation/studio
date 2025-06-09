@@ -6,14 +6,13 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, PlayCircle, BookOpen, Video, FileText, Loader2, ListChecks, FileVideo, ExternalLink, CheckCircle2, ShoppingCart, AlertOctagon, Clock } from 'lucide-react';
+import { ChevronLeft, PlayCircle, BookOpen, Video, FileText, Loader2, ListChecks, FileVideo, ExternalLink, CheckCircle2, ShoppingCart, AlertOctagon } from 'lucide-react';
 import Link from 'next/link';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { getEmbedUrl } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
-// PaymentSubmission related imports are removed in this revert state, so no need to manage them here.
 
 export default function CourseDetailPage() {
   const params = useParams();
@@ -21,79 +20,62 @@ export default function CourseDetailPage() {
   const { user } = useAuth();
   const router = useRouter();
 
-  // State for all courses available in the app
-  const [activeCourses, setActiveCourses] = useState<Course[]>([]);
-  const [areActiveCoursesLoaded, setAreActiveCoursesLoaded] = useState(false);
-
-  // State for the specific course being viewed
+  const [allAppCourses, setAllAppCourses] = useState<Course[]>([]);
+  const [areAppCoursesLoaded, setAreAppCoursesLoaded] = useState(false);
+  
   const [currentCourse, setCurrentCourse] = useState<Course | null>(null);
   const [firstLessonPath, setFirstLessonPath] = useState<string | null>(null);
   
-  // User-specific state for the current course
   const [completionInfo, setCompletionInfo] = useState<{ date: string; isCompleted: boolean } | null>(null);
-  // userPaymentSubmission state removed in this revert
-
-  // Overall loading state for the page
+  
   const [isLoadingPage, setIsLoadingPage] = useState(true);
 
-
-  // Effect 1: Load all available courses (activeCourses)
   useEffect(() => {
-    setIsLoadingPage(true); // Start with page loading
+    setIsLoadingPage(true);
     let coursesToUse = mockDataCourses;
     const storedCourses = localStorage.getItem('adminCourses');
     if (storedCourses) {
       try {
         const parsedCourses = JSON.parse(storedCourses) as Course[];
-         if (Array.isArray(parsedCourses)) { // Check if it's an array
-          coursesToUse = parsedCourses; // Use parsed courses, even if it's an empty array
+        if (Array.isArray(parsedCourses)) {
+          coursesToUse = parsedCourses; 
         } else {
-          console.error("Stored adminCourses is not an array. Using mock courses.");
-          // coursesToUse remains mockDataCourses if not an array
+           console.error("Stored adminCourses is not an array. Using mock courses.");
         }
       } catch (e) {
         console.error("Failed to parse courses from localStorage. Using mock data.", e);
-        // coursesToUse remains mockDataCourses if parsing fails
       }
     }
-    setActiveCourses(coursesToUse);
-    setAreActiveCoursesLoaded(true); 
-    // Do NOT set isLoadingPage to false here. Effect 2 will handle it.
-  }, []); // Runs once on mount
+    setAllAppCourses(coursesToUse);
+    setAreAppCoursesLoaded(true);
+  }, []);
 
-
-  // Effect 2: Load specific course details and user completion status
-  // This effect depends on courseId, user, and the loaded activeCourses
   useEffect(() => {
-    // Always reset and set loading true at the start of this effect when dependencies change.
+    if (!areAppCoursesLoaded) {
+      setIsLoadingPage(true);
+      return;
+    }
+
+    setIsLoadingPage(true);
     setCurrentCourse(null);
     setFirstLessonPath(null);
     setCompletionInfo(null);
-    setIsLoadingPage(true);
 
-    if (!areActiveCoursesLoaded) {
-      // If activeCourses are not loaded yet, wait. isLoadingPage remains true.
-      return;
-    }
-    
     if (!courseId) {
-      // If courseId is not available (e.g., initial render before params are set),
-      // we can't load a specific course. Set loading false as there's nothing to load.
       setIsLoadingPage(false);
       return;
     }
 
-    const foundCourse = activeCourses.find(c => c.id === courseId);
+    const foundCourse = allAppCourses.find(c => c.id === courseId);
 
     if (!foundCourse) {
-      setCurrentCourse(null); // Ensure currentCourse is null if not found
-      setIsLoadingPage(false); // Stop loading, course not found
+      setCurrentCourse(null);
+      setIsLoadingPage(false);
       return;
     }
 
     setCurrentCourse(foundCourse);
 
-    // Determine first lesson path
     if (foundCourse.modules && foundCourse.modules.length > 0) {
       const firstModuleWithLessons = foundCourse.modules.find(m => m.lessons && m.lessons.length > 0);
       if (firstModuleWithLessons && firstModuleWithLessons.lessons && firstModuleWithLessons.lessons.length > 0) {
@@ -105,7 +87,6 @@ export default function CourseDetailPage() {
       setFirstLessonPath(null);
     }
 
-    // Load completion status if user is logged in
     if (user) {
       let isCourseCompleted = false;
       let completionDate = '';
@@ -122,12 +103,12 @@ export default function CourseDetailPage() {
       } catch (e) { console.error("Error parsing completions from localStorage", e); }
       setCompletionInfo({ date: completionDate, isCompleted: isCourseCompleted });
     } else {
-      setCompletionInfo(null); // No user, no completion info
+      setCompletionInfo(null);
     }
     
-    setIsLoadingPage(false); // All data for this course (or lack thereof) is determined
+    setIsLoadingPage(false);
 
-  }, [courseId, user, activeCourses, areActiveCoursesLoaded]); 
+  }, [courseId, user, allAppCourses, areAppCoursesLoaded]);
 
 
   if (isLoadingPage) {
@@ -176,8 +157,6 @@ export default function CourseDetailPage() {
       );
     }
     
-    // No payment submission logic in this reverted state for CTA button
-
     if (firstLessonPath) {
       if (isPaidCourse) {
         return (
@@ -282,8 +261,6 @@ export default function CourseDetailPage() {
                           <ul className="space-y-3 pl-2">
                             {module.lessons.map(lesson => {
                               const embeddableUrl = getEmbedUrl(lesson.embedUrl);
-                              // Lesson accessibility for paid courses only if completed or course is free.
-                              // This is the reverted logic.
                               const isCourseFree = !currentCourse.price || currentCourse.price <= 0;
                               const isCourseAlreadyCompleted = completionInfo?.isCompleted;
                               const lessonIsAccessible = isCourseFree || isCourseAlreadyCompleted;
@@ -332,4 +309,3 @@ export default function CourseDetailPage() {
     </ProtectedRoute>
   );
 }
-
