@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, PlayCircle, BookOpen, Video, FileText, Loader2, ListChecks, FileVideo, ExternalLink, CheckCircle2, AlertOctagon } from 'lucide-react'; // ShoppingCart removed
+import { ChevronLeft, PlayCircle, BookOpen, Video, FileText, Loader2, ListChecks, FileVideo, ExternalLink, CheckCircle2, AlertOctagon } from 'lucide-react';
 import Link from 'next/link';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -18,35 +18,25 @@ export default function CourseDetailPage() {
   const params = useParams();
   const courseId = params.id as string;
   const { user } = useAuth();
-  const router = useRouter(); // Keep router if needed for other navigation
+  const router = useRouter();
 
   const [allAppCourses, setAllAppCourses] = useState<Course[]>([]);
   const [areAppCoursesLoaded, setAreAppCoursesLoaded] = useState(false);
 
   const [currentCourse, setCurrentCourse] = useState<Course | null>(null);
   const [firstLessonPath, setFirstLessonPath] = useState<string | null>(null);
-
   const [completionInfo, setCompletionInfo] = useState<{ date: string; isCompleted: boolean } | null>(null);
-  // userPaymentSubmission state removed
-
+  
   const [isLoadingPage, setIsLoadingPage] = useState(true);
 
-  // Effect 1: Load allAppCourses
+  // Effect 1: Load allAppCourses from localStorage or use mock data
   useEffect(() => {
-    setIsLoadingPage(true); // Start loading when courseId changes or on initial load
-    setAreAppCoursesLoaded(false); // Reset this flag
-    setCurrentCourse(null); // Clear previous course details
-    setFirstLessonPath(null);
-    setCompletionInfo(null);
-
     let coursesToUse = mockDataCourses;
     const storedCourses = localStorage.getItem('adminCourses');
     if (storedCourses) {
       try {
         const parsedCourses = JSON.parse(storedCourses) as Course[];
-        // If parsedCourses is an array (even empty), use it.
-        // Fallback to mockDataCourses only if parsing fails or item not found.
-        if (Array.isArray(parsedCourses)) {
+        if (Array.isArray(parsedCourses)) { // Use parsedCourses if it's an array (even empty)
           coursesToUse = parsedCourses;
         } else {
            console.error("Stored adminCourses is not an array. Using mock courses.");
@@ -56,33 +46,39 @@ export default function CourseDetailPage() {
       }
     }
     setAllAppCourses(coursesToUse);
-    setAreAppCoursesLoaded(true); // Signal that allAppCourses are now determined
-  }, []); // Runs once on mount
+    setAreAppCoursesLoaded(true);
+  }, []);
 
   // Effect 2: Set currentCourse and firstLessonPath based on allAppCourses and courseId
   useEffect(() => {
     if (!areAppCoursesLoaded) {
-      setIsLoadingPage(true); // Keep loading if allAppCourses aren't ready
+      // setIsLoadingPage(true) is default, so just wait
       return;
     }
 
-    setIsLoadingPage(true); // Start loading for specific course finding
-    setCurrentCourse(null);
+    // At this point, areAppCoursesLoaded is true.
+    // We need to set isLoadingPage true here if we are about to process a courseId
+    // but Effect 3 will ultimately decide when isLoadingPage becomes false.
+
+    setCurrentCourse(null); // Reset before attempting to find
     setFirstLessonPath(null);
-    // No need to reset completionInfo or userPaymentSubmission here, handled by Effect 3
 
     if (!courseId) {
-      setIsLoadingPage(false); // No ID, so nothing to load
+      // No courseId means we can't load a specific course. Effect 3 will handle isLoadingPage.
       return;
+    }
+    
+    // If allAppCourses is empty and we have a courseId, it means the course won't be found.
+    // This is a valid state if an admin cleared all courses.
+    if (allAppCourses.length === 0 && courseId) {
+        setCurrentCourse(null);
+        // Effect 3 will handle isLoadingPage.
+        return;
     }
 
     const foundCourse = allAppCourses.find(c => c.id === courseId);
 
-    if (!foundCourse) {
-      setCurrentCourse(null);
-      // setIsLoadingPage(false) will be handled by Effect 3 if user is not involved, or after user data in Effect 3
-      // For now, if course not found, Effect 3 will quickly set isLoadingPage to false.
-    } else {
+    if (foundCourse) {
       setCurrentCourse(foundCourse);
       if (foundCourse.modules && foundCourse.modules.length > 0) {
         const firstModuleWithLessons = foundCourse.modules.find(m => m.lessons && m.lessons.length > 0);
@@ -94,45 +90,50 @@ export default function CourseDetailPage() {
       } else {
         setFirstLessonPath(null);
       }
+    } else {
+      setCurrentCourse(null); // Course not found in allAppCourses
     }
-    // setIsLoadingPage(false) will be handled in Effect 3 after user-specific data
+    // isLoadingPage will be finalized in Effect 3
   }, [courseId, allAppCourses, areAppCoursesLoaded]);
 
   // Effect 3: Load user-specific data (completions) and finalize loading state
   useEffect(() => {
-    // This effect now depends on currentCourse being set (or determined as null)
+    // This effect depends on currentCourse being set (or determined as null by Effect 2)
     // and areAppCoursesLoaded being true.
+
     if (!areAppCoursesLoaded) {
         setIsLoadingPage(true); // Still waiting for global courses
         return;
     }
     
-    // If we have processed courseId from Effect 2 and currentCourse is still null (meaning not found)
+    // If we have processed courseId (from Effect 2) and currentCourse is still null (meaning not found),
     // and allAppCourses are loaded, then we can stop loading.
     if (areAppCoursesLoaded && courseId && !currentCourse) {
+        setCompletionInfo(null);
         setIsLoadingPage(false);
         return;
     }
 
-    // If no courseId, it means we are not on a specific course page (should not happen with this page structure but good check)
+    // If no courseId, it means we are not on a specific course page.
     if(!courseId && areAppCoursesLoaded){
+        setCompletionInfo(null);
         setIsLoadingPage(false);
         return;
     }
 
-    // If currentCourse is not yet determined by Effect 2, keep loading.
-    if (!currentCourse && courseId) { // courseId exists but currentCourse is not yet set
+    // If currentCourse is not yet determined by Effect 2, BUT we have a courseId, keep loading
+    // This case should be less frequent with the new structure, but acts as a safeguard.
+    if (!currentCourse && courseId) {
         setIsLoadingPage(true);
         return;
     }
     
-    // At this point, currentCourse is either set or null (if not found after check)
+    // At this point, currentCourse is either set or null (if not found after check in Effect 2)
     // and allAppCourses are loaded.
 
     setCompletionInfo(null); // Reset before fetching
-    // userPaymentSubmission logic removed
 
-    if (user && currentCourse) {
+    if (user && currentCourse) { // Only fetch if user and currentCourse exist
       let isCourseCompleted = false;
       let completionDate = '';
       try {
@@ -146,9 +147,10 @@ export default function CourseDetailPage() {
           }
         }
       } catch (e) { console.error("Error parsing completions from localStorage", e); }
-      setCompletionInfo({ date: completionDate, isCompleted: isCourseCompleted });
+      setCompletionInfo({ date: completionDate, isCourseCompleted });
     }
-    setIsLoadingPage(false); // All data loading attempts are complete
+    // All data loading attempts are complete for the current state of courseId and currentCourse
+    setIsLoadingPage(false); 
   }, [user, currentCourse, areAppCoursesLoaded, courseId]);
 
 
@@ -168,6 +170,7 @@ export default function CourseDetailPage() {
         <AlertOctagon className="h-12 w-12 text-destructive mb-4" />
         <h1 className="text-2xl font-semibold text-destructive">Course Not Found</h1>
         <p className="text-muted-foreground">The course you are looking for (ID: {courseId || 'N/A'}) could not be found or is not available.</p>
+        <p className="text-xs text-muted-foreground mt-1">This might happen if the course was recently removed or the link is incorrect.</p>
         <Button asChild variant="link" className="mt-4">
           <Link href="/">Go back to Homepage</Link>
         </Button>
@@ -178,8 +181,6 @@ export default function CourseDetailPage() {
   const totalLessons = currentCourse.modules?.reduce((acc, module) => acc + (module.lessons?.length || 0), 0) || 0;
 
   const renderCTAButton = () => {
-    // const isPaidCourse = currentCourse.price && currentCourse.price > 0; // Removed
-
     if (completionInfo?.isCompleted && completionInfo.date) {
       let formattedDate = 'a previous date';
       try {
@@ -198,12 +199,12 @@ export default function CourseDetailPage() {
       );
     }
 
-    // Simplified: if not completed, and has a first lesson, allow starting
+    // Course is not paid or does not have a price defined
     if (firstLessonPath) {
       return (
         <Button size="lg" className="w-full bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150" asChild>
           <Link href={firstLessonPath}>
-            <PlayCircle className="mr-2 h-6 w-6"/> Start Learning
+            <PlayCircle className="mr-2 h-6 w-6"/> Start Learning (Free)
           </Link>
         </Button>
       );
@@ -215,6 +216,7 @@ export default function CourseDetailPage() {
       </Button>
     );
   };
+
 
   return (
     <ProtectedRoute>
@@ -246,7 +248,6 @@ export default function CourseDetailPage() {
             {!currentCourse.imageUrl && <CardTitle className="text-3xl font-headline">{currentCourse.title}</CardTitle>}
             <div className="flex justify-between items-start">
                 <CardDescription className="text-md">By {currentCourse.instructor}</CardDescription>
-                {/* Price display removed */}
             </div>
           </CardHeader>
           <CardContent className="px-6 pb-6 space-y-6">
@@ -287,8 +288,7 @@ export default function CourseDetailPage() {
                           <ul className="space-y-3 pl-2">
                             {module.lessons.map(lesson => {
                               const embeddableUrl = getEmbedUrl(lesson.embedUrl);
-                              // const isCourseFree = !currentCourse.price || currentCourse.price <= 0; // Removed
-                              const lessonIsAccessible = true; // All courses are effectively free now
+                              const lessonIsAccessible = true; // Since it's non-payment version
                               const lessonLink = `/courses/${currentCourse.id}/learn/${module.id}/${lesson.id}`;
 
                               return (
@@ -303,7 +303,7 @@ export default function CourseDetailPage() {
                                   {lesson.description && (
                                     <p className="text-sm text-muted-foreground mb-2">{lesson.description}</p>
                                   )}
-                                  {lessonIsAccessible && firstLessonPath && ( // Kept firstLessonPath check to ensure course has content
+                                  {lessonIsAccessible && firstLessonPath && (
                                     <Link href={lessonLink} className="text-xs text-primary hover:underline flex items-center">
                                       Watch Lesson <ExternalLink className="ml-1 h-3 w-3" />
                                     </Link>
@@ -329,3 +329,5 @@ export default function CourseDetailPage() {
     </ProtectedRoute>
   );
 }
+
+    
