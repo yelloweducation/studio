@@ -1,6 +1,6 @@
 
 "use client";
-import { useState, type FormEvent, useEffect } from 'react';
+import React, { useState, type FormEvent, useEffect, Suspense, lazy } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -9,14 +9,13 @@ import { Button } from '@/components/ui/button';
 import { Search, Video as VideoIcon, XCircle, Tv, Loader2, X, Shapes } from 'lucide-react';
 import VideoCard from '@/components/videos/VideoCard';
 import { videos as mockVideos, type Video, categories as mockCategories, type Category } from '@/data/mockData';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'; // Added CardFooter
 import { Skeleton } from '@/components/ui/skeleton';
-import * as LucideIcons from 'lucide-react';
-import CareerAdviceChatbox from '@/components/ai/CareerAdviceChatbox';
+import CategoryCard from '@/components/categories/CategoryCard';
 
-const isValidLucideIcon = (iconName: string): iconName is keyof typeof LucideIcons => {
-  return iconName in LucideIcons;
-};
+// Lazy load CareerAdviceChatbox
+const CareerAdviceChatbox = lazy(() => import('@/components/ai/CareerAdviceChatbox'));
+
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -201,7 +200,21 @@ export default function Home() {
       </section>
 
       <section className="w-full max-w-2xl mb-12">
-        <CareerAdviceChatbox />
+        <Suspense fallback={
+            <Card className="w-full max-w-2xl mx-auto shadow-xl">
+                <CardHeader className="pb-4">
+                    <Skeleton className="h-7 w-1/2" />
+                </CardHeader>
+                <CardContent>
+                    <Skeleton className="h-40 w-full" />
+                </CardContent>
+                <CardFooter>
+                    <Skeleton className="h-10 w-full" />
+                </CardFooter>
+            </Card>
+        }>
+          <CareerAdviceChatbox />
+        </Suspense>
       </section>
 
       <section className="w-full max-w-5xl mt-8 mb-12">
@@ -221,36 +234,9 @@ export default function Home() {
           </div>
         ) : courseCategories.length > 0 ? (
           <div className="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
-            {courseCategories.map(category => {
-              const IconComponent = category.icon && isValidLucideIcon(category.icon) 
-                ? LucideIcons[category.icon] as React.ElementType 
-                : LucideIcons.Shapes; // Default icon
-              return (
-                <Link key={category.id} href={`/courses/search?query=${encodeURIComponent(category.name)}`} passHref>
-                  <Card className="group flex flex-col items-center justify-start text-center p-0 rounded-lg shadow-lg hover:shadow-xl active:shadow-md transform hover:-translate-y-1 active:translate-y-px transition-all duration-150 h-full overflow-hidden cursor-pointer">
-                    {category.imageUrl && (
-                      <div className="w-full h-24 sm:h-32 relative">
-                        <Image
-                          src={category.imageUrl}
-                          alt={category.name}
-                          layout="fill"
-                          objectFit="cover"
-                          data-ai-hint={category.dataAiHint || 'category item'}
-                          className="rounded-t-lg"
-                        />
-                         <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors duration-150"></div>
-                      </div>
-                    )}
-                    <CardHeader className="p-3 pt-4 flex-grow w-full">
-                      <CardTitle className="text-sm sm:text-md font-semibold font-headline flex flex-col items-center justify-center">
-                        <IconComponent className="mb-1 h-5 w-5 sm:h-6 sm:w-6 text-primary group-hover:text-accent transition-colors" />
-                        {category.name}
-                      </CardTitle>
-                    </CardHeader>
-                  </Card>
-                </Link>
-              );
-            })}
+            {courseCategories.map(category => (
+              <CategoryCard key={category.id} category={category} />
+            ))}
           </div>
         ) : (
           <Card className="w-full">

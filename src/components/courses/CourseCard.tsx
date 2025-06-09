@@ -1,3 +1,5 @@
+
+import React from 'react';
 import type { Course } from '@/data/mockData';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -9,7 +11,7 @@ interface CourseCardProps {
   course: Course;
 }
 
-const CourseCard = ({ course }: CourseCardProps) => {
+const CourseCard = React.memo(({ course }: CourseCardProps) => {
   return (
     <Card className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 h-full">
       <CardHeader className="p-0">
@@ -44,6 +46,8 @@ const CourseCard = ({ course }: CourseCardProps) => {
       </CardFooter>
     </Card>
   );
-};
+});
+
+CourseCard.displayName = 'CourseCard';
 
 export default CourseCard;
