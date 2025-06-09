@@ -10,8 +10,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        body: ['Inter', 'sans-serif'],
-        headline: ['Inter', 'sans-serif'],
+        body: ['PT Sans', 'sans-serif'],
+        headline: ['Poppins', 'sans-serif'],
         code: ['monospace'],
       },
       colors: {
@@ -40,6 +40,7 @@ export default {
         accent: {
           DEFAULT: 'hsl(var(--accent))',
           foreground: 'hsl(var(--accent-foreground))',
+          darker: 'hsl(var(--accent-darker))',
         },
         destructive: {
           DEFAULT: 'hsl(var(--destructive))',
@@ -88,11 +89,25 @@ export default {
             height: '0',
           },
         },
+        'fade-in': {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        'fade-out': {
+          '0%': { opacity: '1' },
+          '100%': { opacity: '0' },
+        }
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'fade-in': 'fade-in 0.3s ease-out forwards',
+        'fade-out': 'fade-out 0.3s ease-out forwards',
       },
+      boxShadow: {
+        '3d': '4px 4px 0px 0px hsl(var(--accent-darker))',
+        '3d-hover': '2px 2px 0px 0px hsl(var(--accent-darker))',
+      }
     },
   },
   plugins: [require('tailwindcss-animate')],
