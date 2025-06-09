@@ -22,8 +22,8 @@ export default function VideosPage() {
       </div>
       
       <div 
-        className="w-full max-w-md flex-grow overflow-y-auto snap-y snap-mandatory space-y-2 
-                   rounded-lg bg-card shadow-inner scrollbar-hide p-1"
+        className="w-full max-w-md flex-grow overflow-y-auto snap-y snap-mandatory 
+                   rounded-lg bg-card shadow-inner scrollbar-hide"
       >
         {allVideos.length > 0 ? (
           allVideos.map(video => (
@@ -59,3 +59,4 @@ export default function VideosPage() {
   }
 }
 */
+
