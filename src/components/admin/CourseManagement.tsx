@@ -203,13 +203,23 @@ export default function CourseManagement() {
   useEffect(() => {
     const storedCourses = localStorage.getItem('adminCourses');
     if (storedCourses) {
-      setCourses(JSON.parse(storedCourses));
+      try {
+        const parsedCourses = JSON.parse(storedCourses) as Course[];
+        setCourses(parsedCourses);
+      } catch (e) {
+        console.error("Failed to parse adminCourses from localStorage in CourseManagement", e);
+        setCourses(initialCourses); // Fallback to mockData on error
+      }
     } else {
-      setCourses(initialCourses);
+      setCourses(initialCourses); // Fallback if not in localStorage
     }
   }, []);
 
   useEffect(() => {
+    // Only save to localStorage if courses is not empty or if it's intentionally being cleared.
+    // This check prevents overwriting localStorage with an empty array during initial load if localStorage was empty.
+    // However, since we load initialCourses, 'courses' will usually have data unless initialCourses is empty or localStorage had '[]'.
+    // The current logic is fine: if 'courses' state becomes '[]' (e.g., admin deleted all), it saves '[]'.
     localStorage.setItem('adminCourses', JSON.stringify(courses));
   }, [courses]);
 
