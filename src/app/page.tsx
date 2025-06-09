@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Search, Video as VideoIcon, XCircle, Tv, Loader2, X } from 'lucide-react';
 import VideoCard from '@/components/videos/VideoCard';
 import { videos as mockVideos, type Video } from '@/data/mockData';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton'; // Added missing import
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -45,7 +46,7 @@ export default function Home() {
   }, []);
 
   const loadAllFeedVideos = () => {
-    if (allFeedVideos.length > 0 && !showVideoFeed) return; // No need to reload if already loaded and not showing feed
+    if (allFeedVideos.length > 0 && !showVideoFeed) return; 
 
     setIsLoadingFeedVideos(true);
     const storedVideosString = localStorage.getItem('adminVideos');
@@ -129,7 +130,7 @@ export default function Home() {
         </Card>
       </div>
     );
-  }
+  };
 
   return (
     <div className="flex flex-col items-center pb-8">
@@ -137,78 +138,88 @@ export default function Home() {
         <div className="mb-8 flex justify-center">
           <Image
             src="https://placehold.co/350x350.png"
-            alt="3D Globe - Yellow Institute"
+            alt="Lumina Learn 3D Globe"
             width={350}
             height={350}
-            className="rounded-lg shadow-xl hover:shadow-2xl transition-shadow duration-300"
-            data-ai-hint="3d globe"
             priority
+            className="rounded-full shadow-2xl"
+            data-ai-hint="3d globe"
           />
         </div>
-
-        <form onSubmit={handleFormSubmit} className="w-full mb-4">
-          <div className="relative flex-grow">
+        <h1 className="text-4xl sm:text-5xl font-headline font-bold mb-4 text-foreground">
+          Discover Your Next Passion
+        </h1>
+        <p className="text-lg sm:text-xl text-muted-foreground mb-8">
+          Explore a world of knowledge with Yellow Institute.
+        </p>
+        <form onSubmit={handleFormSubmit} className="flex flex-col sm:flex-row gap-3 max-w-xl mx-auto">
+          <div className="relative w-full">
             <Input
-              type="text"
-              placeholder="Search for courses (e.g., Web Development)"
+              type="search"
+              placeholder="Search for courses (e.g., Web Development, Data Science)"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full text-sm md:text-base pr-10"
+              className="w-full pl-10 pr-20 sm:pr-10 py-3 text-base rounded-full shadow-md focus:ring-primary focus:border-primary"
             />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             {searchQuery && (
               <Button
-                type="button"
                 variant="ghost"
                 size="icon"
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
+                className="absolute right-12 sm:right-10 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full hover:bg-muted/50"
                 onClick={clearSearch}
+                aria-label="Clear search"
               >
                 <XCircle className="h-5 w-5 text-muted-foreground" />
               </Button>
             )}
+            <Button type="submit" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 sm:hidden">
+              <Search className="h-5 w-5" />
+            </Button>
           </div>
-        </form>
-
-        <div className="flex gap-2 w-full">
-          <Button
-            type="button"
-            onClick={performSearch}
-            className="flex-1"
-          >
-            <Search className="mr-2 h-5 w-5" /> Search Courses
+          <Button type="submit" className="hidden sm:inline-flex bg-primary text-primary-foreground hover:bg-primary/90 shadow-md hover:shadow-sm active:translate-y-px transition-all duration-150">
+            <Search className="mr-2 h-5 w-5" /> Search
           </Button>
-          <Button
-            onClick={handleShowVideos}
-            variant="default"
-            className="flex-1"
-          >
+        </form>
+      </section>
+
+      <section className="w-full mt-12">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl sm:text-3xl font-headline font-semibold flex items-center">
+            <Tv className="mr-2 h-7 w-7 text-primary" /> Trending Videos
+          </h2>
+          <Button variant="outline" onClick={handleShowVideos} className="hover:border-accent hover:text-accent">
             <VideoIcon className="mr-2 h-5 w-5" /> View Reels
           </Button>
         </div>
-      </section>
-
-      <section className="w-full max-w-4xl mt-12 md:mt-16">
-        <h2 className="text-2xl md:text-3xl font-headline font-semibold mb-6 flex items-center">
-          <Tv className="mr-3 h-7 w-7 text-primary" /> Trending Videos
-        </h2>
         {isLoadingTrendingVideos ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="aspect-[9/16] bg-muted rounded-lg animate-pulse flex items-center justify-center">
-                <Loader2 className="h-8 w-8 text-primary animate-spin" />
+           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="bg-card rounded-lg shadow-md overflow-hidden">
+                <Skeleton className="w-full aspect-[9/16]" />
+                <div className="p-4">
+                  <Skeleton className="h-4 w-3/4 mb-2" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
               </div>
             ))}
           </div>
         ) : trendingVideos.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-8">
             {trendingVideos.map(video => (
-              <div key={video.id} className="aspect-[9/16] rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
+              <div key={video.id} className="w-full aspect-[9/16] rounded-lg overflow-hidden shadow-lg">
                 <VideoCard video={video} />
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-muted-foreground text-center py-4">No trending videos available right now.</p>
+          !showVideoFeed && ( // Only show this message if the main feed is not active
+            <Card className="w-full max-w-2xl mt-8">
+              <CardContent className="pt-6">
+                <p className="text-center text-muted-foreground">No trending videos available at the moment.</p>
+              </CardContent>
+            </Card>
+          )
         )}
       </section>
     </div>
