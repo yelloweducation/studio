@@ -1,7 +1,7 @@
 
 "use client";
 import { useParams, useRouter } from 'next/navigation';
-import { courses as allCourses, type Course, type Lesson, type Module, getPaymentSubmissions, type PaymentSubmission } from '@/data/mockData';
+import { courses as mockDataCourses, type Course, type Lesson, type Module, getPaymentSubmissions, type PaymentSubmission } from '@/data/mockData';
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,89 +14,93 @@ import { getEmbedUrl } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
 
-
 export default function CourseDetailPage() {
   const params = useParams();
   const courseId = params.id as string;
   const { user } = useAuth();
   const router = useRouter();
 
-  const [activeCourses, setActiveCourses] = useState<Course[]>([]);
-  const [initialCoursesLoaded, setInitialCoursesLoaded] = useState(false); // New state
-  const [course, setCourse] = useState<Course | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // State for all courses available in the app
+  const [allAppCourses, setAllAppCourses] = useState<Course[]>([]);
+  // Flag to indicate if allAppCourses has been loaded
+  const [areAppCoursesLoaded, setAreAppCoursesLoaded] = useState(false);
+
+  // State for the specific course being viewed
+  const [currentCourse, setCurrentCourse] = useState<Course | null>(null);
+  // State for the path to the first lesson of the current course
   const [firstLessonPath, setFirstLessonPath] = useState<string | null>(null);
+
+  // Overall loading state for the page
+  const [isLoadingPage, setIsLoadingPage] = useState(true);
+
+  // User-specific states for the current course
   const [completionInfo, setCompletionInfo] = useState<{ date: string; isCompleted: boolean } | null>(null);
   const [userPaymentSubmission, setUserPaymentSubmission] = useState<PaymentSubmission | null>(null);
 
   // Effect 1: Load all available courses (from localStorage or fallback to mock)
+  // This runs once on mount or when dependencies change (none in this case, so effectively once).
   useEffect(() => {
-    let coursesToUse = allCourses;
+    let coursesToUse = mockDataCourses; // Default to mock data
     const storedCourses = localStorage.getItem('adminCourses');
     if (storedCourses) {
       try {
         const parsedCourses = JSON.parse(storedCourses) as Course[];
-        if (Array.isArray(parsedCourses)) { 
+        // Ensure parsedCourses is an array. If it's an empty array from admin, respect that.
+        if (Array.isArray(parsedCourses)) {
           coursesToUse = parsedCourses;
         }
       } catch (e) {
-        console.error("Failed to parse courses from localStorage on detail page", e);
+        console.error("Failed to parse courses from localStorage on detail page. Using mock data.", e);
+        // Fallback to mockDataCourses is already handled by initial coursesToUse
       }
     }
-    setActiveCourses(coursesToUse);
-    setInitialCoursesLoaded(true); // Signal that activeCourses loading attempt is complete
-  }, []); 
+    setAllAppCourses(coursesToUse);
+    setAreAppCoursesLoaded(true); // Signal that master course list loading attempt is complete
+  }, []);
 
-  // Effect 2: Determine the specific course and its first lesson path
+  // Effect 2: Determine the specific course details once allAppCourses are loaded and courseId is available.
   useEffect(() => {
-    if (!initialCoursesLoaded) {
-      // Wait for activeCourses to be loaded by the first effect.
-      // Ensure isLoading is true during this wait.
-      if (!isLoading) setIsLoading(true);
+    // Guard: Wait for the master list of all courses to be loaded and for courseId to be available.
+    if (!areAppCoursesLoaded || !courseId) {
+      // If still waiting for these, ensure the page remains in a loading state.
+      // If isLoadingPage is somehow false, set it back to true.
+      if (!isLoadingPage) setIsLoadingPage(true);
+      setCurrentCourse(null); // Clear any stale specific course data
+      setFirstLessonPath(null);
       return;
     }
 
-    setIsLoading(true); 
-    setCourse(null); // Reset previous course data
+    // Start the process of finding the specific course.
+    setIsLoadingPage(true);
+    setCurrentCourse(null); // Reset previous specific course data
     setFirstLessonPath(null);
 
-    if (!courseId) {
-      // If courseId is not available (e.g., router params not ready), stop loading.
-      setIsLoading(false);
-      return; 
-    }
-    
-    let determinedCourse: Course | null = null;
-    let determinedPath: string | null = null;
+    const foundCourse = allAppCourses.find(c => c.id === courseId);
 
-    if (activeCourses.length > 0) {
-      const found = activeCourses.find(c => c.id === courseId);
-      if (found) {
-        determinedCourse = found;
-        if (found.modules && found.modules.length > 0) {
-          const firstModuleWithLessons = found.modules.find(m => m.lessons && m.lessons.length > 0);
-          if (firstModuleWithLessons && firstModuleWithLessons.lessons && firstModuleWithLessons.lessons.length > 0) {
-            determinedPath = `/courses/${found.id}/learn/${firstModuleWithLessons.id}/${firstModuleWithLessons.lessons[0].id}`;
-          }
+    if (foundCourse) {
+      setCurrentCourse(foundCourse);
+      if (foundCourse.modules && foundCourse.modules.length > 0) {
+        const firstModuleWithLessons = foundCourse.modules.find(m => m.lessons && m.lessons.length > 0);
+        if (firstModuleWithLessons && firstModuleWithLessons.lessons && firstModuleWithLessons.lessons.length > 0) {
+          setFirstLessonPath(`/courses/${foundCourse.id}/learn/${firstModuleWithLessons.id}/${firstModuleWithLessons.lessons[0].id}`);
         }
       }
+    } else {
+      // Course not found in allAppCourses, currentCourse will remain null.
     }
-    
-    setCourse(determinedCourse);
-    setFirstLessonPath(determinedPath);
-    setIsLoading(false); 
+    setIsLoadingPage(false); // Finished attempting to load/find the specific course.
 
-  }, [courseId, activeCourses, initialCoursesLoaded]); // Depend on initialCoursesLoaded
+  }, [courseId, allAppCourses, areAppCoursesLoaded]); // Key dependencies for re-running this effect.
 
-  // Effect 3: Determine completion status and payment submission status
+  // Effect 3: Determine completion status and payment submission status for the currentCourse.
+  // This depends on the currentCourse being loaded (isLoadingPage is false) and the user being available.
   useEffect(() => {
-    // Only proceed if initial courses are loaded, not currently loading main course data, and user/course are available
-    if (!initialCoursesLoaded || isLoading || !course || !user) { 
+    if (isLoadingPage || !currentCourse || !user) {
       setCompletionInfo(null);
       setUserPaymentSubmission(null);
       return;
     }
-    
+
     // Check for course completion
     const completionKey = `user_${user.id}_completions`;
     let isCourseCompleted = false;
@@ -105,9 +109,9 @@ export default function CourseDetailPage() {
       const storedCompletions = localStorage.getItem(completionKey);
       if (storedCompletions) {
         const completions = JSON.parse(storedCompletions);
-        if (completions[course.id]) {
+        if (completions[currentCourse.id]) {
           isCourseCompleted = true;
-          completionDate = completions[course.id];
+          completionDate = completions[currentCourse.id];
         }
       }
     } catch (e) {
@@ -115,21 +119,21 @@ export default function CourseDetailPage() {
     }
     setCompletionInfo({ date: completionDate, isCompleted: isCourseCompleted });
 
-    const isPaidCourse = course.price && course.price > 0;
-    if (isPaidCourse && !isCourseCompleted) { 
+    const isPaidCourse = currentCourse.price && currentCourse.price > 0;
+    if (isPaidCourse && !isCourseCompleted) {
       const allSubmissions = getPaymentSubmissions();
       const userCourseSubmissions = allSubmissions
-        .filter(sub => sub.userId === user.id && sub.courseId === course.id)
+        .filter(sub => sub.userId === user.id && sub.courseId === currentCourse.id)
         .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
-      
+
       setUserPaymentSubmission(userCourseSubmissions.length > 0 ? userCourseSubmissions[0] : null);
     } else {
-      setUserPaymentSubmission(null); 
+      setUserPaymentSubmission(null);
     }
-  }, [user, course, isLoading, initialCoursesLoaded]); // Added initialCoursesLoaded and isLoading
+  }, [user, currentCourse, isLoadingPage]); // Depend on isLoadingPage to run after specific course is processed.
 
 
-  if (isLoading || !initialCoursesLoaded) { // Show loader if main loading or initial courses not yet processed
+  if (isLoadingPage) {
     return (
       <div className="text-center py-20 flex flex-col items-center justify-center min-h-[calc(100vh-200px)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -139,12 +143,12 @@ export default function CourseDetailPage() {
     );
   }
 
-  if (!course) {
+  if (!currentCourse) {
     return (
       <div className="text-center py-10 min-h-[calc(100vh-200px)] flex flex-col items-center justify-center">
         <AlertOctagon className="h-12 w-12 text-destructive mb-4" />
         <h1 className="text-2xl font-semibold text-destructive">Course Not Found</h1>
-        <p className="text-muted-foreground">The course you are looking for (ID: {courseId}) does not exist or is not available.</p>
+        <p className="text-muted-foreground">The course you are looking for (ID: {courseId}) could not be found or is not available.</p>
         <Button asChild variant="link" className="mt-4">
           <Link href="/">Go back to Homepage</Link>
         </Button>
@@ -152,18 +156,18 @@ export default function CourseDetailPage() {
     );
   }
 
-  const totalLessons = course.modules?.reduce((acc, module) => acc + (module.lessons?.length || 0), 0) || 0;
-  
+  const totalLessons = currentCourse.modules?.reduce((acc, module) => acc + (module.lessons?.length || 0), 0) || 0;
 
   const renderCTAButton = () => {
-    const isPaidCourse = course.price && course.price > 0;
+    const isPaidCourse = currentCourse.price && currentCourse.price > 0;
 
     if (completionInfo?.isCompleted && completionInfo.date) {
       let formattedDate = 'a previous date';
       try {
         formattedDate = format(new Date(completionInfo.date), 'PPP');
       } catch (error) {
-        formattedDate = completionInfo.date; 
+        // If date format is invalid, use the raw date string
+        formattedDate = completionInfo.date;
       }
       return (
         <div className="w-full p-3 text-center bg-green-100 dark:bg-green-900 border border-green-500 text-green-700 dark:text-green-300 rounded-md shadow-sm flex flex-col sm:flex-row items-center justify-center gap-2">
@@ -177,7 +181,7 @@ export default function CourseDetailPage() {
         </div>
       );
     }
-    
+
     if (firstLessonPath) {
       if (isPaidCourse) {
         if (user && userPaymentSubmission) {
@@ -204,7 +208,7 @@ export default function CourseDetailPage() {
                 <p className="text-sm">Your payment proof is pending verification by an admin. Please check back later.</p>
                 <p className="text-xs mt-1">Submitted on: {format(new Date(userPaymentSubmission.submittedAt), 'PPpp')}</p>
                  <Button size="sm" variant="outline" asChild className="mt-2 border-yellow-600 text-yellow-700 hover:bg-yellow-200 dark:border-yellow-500 dark:text-yellow-300 dark:hover:bg-yellow-800/70">
-                    <Link href={`/courses/${course.id}/checkout`}>View/Update Submission</Link>
+                    <Link href={`/courses/${currentCourse.id}/checkout`}>View/Update Submission</Link>
                  </Button>
               </div>
             );
@@ -215,7 +219,7 @@ export default function CourseDetailPage() {
                 <span className="font-semibold text-lg">Payment Rejected</span>
                 <p className="text-sm">Your previous payment submission was rejected. Please ensure your details are correct and try again.</p>
                 <Button size="lg" asChild className="mt-3 w-full sm:w-auto bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                  <Link href={`/courses/${course.id}/checkout`}>
+                  <Link href={`/courses/${currentCourse.id}/checkout`}>
                     <ShoppingCart className="mr-2 h-6 w-6"/> Re-submit Payment
                   </Link>
                 </Button>
@@ -223,14 +227,15 @@ export default function CourseDetailPage() {
             );
           }
         }
+        // No submission, or submission is not yet actionable for starting the course
         return (
           <Button size="lg" className="w-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150" asChild>
-            <Link href={`/courses/${course.id}/checkout`}>
-              <ShoppingCart className="mr-2 h-6 w-6"/> Enroll & Pay ({course.price?.toLocaleString()} {course.currency})
+            <Link href={`/courses/${currentCourse.id}/checkout`}>
+              <ShoppingCart className="mr-2 h-6 w-6"/> Enroll & Pay ({currentCourse.price?.toLocaleString()} {currentCourse.currency})
             </Link>
           </Button>
         );
-      } else { 
+      } else { // Free course
         return (
           <Button size="lg" className="w-full bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150" asChild>
             <Link href={firstLessonPath}>
@@ -241,13 +246,13 @@ export default function CourseDetailPage() {
       }
     }
 
+    // No firstLessonPath means no content to start
     return (
       <Button size="lg" className="w-full" disabled>
         <PlayCircle className="mr-2 h-6 w-6"/> Course Content Coming Soon
       </Button>
     );
   };
-
 
   return (
     <ProtectedRoute>
@@ -259,29 +264,29 @@ export default function CourseDetailPage() {
         </Button>
 
         <Card className="overflow-hidden shadow-xl">
-          {course.imageUrl && (
+          {currentCourse.imageUrl && (
             <div className="relative w-full h-64 md:h-80">
               <Image
-                src={course.imageUrl}
-                alt={course.title}
+                src={currentCourse.imageUrl}
+                alt={currentCourse.title}
                 layout="fill"
                 objectFit="cover"
-                data-ai-hint={course.dataAiHint || 'education banner'}
+                data-ai-hint={currentCourse.dataAiHint || 'education banner'}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
               <div className="absolute bottom-0 left-0 p-6">
-                <h1 className="text-3xl md:text-4xl font-headline font-bold text-white">{course.title}</h1>
-                <p className="text-lg text-primary-foreground/80">{course.category}</p>
+                <h1 className="text-3xl md:text-4xl font-headline font-bold text-white">{currentCourse.title}</h1>
+                <p className="text-lg text-primary-foreground/80">{currentCourse.category}</p>
               </div>
             </div>
           )}
-          <CardHeader className={!course.imageUrl ? "pt-6" : "pt-2 pb-4 px-6"}>
-            {!course.imageUrl && <CardTitle className="text-3xl font-headline">{course.title}</CardTitle>}
+          <CardHeader className={!currentCourse.imageUrl ? "pt-6" : "pt-2 pb-4 px-6"}>
+            {!currentCourse.imageUrl && <CardTitle className="text-3xl font-headline">{currentCourse.title}</CardTitle>}
             <div className="flex justify-between items-start">
-                <CardDescription className="text-md">By {course.instructor}</CardDescription>
-                {course.price && course.price > 0 ? (
+                <CardDescription className="text-md">By {currentCourse.instructor}</CardDescription>
+                {currentCourse.price && currentCourse.price > 0 ? (
                     <span className="text-xl font-semibold text-primary">
-                        {course.price?.toLocaleString()} {course.currency}
+                        {currentCourse.price?.toLocaleString()} {currentCourse.currency}
                     </span>
                 ) : (
                     <span className="text-xl font-semibold text-green-600">Free</span>
@@ -289,14 +294,14 @@ export default function CourseDetailPage() {
             </div>
           </CardHeader>
           <CardContent className="px-6 pb-6 space-y-6">
-            <p className="text-lg text-foreground/90">{course.description}</p>
+            <p className="text-lg text-foreground/90">{currentCourse.description}</p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-4 p-4 border rounded-lg bg-muted/50 shadow-sm">
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground flex items-center mb-1">
                   <ListChecks className="mr-2 h-5 w-5 text-primary" /> Modules
                 </h3>
-                <p className="text-xl font-semibold text-foreground">{course.modules?.length || 0}</p>
+                <p className="text-xl font-semibold text-foreground">{currentCourse.modules?.length || 0}</p>
               </div>
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground flex items-center mb-1">
@@ -305,7 +310,7 @@ export default function CourseDetailPage() {
                 <p className="text-xl font-semibold text-foreground">{totalLessons}</p>
               </div>
             </div>
-            
+
             <div className="mt-6 mb-4">
              {renderCTAButton()}
             </div>
@@ -314,9 +319,9 @@ export default function CourseDetailPage() {
               <h2 className="text-2xl font-headline font-semibold mb-3 flex items-center">
                 <BookOpen className="mr-2 h-6 w-6 text-primary" /> Course Modules & Lessons
               </h2>
-              {course.modules && course.modules.length > 0 ? (
+              {currentCourse.modules && currentCourse.modules.length > 0 ? (
                 <Accordion type="single" collapsible className="w-full">
-                  {course.modules.map(module => (
+                  {currentCourse.modules.map(module => (
                     <AccordionItem value={`module-${module.id}`} key={module.id} className="border-b">
                       <AccordionTrigger className="text-lg font-semibold hover:no-underline py-4">
                         {module.title}
@@ -326,9 +331,12 @@ export default function CourseDetailPage() {
                           <ul className="space-y-3 pl-2">
                             {module.lessons.map(lesson => {
                               const embeddableUrl = getEmbedUrl(lesson.embedUrl);
-                              const isPaidAndNotVerified = (course.price && course.price > 0) && (!userPaymentSubmission || userPaymentSubmission.status !== 'verified');
-                              const lessonIsAccessible = (!isPaidAndNotVerified || completionInfo?.isCompleted || (course.price === 0 || !course.price)); 
-                              const lessonLink = `/courses/${course.id}/learn/${module.id}/${lesson.id}`;
+                              const isCourseFree = !currentCourse.price || currentCourse.price <= 0;
+                              const isPaymentVerified = userPaymentSubmission?.status === 'verified';
+                              const isCourseAlreadyCompleted = completionInfo?.isCompleted;
+
+                              const lessonIsAccessible = isCourseFree || isPaymentVerified || isCourseAlreadyCompleted;
+                              const lessonLink = `/courses/${currentCourse.id}/learn/${module.id}/${lesson.id}`;
 
                               return (
                                 <li key={lesson.id} className={`p-3 border rounded-md bg-card ${lessonIsAccessible ? 'hover:shadow-md transition-shadow' : 'opacity-70'}`}>
@@ -347,7 +355,7 @@ export default function CourseDetailPage() {
                                       Watch Lesson <ExternalLink className="ml-1 h-3 w-3" />
                                     </Link>
                                   )}
-                                   {!lessonIsAccessible && (course.price && course.price > 0) && (
+                                   {!lessonIsAccessible && (currentCourse.price && currentCourse.price > 0) && (
                                     <span className="text-xs text-muted-foreground flex items-center">
                                         Enrollment or verified payment required.
                                     </span>
@@ -367,13 +375,10 @@ export default function CourseDetailPage() {
                 <p className="text-muted-foreground">Modules for this course will be available soon.</p>
               )}
             </div>
-            
+
           </CardContent>
         </Card>
       </div>
     </ProtectedRoute>
   );
 }
-    
-
-    
