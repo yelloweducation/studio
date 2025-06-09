@@ -9,7 +9,7 @@ export default function RegisterPage() {
     <div className="flex justify-center items-center min-h-[calc(100vh-200px)] py-12">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-headline">Create your LuminaLearn Account</CardTitle>
+          <CardTitle className="text-3xl font-headline">Create your Yellow Institute Account</CardTitle>
           <CardDescription>Join our community of learners and educators.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -25,4 +25,3 @@ export default function RegisterPage() {
     </div>
   );
 }
-

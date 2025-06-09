@@ -130,16 +130,16 @@ export default function CourseManagement() {
         {courses.length > 0 ? (
           <ul className="space-y-4">
             {courses.map(course => (
-              <li key={course.id} className="p-4 border rounded-lg bg-card flex justify-between items-center shadow-sm">
-                <div>
+              <li key={course.id} className="p-4 border rounded-lg bg-card flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center shadow-sm">
+                <div className="flex-grow">
                   <h3 className="font-semibold font-headline text-lg">{course.title}</h3>
                   <p className="text-sm text-muted-foreground">{course.category} - By {course.instructor}</p>
                 </div>
-                <div className="space-x-2">
-                  <Button variant="outline" size="sm" onClick={() => openForm(course)} className="hover:border-primary hover:text-primary">
+                <div className="flex flex-col sm:flex-row sm:space-x-2 gap-2 sm:gap-0 w-full sm:w-auto">
+                  <Button variant="outline" size="sm" onClick={() => openForm(course)} className="w-full sm:w-auto hover:border-primary hover:text-primary">
                     <Edit3 className="mr-1 h-4 w-4" /> Edit
                   </Button>
-                  <Button variant="destructive" size="sm" onClick={() => handleDeleteCourse(course.id)}>
+                  <Button variant="destructive" size="sm" onClick={() => handleDeleteCourse(course.id)} className="w-full sm:w-auto">
                     <Trash2 className="mr-1 h-4 w-4" /> Delete
                   </Button>
                 </div>

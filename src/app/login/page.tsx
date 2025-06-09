@@ -9,7 +9,7 @@ export default function LoginPage() {
     <div className="flex justify-center items-center min-h-[calc(100vh-200px)] py-12">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-headline">Login to LuminaLearn</CardTitle>
+          <CardTitle className="text-3xl font-headline">Login to Yellow Institute</CardTitle>
           <CardDescription>Enter your credentials to access your account.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -25,4 +25,3 @@ export default function LoginPage() {
     </div>
   );
 }
-

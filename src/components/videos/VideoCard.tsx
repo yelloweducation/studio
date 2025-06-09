@@ -8,7 +8,7 @@ interface VideoCardProps {
 
 const VideoCard = ({ video }: VideoCardProps) => {
   return (
-    <div className="bg-black rounded-lg shadow-xl overflow-hidden w-full h-[480px] sm:h-[560px] md:h-[600px] flex flex-col items-center justify-center relative text-white snap-center shrink-0">
+    <div className="bg-black rounded-lg shadow-xl overflow-hidden w-full h-full flex flex-col items-center justify-center relative text-white snap-center shrink-0">
       {video.thumbnailUrl && (
         <Image 
             src={video.thumbnailUrl} 

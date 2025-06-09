@@ -56,7 +56,7 @@ export default function Home() {
   return (
     <div className="flex flex-col items-center py-8">
       <section className="w-full max-w-2xl text-center mb-12">
-        <h1 className="text-4xl md:text-5xl font-headline font-bold mb-4 text-primary">Welcome to LuminaLearn</h1>
+        <h1 className="text-4xl md:text-5xl font-headline font-bold mb-4 text-primary">Welcome to Yellow Institute</h1>
         <p className="text-lg text-foreground/80 mb-8">
           Discover a world of knowledge. Search for courses or explore trending videos.
         </p>
@@ -67,7 +67,7 @@ export default function Home() {
               placeholder="Search for courses (e.g., Web Development)"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full text-base pr-10"
+              className="w-full text-sm md:text-base pr-10"
             />
             {searchQuery && (
               <Button 
@@ -110,7 +110,7 @@ export default function Home() {
       {activeSection === 'videos' && (
          <section className={`w-full max-w-md mx-auto ${animationClass}`}>
           <h2 className="text-3xl font-headline font-semibold mb-6 text-center">Trending Videos</h2>
-          <div className="h-[600px] md:h-[700px] overflow-y-auto snap-y snap-mandatory space-y-4 rounded-lg p-2 bg-card shadow-inner">
+          <div className="h-[450px] sm:h-[550px] md:h-[600px] overflow-y-auto snap-y snap-mandatory space-y-4 rounded-lg p-2 bg-card shadow-inner">
             {allVideos.map(video => (
               <VideoCard key={video.id} video={video} />
             ))}

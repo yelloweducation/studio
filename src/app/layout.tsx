@@ -6,8 +6,8 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 
 export const metadata: Metadata = {
-  title: 'Lumina Learn',
-  description: 'Your journey to knowledge starts here.',
+  title: 'Yellow Institute',
+  description: 'Your journey to knowledge starts here at Yellow Institute.',
 };
 
 export default function RootLayout({
