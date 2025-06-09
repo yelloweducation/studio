@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Edit3, Trash2, ListOrdered, BookOpen, Film, FileText } from 'lucide-react';
+import { PlusCircle, Edit3, Trash2, ListOrdered, BookOpen, Film, FileText, DollarSign, Milestone } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Label } from '../ui/label';
 
 const CourseForm = ({ 
   course, 
@@ -35,6 +36,8 @@ const CourseForm = ({
   const [instructor, setInstructor] = useState(course?.instructor || '');
   const [imageUrl, setImageUrl] = useState(course?.imageUrl || 'https://placehold.co/600x400.png');
   const [dataAiHint, setDataAiHint] = useState(course?.dataAiHint || 'education course');
+  const [price, setPrice] = useState<number>(course?.price ?? 0);
+  const [currency, setCurrency] = useState(course?.currency || 'MMK');
   const [modules, setModules] = useState<Module[]>(course?.modules || []);
 
   const handleModuleChange = (index: number, field: keyof Module, value: string) => {
@@ -81,7 +84,9 @@ const CourseForm = ({
       instructor, 
       modules,
       imageUrl,
-      dataAiHint
+      dataAiHint,
+      price: Number(price) || 0,
+      currency,
     };
     onSubmit(courseData);
   };
@@ -91,29 +96,46 @@ const CourseForm = ({
       <ScrollArea className="h-[60vh] sm:h-[70vh] pr-4">
         <div className="space-y-4">
           <div>
-            <label htmlFor="title" className="block text-sm font-medium text-foreground mb-1">Title</label>
+            <Label htmlFor="title">Title</Label>
             <Input id="title" value={title} onChange={e => setTitle(e.target.value)} required />
           </div>
           <div>
-            <label htmlFor="description" className="block text-sm font-medium text-foreground mb-1">Description</label>
+            <Label htmlFor="description">Description</Label>
             <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} required />
           </div>
           <div>
-            <label htmlFor="category" className="block text-sm font-medium text-foreground mb-1">Category</label>
+            <Label htmlFor="category">Category</Label>
             <Input id="category" value={category} onChange={e => setCategory(e.target.value)} required />
           </div>
           <div>
-            <label htmlFor="instructor" className="block text-sm font-medium text-foreground mb-1">Instructor</label>
+            <Label htmlFor="instructor">Instructor</Label>
             <Input id="instructor" value={instructor} onChange={e => setInstructor(e.target.value)} required />
           </div>
            <div>
-            <label htmlFor="imageUrl" className="block text-sm font-medium text-foreground mb-1">Image URL</label>
+            <Label htmlFor="imageUrl">Image URL</Label>
             <Input id="imageUrl" value={imageUrl} onChange={e => setImageUrl(e.target.value)} />
           </div>
           <div>
-            <label htmlFor="dataAiHint" className="block text-sm font-medium text-foreground mb-1">Image AI Hint (keywords)</label>
+            <Label htmlFor="dataAiHint">Image AI Hint (keywords)</Label>
             <Input id="dataAiHint" value={dataAiHint} onChange={e => setDataAiHint(e.target.value)} placeholder="e.g. education programming"/>
           </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="price">Price</Label>
+              <div className="relative">
+                <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input id="price" type="number" value={price} onChange={e => setPrice(parseFloat(e.target.value) || 0)} placeholder="e.g., 50000" className="pl-8" />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="currency">Currency</Label>
+               <div className="relative">
+                <Milestone className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input id="currency" value={currency} onChange={e => setCurrency(e.target.value.toUpperCase())} placeholder="e.g., MMK" className="pl-8" />
+              </div>
+            </div>
+          </div>
+
 
           <div className="space-y-4 pt-4 border-t">
             <h3 className="text-lg font-semibold flex items-center"><BookOpen className="mr-2 h-5 w-5 text-primary"/> Modules</h3>
@@ -283,7 +305,7 @@ export default function CourseManagement() {
         <CardTitle className="flex items-center text-xl md:text-2xl font-headline">
           <ListOrdered className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Course Management
         </CardTitle>
-        <CardDescription>Add, edit, or delete courses and their content.</CardDescription>
+        <CardDescription>Add, edit, or delete courses, their content, and pricing.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="mb-6 text-right">
@@ -297,7 +319,7 @@ export default function CourseManagement() {
               <DialogHeader className="pb-4">
                 <DialogTitle className="font-headline text-xl md:text-2xl">{editingCourse ? 'Edit Course' : 'Add New Course'}</DialogTitle>
                 <DialogDescription>
-                  {editingCourse ? 'Modify the details and content of the existing course.' : 'Fill in the details and content for the new course.'}
+                  {editingCourse ? 'Modify the details, content, and pricing of the existing course.' : 'Fill in the details, content, and pricing for the new course.'}
                 </DialogDescription>
               </DialogHeader>
               <CourseForm 
@@ -317,6 +339,9 @@ export default function CourseManagement() {
                   <h3 className="font-semibold font-headline text-md md:text-lg">{course.title}</h3>
                   <p className="text-xs sm:text-sm text-muted-foreground">{course.category} - By {course.instructor}</p>
                   <p className="text-xs sm:text-sm text-muted-foreground">Modules: {course.modules.length}</p>
+                  <p className="text-xs sm:text-sm text-primary font-semibold">
+                    Price: {course.price && course.price > 0 ? `${course.price.toLocaleString()} ${course.currency || 'MMK'}` : 'Free'}
+                  </p>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:space-x-2 gap-2 sm:gap-0 w-full sm:w-auto">
                   <Button variant="outline" size="sm" onClick={() => openForm(course)} className="w-full sm:w-auto hover:border-primary hover:text-primary">
@@ -356,5 +381,3 @@ export default function CourseManagement() {
     </Card>
   );
 }
-
-    

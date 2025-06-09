@@ -23,6 +23,8 @@ export type Course = {
   modules: Module[];
   imageUrl?: string;
   dataAiHint?: string;
+  price?: number; // New field for course price
+  currency?: string; // New field for currency, e.g., "MMK"
 };
 
 export type User = {
@@ -68,6 +70,8 @@ export const courses: Course[] = [
     instructor: 'Dr. Web Coder',
     imageUrl: 'https://placehold.co/600x400.png',
     dataAiHint: 'programming code',
+    price: 50000,
+    currency: 'MMK',
     modules: [
       {
         id: 'm1c1',
@@ -103,6 +107,8 @@ export const courses: Course[] = [
     instructor: 'Prof. Script Master',
     imageUrl: 'https://placehold.co/600x400.png',
     dataAiHint: 'abstract javascript',
+    price: 75000,
+    currency: 'MMK',
     modules: [
       {
         id: 'm1c2',
@@ -129,6 +135,8 @@ export const courses: Course[] = [
     instructor: 'Dr. Data Insight',
     imageUrl: 'https://placehold.co/600x400.png',
     dataAiHint: 'python data',
+    price: 0, // Free course
+    currency: 'MMK',
     modules: [
       {
         id: 'm1c3',
@@ -154,6 +162,8 @@ export const courses: Course[] = [
     instructor: 'The Future',
     imageUrl: 'https://placehold.co/600x400.png',
     dataAiHint: 'coming soon abstract',
+    price: 10000,
+    currency: 'MMK',
     modules: [], // No modules
   },
   {
@@ -164,6 +174,8 @@ export const courses: Course[] = [
     instructor: 'Curriculum Planner',
     imageUrl: 'https://placehold.co/600x400.png',
     dataAiHint: 'planning document',
+    price: 5000,
+    currency: 'MMK',
     modules: [
       { id: 'm1c5', title: 'Module A - Concepts', lessons: [] },
       { id: 'm2c5', title: 'Module B - Drafts', lessons: [] },
@@ -209,3 +221,8 @@ export const categories: Category[] = [
   { id: 'cat5', name: 'AI & ML', imageUrl: 'https://placehold.co/200x150.png', dataAiHint: 'artificial intelligence', icon: 'BrainCircuit' },
 ];
 
+export interface PaymentSettings {
+  bankName: string;
+  bankAccountNumber: string;
+  paymentInstructions: string;
+}
