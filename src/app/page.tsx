@@ -2,7 +2,7 @@
 "use client";
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image'; // Added import
+import Image from 'next/image';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, Video as VideoIcon, XCircle } from 'lucide-react';
@@ -74,14 +74,14 @@ export default function Home() {
           <Button 
             type="button" 
             onClick={performSearch} 
-            className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90 shadow-3d-accent hover:shadow-3d-accent-hover active:shadow-none active:translate-y-px active:translate-x-px transition-all duration-150"
+            className="flex-1" // Changed: Removed custom accent styles, will use default primary style
           >
             <Search className="mr-2 h-5 w-5" /> Search Courses
           </Button>
           <Button 
             onClick={handleShowVideos} 
-            variant="default" // Changed from outline to default for 3D primary style
-            className="flex-1" // Retain flex-1 for equal width
+            variant="default"
+            className="flex-1"
           >
             <VideoIcon className="mr-2 h-5 w-5" /> View Videos
           </Button>
