@@ -21,58 +21,66 @@ export default function CourseDetailPage() {
   const { user } = useAuth();
   const router = useRouter();
 
-  const [course, setCourse] = useState<Course | null>(null);
   const [activeCourses, setActiveCourses] = useState<Course[]>([]);
+  const [course, setCourse] = useState<Course | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [firstLessonPath, setFirstLessonPath] = useState<string | null>(null);
   const [completionInfo, setCompletionInfo] = useState<{ date: string; isCompleted: boolean } | null>(null);
   const [userPaymentSubmission, setUserPaymentSubmission] = useState<PaymentSubmission | null>(null);
 
-
+  // Effect 1: Load all available courses (from localStorage or fallback to mock)
   useEffect(() => {
     let coursesToUse = allCourses;
     const storedCourses = localStorage.getItem('adminCourses');
     if (storedCourses) {
       try {
         const parsedCourses = JSON.parse(storedCourses) as Course[];
-        if (Array.isArray(parsedCourses) && parsedCourses.length > 0) {
+        if (Array.isArray(parsedCourses)) { // Allow empty array if admin saved it
           coursesToUse = parsedCourses;
         }
       } catch (e) {
         console.error("Failed to parse courses from localStorage on detail page", e);
+        // coursesToUse defaults to allCourses
       }
     }
     setActiveCourses(coursesToUse);
-  }, []);
+  }, []); // Runs once on mount
 
+  // Effect 2: Determine the specific course and its first lesson path
   useEffect(() => {
     if (!courseId) {
       setCourse(null);
-      setIsLoading(false);
+      setFirstLessonPath(null);
+      setIsLoading(false); // No courseId, stop loading
       return;
     }
-    
-    if (activeCourses.length > 0) {
-        const foundCourse = activeCourses.find(c => c.id === courseId);
-        setCourse(foundCourse || null);
-        if (foundCourse && foundCourse.modules && foundCourse.modules.length > 0) {
-          const firstModuleWithLessons = foundCourse.modules.find(m => m.lessons && m.lessons.length > 0);
-          if (firstModuleWithLessons && firstModuleWithLessons.lessons && firstModuleWithLessons.lessons.length > 0) {
-            setFirstLessonPath(`/courses/${foundCourse.id}/learn/${firstModuleWithLessons.id}/${firstModuleWithLessons.lessons[0].id}`);
-          } else {
-            setFirstLessonPath(null); // No lessons in any module
-          }
-        } else {
-          setFirstLessonPath(null); // No modules
-        }
-    } else {
-        setCourse(null);
-        setFirstLessonPath(null);
-    }
-    setIsLoading(false);
-    
-  }, [courseId, activeCourses]);
 
+    setIsLoading(true); // Start loading process for this courseId / activeCourses change
+
+    let determinedCourse: Course | null = null;
+    let determinedPath: string | null = null;
+
+    if (activeCourses.length > 0) {
+      const found = activeCourses.find(c => c.id === courseId);
+      if (found) {
+        determinedCourse = found;
+        if (found.modules && found.modules.length > 0) {
+          const firstModuleWithLessons = found.modules.find(m => m.lessons && m.lessons.length > 0);
+          if (firstModuleWithLessons && firstModuleWithLessons.lessons && firstModuleWithLessons.lessons.length > 0) {
+            determinedPath = `/courses/${found.id}/learn/${firstModuleWithLessons.id}/${firstModuleWithLessons.lessons[0].id}`;
+          }
+        }
+      }
+    }
+    // If activeCourses is empty or course not found, determinedCourse and determinedPath remain null.
+
+    setCourse(determinedCourse);
+    setFirstLessonPath(determinedPath);
+    setIsLoading(false); // Finish loading
+
+  }, [courseId, activeCourses]); // Re-run if courseId or the list of activeCourses changes
+
+  // Effect 3: Determine completion status and payment submission status
   useEffect(() => {
     if (user && course) {
       // Check for course completion
@@ -93,24 +101,22 @@ export default function CourseDetailPage() {
       }
       setCompletionInfo({ date: completionDate, isCompleted: isCourseCompleted });
   
-      // If course is paid and not completed by this user, check for payment submission
       const isPaidCourse = course.price && course.price > 0;
       if (isPaidCourse && !isCourseCompleted) {
         const allSubmissions = getPaymentSubmissions();
-        // Find the most recent submission for this user and course
         const userCourseSubmissions = allSubmissions
           .filter(sub => sub.userId === user.id && sub.courseId === course.id)
           .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
         
         setUserPaymentSubmission(userCourseSubmissions.length > 0 ? userCourseSubmissions[0] : null);
       } else {
-        setUserPaymentSubmission(null); // Clear if course is free, or completed, or no user
+        setUserPaymentSubmission(null);
       }
     } else {
       setCompletionInfo(null);
       setUserPaymentSubmission(null);
     }
-  }, [user, course]);
+  }, [user, course]); // Re-run if user or the specific course changes
 
 
   if (isLoading) {
@@ -162,7 +168,6 @@ export default function CourseDetailPage() {
       );
     }
     
-    // If course has content
     if (firstLessonPath) {
       if (isPaidCourse) {
         if (userPaymentSubmission) {
@@ -208,7 +213,6 @@ export default function CourseDetailPage() {
             );
           }
         }
-        // Default for paid course, no submission or unhandled status
         return (
           <Button size="lg" className="w-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150" asChild>
             <Link href={`/courses/${course.id}/checkout`}>
@@ -216,7 +220,7 @@ export default function CourseDetailPage() {
             </Link>
           </Button>
         );
-      } else { // Free course
+      } else { 
         return (
           <Button size="lg" className="w-full bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150" asChild>
             <Link href={firstLessonPath}>
@@ -227,7 +231,6 @@ export default function CourseDetailPage() {
       }
     }
 
-    // Fallback if no firstLessonPath (course has no content)
     return (
       <Button size="lg" className="w-full" disabled>
         <PlayCircle className="mr-2 h-6 w-6"/> Course Content Coming Soon
@@ -313,8 +316,6 @@ export default function CourseDetailPage() {
                           <ul className="space-y-3 pl-2">
                             {module.lessons.map(lesson => {
                               const embeddableUrl = getEmbedUrl(lesson.embedUrl);
-                              // For paid courses, access depends on completion or verified payment.
-                              // For free courses, always accessible.
                               const isPaidAndNotVerified = (course.price && course.price > 0) && userPaymentSubmission?.status !== 'verified';
                               const lessonIsAccessible = (!isPaidAndNotVerified || completionInfo?.isCompleted); 
                               const lessonLink = `/courses/${course.id}/learn/${module.id}/${lesson.id}`;
@@ -364,3 +365,5 @@ export default function CourseDetailPage() {
   );
 }
 
+
+    
