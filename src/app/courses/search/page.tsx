@@ -35,10 +35,12 @@ function SearchResultsContent() {
   useEffect(() => {
     setIsLoading(true);
     if (query) {
+      const lowerCaseQuery = query.toLowerCase();
       const results = activeCourses.filter(course =>
-        course.title.toLowerCase().includes(query.toLowerCase()) ||
-        course.description.toLowerCase().includes(query.toLowerCase()) ||
-        course.category.toLowerCase().includes(query.toLowerCase())
+        course.title.toLowerCase().includes(lowerCaseQuery) ||
+        course.description.toLowerCase().includes(lowerCaseQuery) ||
+        course.category.toLowerCase().includes(lowerCaseQuery) || // This will catch direct category searches
+        course.category.toLowerCase() === lowerCaseQuery // Explicitly match category names
       );
       setFilteredCourses(results);
     } else {

@@ -2,21 +2,28 @@
 "use client";
 import { useState, type FormEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-// import NextImage from 'next/image'; // Removed as hero image is removed
+import Image from 'next/image';
+import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Video as VideoIcon, XCircle, Tv, Loader2, X } from 'lucide-react';
+import { Search, Video as VideoIcon, XCircle, Tv, Loader2, X, Shapes } from 'lucide-react';
 import VideoCard from '@/components/videos/VideoCard';
-import { videos as mockVideos, type Video } from '@/data/mockData';
-import { Card, CardContent } from '@/components/ui/card';
+import { videos as mockVideos, type Video, categories as mockCategories, type Category } from '@/data/mockData';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import * as LucideIcons from 'lucide-react';
 
-// Removed HERO_IMAGE_STORAGE_KEY, DEFAULT_HERO_IMAGE_URL, DEFAULT_HERO_AI_HINT
-// Removed HeroImageData type
+const isValidLucideIcon = (iconName: string): iconName is keyof typeof LucideIcons => {
+  return iconName in LucideIcons;
+};
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const router = useRouter();
+  
+  const [courseCategories, setCourseCategories] = useState<Category[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+
   const [trendingVideos, setTrendingVideos] = useState<Video[]>([]);
   const [isLoadingTrendingVideos, setIsLoadingTrendingVideos] = useState(true);
 
@@ -24,9 +31,24 @@ export default function Home() {
   const [allFeedVideos, setAllFeedVideos] = useState<Video[]>([]);
   const [isLoadingFeedVideos, setIsLoadingFeedVideos] = useState(false);
 
-  // Removed heroImageDetails state and its useEffect
 
   useEffect(() => {
+    // Load course categories
+    setIsLoadingCategories(true);
+    const storedCategoriesString = localStorage.getItem('adminCategories');
+    if (storedCategoriesString) {
+      try {
+        const parsedCategories = JSON.parse(storedCategoriesString) as Category[];
+        setCourseCategories(parsedCategories.length > 0 ? parsedCategories : mockCategories);
+      } catch (e) {
+        console.error("Failed to parse categories from localStorage", e);
+        setCourseCategories(mockCategories);
+      }
+    } else {
+      setCourseCategories(mockCategories);
+    }
+    setIsLoadingCategories(false);
+
     // Load trending videos
     setIsLoadingTrendingVideos(true);
     let videosToDisplay: Video[] = [];
@@ -139,8 +161,7 @@ export default function Home() {
 
   return (
     <div className="flex flex-col items-center pb-8">
-      <section className="w-full max-w-2xl text-center mb-12 pt-8"> {/* Added pt-8 for spacing if needed */}
-        {/* Hero Image section removed */}
+      <section className="w-full max-w-2xl text-center pt-8 mb-10">
         <h1 className="text-4xl sm:text-5xl font-headline font-bold mb-4 text-foreground">
           Discover Your Next Passion
         </h1>
@@ -177,6 +198,64 @@ export default function Home() {
           </Button>
         </form>
       </section>
+
+      <section className="w-full max-w-5xl mt-8 mb-12">
+        <h2 className="text-2xl sm:text-3xl font-headline font-semibold flex items-center mb-6 text-center sm:text-left justify-center sm:justify-start">
+          <Shapes className="mr-2 h-7 w-7 text-primary" /> Explore Categories
+        </h2>
+        {isLoadingCategories ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {[...Array(5)].map((_, i) => (
+              <Card key={i} className="shadow-lg rounded-lg">
+                <Skeleton className="h-24 w-full rounded-t-lg" />
+                <CardContent className="pt-3 pb-3 text-center">
+                  <Skeleton className="h-5 w-3/4 mx-auto" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : courseCategories.length > 0 ? (
+          <div className="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+            {courseCategories.map(category => {
+              const IconComponent = category.icon && isValidLucideIcon(category.icon) 
+                ? LucideIcons[category.icon] as React.ElementType 
+                : LucideIcons.Shapes; // Default icon
+              return (
+                <Link key={category.id} href={`/courses/search?query=${encodeURIComponent(category.name)}`} passHref>
+                  <Card className="group flex flex-col items-center justify-start text-center p-0 rounded-lg shadow-lg hover:shadow-xl active:shadow-md transform hover:-translate-y-1 active:translate-y-px transition-all duration-150 h-full overflow-hidden cursor-pointer">
+                    {category.imageUrl && (
+                      <div className="w-full h-24 sm:h-32 relative">
+                        <Image
+                          src={category.imageUrl}
+                          alt={category.name}
+                          layout="fill"
+                          objectFit="cover"
+                          data-ai-hint={category.dataAiHint || 'category item'}
+                          className="rounded-t-lg"
+                        />
+                         <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors duration-150"></div>
+                      </div>
+                    )}
+                    <CardHeader className="p-3 pt-4 flex-grow w-full">
+                      <CardTitle className="text-sm sm:text-md font-semibold font-headline flex flex-col items-center justify-center">
+                        <IconComponent className="mb-1 h-5 w-5 sm:h-6 sm:w-6 text-primary group-hover:text-accent transition-colors" />
+                        {category.name}
+                      </CardTitle>
+                    </CardHeader>
+                  </Card>
+                </Link>
+              );
+            })}
+          </div>
+        ) : (
+          <Card className="w-full">
+            <CardContent className="pt-6">
+              <p className="text-center text-muted-foreground">No course categories available at the moment. Admins can add them!</p>
+            </CardContent>
+          </Card>
+        )}
+      </section>
+
 
       <section className="w-full mt-12">
         <div className="flex justify-between items-center mb-6">

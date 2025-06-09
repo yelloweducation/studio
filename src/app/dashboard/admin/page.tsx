@@ -5,9 +5,10 @@ import CourseManagement from "@/components/admin/CourseManagement";
 import UserManagement from "@/components/admin/UserManagement";
 import EnrollmentStats from "@/components/admin/EnrollmentStats";
 import VideoManagement from "@/components/admin/VideoManagement";
-import ImageManagement from "@/components/admin/ImageManagement"; // Added
+import ImageManagement from "@/components/admin/ImageManagement";
+import CategoryManagement from "@/components/admin/CategoryManagement"; // Added
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ListOrdered, Users, BarChart3, Settings, Video as VideoIcon, Image as ImageIcon } from "lucide-react"; // Added ImageIcon
+import { ListOrdered, Users, BarChart3, Settings, Video as VideoIcon, Image as ImageIcon, Shapes } from "lucide-react"; // Added Shapes
 
 export default function AdminDashboardPage() {
   return (
@@ -21,9 +22,12 @@ export default function AdminDashboardPage() {
         </section>
 
         <Tabs defaultValue="courses" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 mb-6">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-2 mb-6">
             <TabsTrigger value="courses" className="py-2.5 px-3 text-sm sm:text-base sm:py-3">
               <ListOrdered className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> Manage Courses
+            </TabsTrigger>
+            <TabsTrigger value="categories" className="py-2.5 px-3 text-sm sm:text-base sm:py-3">
+              <Shapes className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> Manage Categories
             </TabsTrigger>
             <TabsTrigger value="videos" className="py-2.5 px-3 text-sm sm:text-base sm:py-3">
               <VideoIcon className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> Manage Videos
@@ -41,6 +45,9 @@ export default function AdminDashboardPage() {
           
           <TabsContent value="courses">
             <CourseManagement />
+          </TabsContent>
+          <TabsContent value="categories">
+            <CategoryManagement />
           </TabsContent>
           <TabsContent value="videos">
             <VideoManagement />

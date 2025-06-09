@@ -50,12 +50,20 @@ export type Video = {
   dataAiHint?: string;
 };
 
+export type Category = {
+  id: string;
+  name: string;
+  imageUrl?: string;
+  dataAiHint?: string;
+  icon?: string; // Lucide icon name
+};
+
 export const courses: Course[] = [
   {
     id: 'course1',
     title: 'Introduction to Web Development',
     description: 'Learn the fundamentals of HTML, CSS, and JavaScript.',
-    category: 'Development',
+    category: 'Web Development', // Updated category name for consistency
     instructor: 'Dr. Web Coder',
     imageUrl: 'https://placehold.co/600x400.png',
     dataAiHint: 'programming code',
@@ -82,7 +90,7 @@ export const courses: Course[] = [
     id: 'course2',
     title: 'Advanced JavaScript Techniques',
     description: 'Dive deep into modern JavaScript features and patterns.',
-    category: 'Development',
+    category: 'JavaScript', // Updated category name for consistency
     instructor: 'Prof. Script Master',
     imageUrl: 'https://placehold.co/600x400.png',
     dataAiHint: 'abstract javascript',
@@ -159,4 +167,12 @@ export const videos: Video[] = [
   { id: 'video13', title: '🎬 Introduction to Docker', description: 'Learn the basics of Docker and containerization.', thumbnailUrl: 'https://placehold.co/360x640.png', dataAiHint: 'docker logo' },
   { id: 'video14', title: '🎬 GraphQL vs REST', description: 'Comparing GraphQL and REST APIs.', thumbnailUrl: 'https://placehold.co/360x640.png', dataAiHint: 'api comparison' },
   { id: 'video15', title: '🎬 Serverless Functions Explained', description: 'Understanding serverless architecture.', thumbnailUrl: 'https://placehold.co/360x640.png', dataAiHint: 'cloud functions' },
+];
+
+export const categories: Category[] = [
+  { id: 'cat1', name: 'Web Development', imageUrl: 'https://placehold.co/200x150.png', dataAiHint: 'coding web', icon: 'Globe' },
+  { id: 'cat2', name: 'Data Science', imageUrl: 'https://placehold.co/200x150.png', dataAiHint: 'analytics charts', icon: 'DatabaseZap' },
+  { id: 'cat3', name: 'JavaScript', imageUrl: 'https://placehold.co/200x150.png', dataAiHint: 'javascript logo', icon: 'Braces' },
+  { id: 'cat4', name: 'Cloud Computing', imageUrl: 'https://placehold.co/200x150.png', dataAiHint: 'cloud network', icon: 'Cloud' },
+  { id: 'cat5', name: 'AI & ML', imageUrl: 'https://placehold.co/200x150.png', dataAiHint: 'artificial intelligence', icon: 'BrainCircuit' },
 ];
