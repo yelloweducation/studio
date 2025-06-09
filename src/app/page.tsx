@@ -14,11 +14,10 @@ export default function Home() {
   const [activeSection, setActiveSection] = useState<'search' | 'videos' | 'none'>('none');
   const [showResults, setShowResults] = useState(false);
 
-  const handleSearch = (e: FormEvent) => {
-    e.preventDefault();
+  const performSearch = () => {
     if (!searchQuery.trim()) {
       setDisplayedCourses([]);
-      setShowResults(true); // Show that search was performed, but no results for empty query
+      setShowResults(true); 
       setActiveSection('search');
       return;
     }
@@ -31,9 +30,14 @@ export default function Home() {
     setShowResults(true);
   };
 
+  const handleFormSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    performSearch();
+  };
+
   const handleShowVideos = () => {
     setActiveSection('videos');
-    setShowResults(false); // Ensure search results are hidden if videos are shown
+    setShowResults(false); 
   };
   
   const clearSearch = () => {
@@ -43,12 +47,11 @@ export default function Home() {
     setActiveSection('none');
   };
 
-  // For subtle transitions
   const [animationClass, setAnimationClass] = useState('animate-fade-in');
 
   useEffect(() => {
-    setAnimationClass(''); // Clear previous animation class
-    const timer = setTimeout(() => setAnimationClass('animate-fade-in'), 50); // Apply new animation class
+    setAnimationClass(''); 
+    const timer = setTimeout(() => setAnimationClass('animate-fade-in'), 50); 
     return () => clearTimeout(timer);
   }, [activeSection, showResults]);
 
@@ -60,7 +63,7 @@ export default function Home() {
         <p className="text-lg text-foreground/80 mb-8">
           Discover a world of knowledge. Search for courses or explore trending videos.
         </p>
-        <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2 mb-4">
+        <form onSubmit={handleFormSubmit} className="w-full mb-4">
           <div className="relative flex-grow">
             <Input
               type="text"
@@ -81,13 +84,21 @@ export default function Home() {
               </Button>
             )}
           </div>
-          <Button type="submit" className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-md hover:shadow-sm active:translate-y-px transition-all duration-150">
+        </form>
+        
+        <div className="flex gap-2 w-full">
+          <Button 
+            type="button" 
+            onClick={performSearch} 
+            className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90 shadow-md hover:shadow-sm active:translate-y-px transition-all duration-150"
+          >
             <Search className="mr-2 h-5 w-5" /> Search
           </Button>
-        </form>
-        {/* Container for buttons to be in parallel */}
-        <div className="flex justify-center gap-2">
-          <Button onClick={handleShowVideos} variant="outline" className="border-primary text-primary hover:bg-primary/10">
+          <Button 
+            onClick={handleShowVideos} 
+            variant="outline" 
+            className="flex-1 border-primary text-primary hover:bg-primary/10"
+          >
             <VideoIcon className="mr-2 h-5 w-5" /> View Videos
           </Button>
         </div>
