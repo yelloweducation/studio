@@ -5,6 +5,7 @@ export type Lesson = {
   duration: string;
   description?: string;
   embedUrl?: string;
+  imageUrl?: string; // Added for lessons that might be image-focused
 };
 
 export type Module = {
@@ -84,6 +85,14 @@ export const courses: Course[] = [
           { id: 'l2m2c1', title: 'CSS Box Model', duration: '18min', description: 'Understanding the CSS box model.'}
         ]
       },
+       {
+        id: 'm3c1',
+        title: 'JavaScript Introduction',
+        lessons: [
+          { id: 'l1m3c1', title: 'What is JavaScript?', duration: '8min', description: 'Basic concepts of JavaScript and its role in web development.' },
+          { id: 'l2m3c1', title: 'Variables and Data Types', duration: '12min', description: 'Understanding variables, constants, and basic data types in JS.'}
+        ]
+      }
     ],
   },
   {
@@ -137,6 +146,29 @@ export const courses: Course[] = [
       },
     ],
   },
+  {
+    id: 'course4-no-lessons',
+    title: 'Placeholder Course (No Content Yet)',
+    description: 'This course is under development. Check back soon!',
+    category: 'Future Skills',
+    instructor: 'The Future',
+    imageUrl: 'https://placehold.co/600x400.png',
+    dataAiHint: 'coming soon abstract',
+    modules: [], // No modules
+  },
+  {
+    id: 'course5-empty-modules',
+    title: 'Course With Empty Modules',
+    description: 'Modules exist, but lessons are not yet populated.',
+    category: 'Content Strategy',
+    instructor: 'Curriculum Planner',
+    imageUrl: 'https://placehold.co/600x400.png',
+    dataAiHint: 'planning document',
+    modules: [
+      { id: 'm1c5', title: 'Module A - Concepts', lessons: [] },
+      { id: 'm2c5', title: 'Module B - Drafts', lessons: [] },
+    ],
+  },
 ];
 
 export const users: User[] = [
@@ -176,3 +208,4 @@ export const categories: Category[] = [
   { id: 'cat4', name: 'Cloud Computing', imageUrl: 'https://placehold.co/200x150.png', dataAiHint: 'cloud network', icon: 'Cloud' },
   { id: 'cat5', name: 'AI & ML', imageUrl: 'https://placehold.co/200x150.png', dataAiHint: 'artificial intelligence', icon: 'BrainCircuit' },
 ];
+

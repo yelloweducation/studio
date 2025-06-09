@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, PlayCircle, BookOpen, Video, FileText, Loader2, ListChecks, FileVideo } from 'lucide-react';
+import { ChevronLeft, PlayCircle, BookOpen, Video, FileText, Loader2, ListChecks, FileVideo, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -19,11 +19,10 @@ export default function CourseDetailPage() {
   const [course, setCourse] = useState<Course | null>(null);
   const [activeCourses, setActiveCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [firstLessonPath, setFirstLessonPath] = useState<string | null>(null);
 
 
   useEffect(() => {
-    // This effect loads the list of available courses.
-    // It runs once on component mount.
     let coursesToUse = allCourses;
     const storedCourses = localStorage.getItem('adminCourses');
     if (storedCourses) {
@@ -34,15 +33,12 @@ export default function CourseDetailPage() {
         }
       } catch (e) {
         console.error("Failed to parse courses from localStorage on detail page", e);
-        // Fallback to allCourses is already default
       }
     }
     setActiveCourses(coursesToUse);
-    // setIsLoading(false) will be handled in the next effect after course finding attempt
   }, []);
 
   useEffect(() => {
-    // This effect runs when courseId changes or when activeCourses list is populated/updated.
     if (!courseId) {
       setCourse(null);
       setIsLoading(false);
@@ -52,11 +48,21 @@ export default function CourseDetailPage() {
     if (activeCourses.length > 0) {
         const foundCourse = activeCourses.find(c => c.id === courseId);
         setCourse(foundCourse || null);
+        if (foundCourse && foundCourse.modules && foundCourse.modules.length > 0) {
+          const firstModuleWithLessons = foundCourse.modules.find(m => m.lessons && m.lessons.length > 0);
+          if (firstModuleWithLessons && firstModuleWithLessons.lessons && firstModuleWithLessons.lessons.length > 0) {
+            setFirstLessonPath(`/courses/${foundCourse.id}/learn/${firstModuleWithLessons.id}/${firstModuleWithLessons.lessons[0].id}`);
+          } else {
+            setFirstLessonPath(null); // No lessons in any module
+          }
+        } else {
+          setFirstLessonPath(null); // No modules
+        }
     } else {
-        // If activeCourses is empty (e.g. initial load or error), set course to null
         setCourse(null);
+        setFirstLessonPath(null);
     }
-    setIsLoading(false); // Set loading to false after attempting to find the course
+    setIsLoading(false);
     
   }, [courseId, activeCourses]);
 
@@ -117,7 +123,7 @@ export default function CourseDetailPage() {
           <CardContent className="px-6 pb-6 space-y-6">
             <p className="text-lg text-foreground/90">{course.description}</p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-4 p-4 border rounded-lg bg-muted/5 shadow-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-4 p-4 border rounded-lg bg-muted/50 shadow-sm">
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground flex items-center mb-1">
                   <ListChecks className="mr-2 h-5 w-5 text-primary" /> Modules
@@ -134,7 +140,7 @@ export default function CourseDetailPage() {
 
             <div>
               <h2 className="text-2xl font-headline font-semibold mb-3 flex items-center">
-                <BookOpen className="mr-2 h-6 w-6 text-primary" /> Course Modules
+                <BookOpen className="mr-2 h-6 w-6 text-primary" /> Course Modules & Lessons
               </h2>
               {course.modules && course.modules.length > 0 ? (
                 <Accordion type="single" collapsible className="w-full">
@@ -145,31 +151,25 @@ export default function CourseDetailPage() {
                       </AccordionTrigger>
                       <AccordionContent className="pb-4 pt-0">
                         {module.lessons && module.lessons.length > 0 ? (
-                          <ul className="space-y-4 pl-2">
+                          <ul className="space-y-3 pl-2">
                             {module.lessons.map(lesson => {
                               const embeddableUrl = getEmbedUrl(lesson.embedUrl);
                               return (
-                                <li key={lesson.id} className="p-4 border rounded-md bg-card hover:shadow-md transition-shadow">
-                                  <div className="flex justify-between items-center mb-2">
+                                <li key={lesson.id} className="p-3 border rounded-md bg-card hover:shadow-md transition-shadow">
+                                  <div className="flex justify-between items-center mb-1">
                                     <h4 className="font-medium text-md flex items-center">
-                                      {embeddableUrl ? <Video className="mr-2 h-5 w-5 text-accent"/> : <FileText className="mr-2 h-5 w-5 text-accent"/>}
+                                      {embeddableUrl ? <Video className="mr-2 h-5 w-5 text-accent shrink-0"/> : <FileText className="mr-2 h-5 w-5 text-accent shrink-0"/>}
                                       {lesson.title}
                                     </h4>
-                                    <span className="text-xs bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full">{lesson.duration}</span>
+                                    <span className="text-xs bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full shrink-0">{lesson.duration}</span>
                                   </div>
                                   {lesson.description && (
-                                    <p className="text-sm text-muted-foreground mb-3">{lesson.description}</p>
+                                    <p className="text-sm text-muted-foreground mb-2">{lesson.description}</p>
                                   )}
                                   {lesson.embedUrl && embeddableUrl && (
-                                    <div className="aspect-video rounded-md overflow-hidden border">
-                                      <iframe
-                                        src={embeddableUrl || ''}
-                                        title={lesson.title}
-                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                                        allowFullScreen
-                                        className="w-full h-full"
-                                      ></iframe>
-                                    </div>
+                                    <Link href={`/courses/${course.id}/learn/${module.id}/${lesson.id}`} className="text-xs text-primary hover:underline flex items-center">
+                                      Watch Lesson <ExternalLink className="ml-1 h-3 w-3" />
+                                    </Link>
                                   )}
                                 </li>
                               );
@@ -186,9 +186,18 @@ export default function CourseDetailPage() {
                 <p className="text-muted-foreground">Modules for this course will be available soon.</p>
               )}
             </div>
-            <Button size="lg" className="w-full bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150">
-              <PlayCircle className="mr-2 h-6 w-6"/> Start Learning
-            </Button>
+            
+            {firstLessonPath ? (
+              <Button size="lg" className="w-full bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150" asChild>
+                <Link href={firstLessonPath}>
+                  <PlayCircle className="mr-2 h-6 w-6"/> Start Learning
+                </Link>
+              </Button>
+            ) : (
+              <Button size="lg" className="w-full" disabled>
+                <PlayCircle className="mr-2 h-6 w-6"/> Course Content Coming Soon
+              </Button>
+            )}
           </CardContent>
         </Card>
       </div>
