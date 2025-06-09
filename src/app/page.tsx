@@ -137,11 +137,11 @@ export default function Home() {
         <div className="mb-8 flex justify-center">
           <Image
             src="https://placehold.co/350x350.png"
-            alt="Engaged Student Learning - Yellow Institute"
+            alt="3D Globe - Yellow Institute"
             width={350}
             height={350}
             className="rounded-lg shadow-xl hover:shadow-2xl transition-shadow duration-300"
-            data-ai-hint="student learning 3d"
+            data-ai-hint="3d globe"
             priority
           />
         </div>
