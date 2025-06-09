@@ -2,13 +2,15 @@
 "use client";
 import { useParams, useRouter } from 'next/navigation';
 import { courses as allCourses, type Course, type PaymentSettings } from '@/data/mockData';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ChangeEvent } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, Loader2, AlertTriangle, Landmark, Copy, Check } from 'lucide-react';
+import { ChevronLeft, Loader2, AlertTriangle, Landmark, Copy, Check, UploadCloud, FileImage } from 'lucide-react';
 import Link from 'next/link';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useToast } from '@/hooks/use-toast';
+import { Input } from '@/components/ui/input'; // Added for file input styling
+import { Label } from '@/components/ui/label'; // Added for file input label
 
 const PAYMENT_SETTINGS_KEY = 'paymentSettings';
 
@@ -23,12 +25,13 @@ export default function CheckoutPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
 
   useEffect(() => {
     setIsLoading(true);
     setError(null);
 
-    // Load course details
     const storedCourses = localStorage.getItem('adminCourses');
     let coursesToUse = allCourses;
     if (storedCourses) {
@@ -44,13 +47,11 @@ export default function CheckoutPage() {
       return;
     }
     if (!foundCourse.price || foundCourse.price <= 0) {
-        // Redirect if course is free or has no price
         router.replace(`/courses/${courseId}`);
         return;
     }
     setCourse(foundCourse);
 
-    // Load payment settings
     const storedPaymentSettings = localStorage.getItem(PAYMENT_SETTINGS_KEY);
     if (storedPaymentSettings) {
       try {
@@ -74,6 +75,18 @@ export default function CheckoutPage() {
       console.error('Failed to copy: ', err);
       toast({ variant: "destructive", title: "Copy Failed", description: "Could not copy to clipboard." });
     });
+  };
+
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      const file = event.target.files[0];
+      setSelectedFile(file);
+      setFileName(file.name);
+      toast({ title: "File Selected", description: `${file.name} is ready for you to send.`});
+    } else {
+      setSelectedFile(null);
+      setFileName(null);
+    }
   };
 
   if (isLoading) {
@@ -102,7 +115,6 @@ export default function CheckoutPage() {
   }
 
   if (!course || !paymentSettings) {
-    // This case should ideally be caught by earlier error checks
     return (
          <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center">
             <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
@@ -114,6 +126,12 @@ export default function CheckoutPage() {
         </div>
     );
   }
+
+  const defaultPaymentInstructions = `1. Make the payment to the bank account details provided above.
+2. Ensure to include your email or the course name ("${course.title}") in the payment reference or description.
+3. After completing the payment, select your payment proof (screenshot) using the button below.
+4. Finally, contact our support team with your name, email, the course you paid for, and attach the payment proof to finalize your enrollment.`;
+
 
   return (
     <ProtectedRoute>
@@ -161,13 +179,38 @@ export default function CheckoutPage() {
             <div>
               <h3 className="text-xl font-semibold mb-2">Payment Instructions</h3>
               <div className="p-4 border rounded-lg bg-muted/30 prose prose-sm dark:prose-invert max-w-none">
-                <p>{paymentSettings.paymentInstructions || "Please make the payment to the account details above. Ensure to include your email or course name in the payment reference. After completing the payment, contact our support team with proof of payment to finalize your enrollment."}</p>
+                <p className="whitespace-pre-line">{paymentSettings.paymentInstructions || defaultPaymentInstructions}</p>
               </div>
+            </div>
+
+            <div>
+                <h3 className="text-xl font-semibold mb-2">Attach Payment Proof (Screenshot)</h3>
+                <div className="p-4 border rounded-lg bg-muted/30 space-y-3">
+                    <Label htmlFor="paymentProof" className="text-sm font-medium text-foreground">
+                        Select your payment screenshot:
+                    </Label>
+                    <Input 
+                        id="paymentProof" 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={handleFileChange} 
+                        className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                    />
+                    {fileName && (
+                        <div className="text-sm text-muted-foreground flex items-center">
+                            <FileImage className="mr-2 h-4 w-4 text-green-600" />
+                            Selected: <span className="font-medium text-foreground ml-1">{fileName}</span>
+                        </div>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                        After selecting, please remember to send this file to our support team as mentioned in the instructions.
+                    </p>
+                </div>
             </div>
             
             <div className="text-sm text-muted-foreground p-3 border-l-4 border-primary bg-primary/10 rounded-r-md">
                 <strong>Important:</strong> This is a manual payment process. Your enrollment will be confirmed once payment is verified by our team.
-                After making the payment, please allow some time for processing. You can start learning once your enrollment is active.
+                After making the payment and contacting support with your proof, please allow some time for processing. You can start learning once your enrollment is active.
             </div>
 
           </CardContent>
