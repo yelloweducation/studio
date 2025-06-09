@@ -7,9 +7,10 @@ import EnrollmentStats from "@/components/admin/EnrollmentStats";
 import VideoManagement from "@/components/admin/VideoManagement";
 import ImageManagement from "@/components/admin/ImageManagement";
 import CategoryManagement from "@/components/admin/CategoryManagement";
-import PaymentSettings from "@/components/admin/PaymentSettings"; // Added
+import PaymentSettings from "@/components/admin/PaymentSettings";
+import PaymentSubmissions from "@/components/admin/PaymentSubmissions"; // New
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ListOrdered, Users, BarChart3, Settings, Video as VideoIcon, Image as ImageIcon, Shapes, CreditCard } from "lucide-react"; // Added Shapes, CreditCard
+import { ListOrdered, Users, BarChart3, Settings, Video as VideoIcon, Image as ImageIcon, Shapes, CreditCard, SendToBack } from "lucide-react"; // Added SendToBack
 
 export default function AdminDashboardPage() {
   return (
@@ -23,27 +24,30 @@ export default function AdminDashboardPage() {
         </section>
 
         <Tabs defaultValue="courses" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 mb-6">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-2 mb-6">
             <TabsTrigger value="courses" className="py-2.5 px-3 text-sm sm:text-base sm:py-3">
-              <ListOrdered className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> Manage Courses
+              <ListOrdered className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> Courses
             </TabsTrigger>
             <TabsTrigger value="categories" className="py-2.5 px-3 text-sm sm:text-base sm:py-3">
-              <Shapes className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> Manage Categories
+              <Shapes className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> Categories
             </TabsTrigger>
             <TabsTrigger value="videos" className="py-2.5 px-3 text-sm sm:text-base sm:py-3">
-              <VideoIcon className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> Manage Videos
+              <VideoIcon className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> Videos
             </TabsTrigger>
              <TabsTrigger value="images" className="py-2.5 px-3 text-sm sm:text-base sm:py-3">
-              <ImageIcon className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> Manage Images
+              <ImageIcon className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> Images
             </TabsTrigger>
-            <TabsTrigger value="payment" className="py-2.5 px-3 text-sm sm:text-base sm:py-3">
-              <CreditCard className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> Payment Settings
+            <TabsTrigger value="paymentSettings" className="py-2.5 px-3 text-sm sm:text-base sm:py-3">
+              <CreditCard className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> Payment Conf.
+            </TabsTrigger>
+            <TabsTrigger value="paymentSubmissions" className="py-2.5 px-3 text-sm sm:text-base sm:py-3">
+              <SendToBack className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> Submissions
             </TabsTrigger>
             <TabsTrigger value="users" className="py-2.5 px-3 text-sm sm:text-base sm:py-3">
-              <Users className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> Manage Users
+              <Users className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> Users
             </TabsTrigger>
             <TabsTrigger value="stats" className="py-2.5 px-3 text-sm sm:text-base sm:py-3">
-              <BarChart3 className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> View Stats
+              <BarChart3 className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> Stats
             </TabsTrigger>
           </TabsList>
           
@@ -59,8 +63,11 @@ export default function AdminDashboardPage() {
           <TabsContent value="images">
             <ImageManagement />
           </TabsContent>
-          <TabsContent value="payment">
+          <TabsContent value="paymentSettings">
             <PaymentSettings />
+          </TabsContent>
+          <TabsContent value="paymentSubmissions">
+            <PaymentSubmissions />
           </TabsContent>
           <TabsContent value="users">
             <UserManagement />
