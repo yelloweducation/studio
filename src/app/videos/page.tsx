@@ -9,12 +9,12 @@ import { ChevronLeft, Video as VideoIcon } from 'lucide-react';
 
 export default function VideosPage() {
   return (
-    <div className="w-full max-w-2xl mx-auto py-2">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-headline font-semibold flex items-center">
-          <VideoIcon className="mr-3 h-8 w-8 text-primary" /> Trending Videos
+    <div className="w-full flex flex-col items-center h-full">
+      <div className="w-full max-w-4xl flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 px-1 sm:px-0">
+        <h1 className="text-2xl md:text-3xl font-headline font-semibold flex items-center">
+          <VideoIcon className="mr-2 h-6 w-6 md:mr-3 md:h-7 md:w-7 text-primary" /> Trending Videos
         </h1>
-        <Button variant="outline" asChild>
+        <Button variant="outline" asChild className="mt-2 sm:mt-0 self-start sm:self-auto">
           <Link href="/">
             <ChevronLeft className="mr-2 h-4 w-4" /> Back to Home
           </Link>
@@ -22,12 +22,13 @@ export default function VideosPage() {
       </div>
       
       <div 
-        className="h-[calc(100vh-280px)] sm:h-[calc(100vh-250px)] md:h-[calc(100vh-220px)] 
-                   overflow-y-auto snap-y snap-mandatory space-y-4 
-                   rounded-lg p-2 bg-card shadow-inner scrollbar-hide"
+        className="w-full max-w-md flex-grow overflow-y-auto snap-y snap-mandatory space-y-2 
+                   rounded-lg bg-card shadow-inner scrollbar-hide p-1"
       >
         {allVideos.length > 0 ? (
           allVideos.map(video => (
+            // Ensure each snap item fills the height of the scrollport
+            // The VideoCard itself should be designed to fill its parent
             <div key={video.id} className="h-full w-full snap-center shrink-0">
               <VideoCard video={video} />
             </div>

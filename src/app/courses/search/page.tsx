@@ -28,17 +28,21 @@ function SearchResultsContent() {
     } else {
       setFilteredCourses(allCourses); // Show all courses if query is empty
     }
-    setIsLoading(false);
+    // Simulate loading delay for better UX perception
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 300);
+    return () => clearTimeout(timer);
   }, [query]);
 
   return (
     <div className="w-full">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-headline font-semibold flex items-center">
-          <Search className="mr-3 h-8 w-8 text-primary" />
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-3 sm:gap-0">
+        <h1 className="text-2xl md:text-3xl font-headline font-semibold flex items-center">
+          <Search className="mr-2 h-6 w-6 md:mr-3 md:h-7 md:w-7 text-primary" />
           {query ? `Results for "${query}"` : "All Courses"}
         </h1>
-        <Button variant="outline" asChild>
+        <Button variant="outline" asChild className="self-start sm:self-center">
           <Link href="/">
             <ChevronLeft className="mr-2 h-4 w-4" /> Back to Home
           </Link>
@@ -59,7 +63,7 @@ function SearchResultsContent() {
           ))}
         </div>
       ) : filteredCourses.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {filteredCourses.map(course => (
             <CourseCard key={course.id} course={course} />
           ))}
@@ -81,7 +85,8 @@ export default function SearchCoursesPage() {
   return (
     <Suspense fallback={
       <div className="space-y-4">
-        <Skeleton className="h-10 w-1/4"/>
+        <Skeleton className="h-10 w-1/2 mb-4"/>
+        <Skeleton className="h-8 w-1/4 self-end mb-6"/>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Skeleton className="h-64 w-full"/>
           <Skeleton className="h-64 w-full"/>
