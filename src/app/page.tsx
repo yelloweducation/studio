@@ -132,7 +132,7 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-col items-center py-8">
+    <div className="flex flex-col items-center pb-8">
       <section className="w-full max-w-2xl text-center mb-12">
         <div className="mb-8 flex justify-center">
           <Image
