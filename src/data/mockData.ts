@@ -1,3 +1,4 @@
+
 export type Course = {
   id: string;
   title: string;
@@ -6,6 +7,7 @@ export type Course = {
   instructor: string;
   modules: { id: string; title: string; lessons: { id: string; title: string; duration: string }[] }[];
   imageUrl?: string;
+  dataAiHint?: string;
 };
 
 export type User = {
@@ -30,6 +32,7 @@ export type Video = {
   description: string;
   thumbnailUrl?: string;
   videoUrl?: string; // Placeholder
+  dataAiHint?: string;
 };
 
 export const courses: Course[] = [
@@ -39,7 +42,7 @@ export const courses: Course[] = [
     description: 'Learn the fundamentals of HTML, CSS, and JavaScript.',
     category: 'Development',
     instructor: 'Dr. Web Coder',
-    imageUrl: 'https://placehold.co/600x400.png?text=Web+Dev',
+    imageUrl: 'https://placehold.co/600x400.png',
     dataAiHint: 'programming code',
     modules: [
       { id: 'm1', title: 'HTML Basics', lessons: [{ id: 'l1', title: 'Intro to HTML', duration: '10min' }] },
@@ -52,7 +55,7 @@ export const courses: Course[] = [
     description: 'Dive deep into modern JavaScript features and patterns.',
     category: 'Development',
     instructor: 'Prof. Script Master',
-    imageUrl: 'https://placehold.co/600x400.png?text=JS+Advanced',
+    imageUrl: 'https://placehold.co/600x400.png',
     dataAiHint: 'abstract javascript',
     modules: [
       { id: 'm1', title: 'ES6+ Features', lessons: [{ id: 'l1', title: 'Arrow Functions', duration: '20min' }] },
@@ -65,7 +68,7 @@ export const courses: Course[] = [
     description: 'Explore data analysis, visualization, and machine learning.',
     category: 'Data Science',
     instructor: 'Dr. Data Insight',
-    imageUrl: 'https://placehold.co/600x400.png?text=Data+Science',
+    imageUrl: 'https://placehold.co/600x400.png',
     dataAiHint: 'python data',
     modules: [
       { id: 'm1', title: 'Python for Data', lessons: [{ id: 'l1', title: 'NumPy & Pandas', duration: '30min' }] },
@@ -87,9 +90,15 @@ export const enrollments: Enrollment[] = [
 ];
 
 export const videos: Video[] = [
-  { id: 'video1', title: '🎬 Video 1: Quick HTML Tip', description: 'A short tip on HTML structure.' , thumbnailUrl: 'https://placehold.co/300x500.png?text=Video+1', dataAiHint: 'code snippet'},
-  { id: 'video2', title: '🎬 Video 2: CSS Magic Trick', description: 'Cool CSS animation for your site.' , thumbnailUrl: 'https://placehold.co/300x500.png?text=Video+2', dataAiHint: 'ui design'},
-  { id: 'video3', title: '🎬 Video 3: JavaScript Snippet', description: 'Useful JavaScript function in 60s.' , thumbnailUrl: 'https://placehold.co/300x500.png?text=Video+3', dataAiHint: 'developer coding'},
-  { id: 'video4', title: '🎬 Video 4: Python Short', description: 'A quick Python data trick.' , thumbnailUrl: 'https://placehold.co/300x500.png?text=Video+4', dataAiHint: 'data visualization'},
-  { id: 'video5', title: '🎬 Video 5: React Tip', description: 'Optimize your React components.' , thumbnailUrl: 'https://placehold.co/300x500.png?text=Video+5', dataAiHint: 'react logo'},
+  { id: 'video1', title: '🎬 Video 1: Quick HTML Tip', description: 'A short tip on HTML structure.' , thumbnailUrl: 'https://placehold.co/300x500.png', dataAiHint: 'code snippet'},
+  { id: 'video2', title: '🎬 Video 2: CSS Magic Trick', description: 'Cool CSS animation for your site.' , thumbnailUrl: 'https://placehold.co/300x500.png', dataAiHint: 'ui design'},
+  { id: 'video3', title: '🎬 Video 3: JavaScript Snippet', description: 'Useful JavaScript function in 60s.' , thumbnailUrl: 'https://placehold.co/300x500.png', dataAiHint: 'developer coding'},
+  { id: 'video4', title: '🎬 Video 4: Python Short', description: 'A quick Python data trick.' , thumbnailUrl: 'https://placehold.co/300x500.png', dataAiHint: 'data visualization'},
+  { id: 'video5', title: '🎬 Video 5: React Tip', description: 'Optimize your React components.' , thumbnailUrl: 'https://placehold.co/300x500.png', dataAiHint: 'react logo'},
+  { id: 'video6', title: '🎬 Video 6: Next.js News', description: 'Latest updates in Next.js world.' , thumbnailUrl: 'https://placehold.co/300x500.png', dataAiHint: 'nextjs framework'},
+  { id: 'video7', title: '🎬 Video 7: Tailwind Power', description: 'Unlock Tailwind CSS potential.' , thumbnailUrl: 'https://placehold.co/300x500.png', dataAiHint: 'tailwind css'},
+  { id: 'video8', title: '🎬 Video 8: ShadCN UI Guide', description: 'Building UIs with ShadCN.' , thumbnailUrl: 'https://placehold.co/300x500.png', dataAiHint: 'shadcn ui'},
+  { id: 'video9', title: '🎬 Video 9: Firebase Tips', description: 'Quick Firebase integration tips.' , thumbnailUrl: 'https://placehold.co/300x500.png', dataAiHint: 'firebase platform'},
+  { id: 'video10', title: '🎬 Video 10: Genkit Intro', description: 'Exploring Genkit for AI.' , thumbnailUrl: 'https://placehold.co/300x500.png', dataAiHint: 'ai technology'},
 ];
+
