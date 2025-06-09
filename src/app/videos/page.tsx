@@ -1,11 +1,11 @@
 
 "use client";
-import React, { useEffect, useState } from 'react'; // Added useEffect, useState
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import VideoCard from '@/components/videos/VideoCard';
-import { videos as mockVideos, type Video } from '@/data/mockData'; // Renamed for clarity
-import { ChevronLeft, Video as VideoIcon, Loader2 } from 'lucide-react'; // Added Loader2
+import { videos as mockVideos, type Video } from '@/data/mockData';
+import { ChevronLeft, Video as VideoIcon, Loader2 } from 'lucide-react';
 
 export default function VideosPage() {
   const [activeVideos, setActiveVideos] = useState<Video[]>([]);
@@ -14,21 +14,31 @@ export default function VideosPage() {
   useEffect(() => {
     setIsLoading(true);
     const storedVideosString = localStorage.getItem('adminVideos');
-    let videosToUse = mockVideos;
-    if (storedVideosString) {
+    
+    if (storedVideosString !== null) { // Check if the key exists in localStorage
       try {
         const parsedVideos = JSON.parse(storedVideosString) as Video[];
-        if (Array.isArray(parsedVideos)) { // Basic check
-          videosToUse = parsedVideos;
+        if (Array.isArray(parsedVideos)) {
+          // If localStorage has 'adminVideos' and it's a valid array (even empty), use it.
+          setActiveVideos(parsedVideos);
+        } else {
+          // Data in localStorage under 'adminVideos' was not an array.
+          // This is unexpected, so log and use mock videos as a fallback.
+          console.error("Stored 'adminVideos' in localStorage is not an array. Using mock videos.", parsedVideos);
+          setActiveVideos(mockVideos);
         }
       } catch (e) {
-        console.error("Failed to parse videos from localStorage on videos page", e);
-        // Fallback to mockVideos is already default
+        // Parsing failed. Log error and use mock videos as a fallback.
+        console.error("Failed to parse 'adminVideos' from localStorage. Using mock videos.", e);
+        setActiveVideos(mockVideos);
       }
+    } else {
+      // No 'adminVideos' key in localStorage. Use mock videos.
+      setActiveVideos(mockVideos);
     }
-    setActiveVideos(videosToUse);
+    
     setIsLoading(false);
-  }, []);
+  }, []); // Empty dependency array ensures this runs once on mount
 
   return (
     <div className="w-full flex flex-col items-center h-full">
