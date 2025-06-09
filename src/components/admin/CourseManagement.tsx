@@ -198,30 +198,30 @@ export default function CourseManagement() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [editingCourse, setEditingCourse] = useState<Course | undefined>(undefined);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isDataLoaded, setIsDataLoaded] = useState(false); // Flag to track initial load
   const { toast } = useToast();
 
   useEffect(() => {
-    const storedCourses = localStorage.getItem('adminCourses');
-    if (storedCourses) {
+    const storedCoursesString = localStorage.getItem('adminCourses');
+    if (storedCoursesString) {
       try {
-        const parsedCourses = JSON.parse(storedCourses) as Course[];
+        const parsedCourses = JSON.parse(storedCoursesString) as Course[];
         setCourses(parsedCourses);
       } catch (e) {
         console.error("Failed to parse adminCourses from localStorage in CourseManagement", e);
-        setCourses(initialCourses); // Fallback to mockData on error
+        setCourses(initialCourses); 
       }
     } else {
-      setCourses(initialCourses); // Fallback if not in localStorage
+      setCourses(initialCourses); 
     }
+    setIsDataLoaded(true); // Indicate that initial loading attempt is complete
   }, []);
 
   useEffect(() => {
-    // Only save to localStorage if courses is not empty or if it's intentionally being cleared.
-    // This check prevents overwriting localStorage with an empty array during initial load if localStorage was empty.
-    // However, since we load initialCourses, 'courses' will usually have data unless initialCourses is empty or localStorage had '[]'.
-    // The current logic is fine: if 'courses' state becomes '[]' (e.g., admin deleted all), it saves '[]'.
-    localStorage.setItem('adminCourses', JSON.stringify(courses));
-  }, [courses]);
+    if (isDataLoaded) { // Only save to localStorage if initial data load has occurred
+      localStorage.setItem('adminCourses', JSON.stringify(courses));
+    }
+  }, [courses, isDataLoaded]);
 
 
   const handleAddCourse = (data: Course) => {
@@ -268,7 +268,7 @@ export default function CourseManagement() {
   };
   
   const openForm = (course?: Course) => {
-    setEditingCourse(course ? JSON.parse(JSON.stringify(course)) : undefined); // Deep copy for editing
+    setEditingCourse(course ? JSON.parse(JSON.stringify(course)) : undefined); 
     setIsFormOpen(true);
   };
 
@@ -356,3 +356,5 @@ export default function CourseManagement() {
     </Card>
   );
 }
+
+    
