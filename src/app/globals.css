@@ -13,88 +13,90 @@ h1, h2, h3, h4, h5, h6 {
 @layer base {
   :root {
     --background: 0 0% 100%; /* White */
-    --foreground: 240 10% 3.9%; /* Dark Gray / Almost Black */
+    --foreground: 220 10% 10%; /* Dark Blue-Gray */
 
-    --card: 0 0% 100%; /* White cards, rely on borders/shadows */
-    --card-foreground: 240 10% 3.9%;
+    --card: 0 0% 100%; 
+    --card-foreground: 220 10% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
+    --popover-foreground: 220 10% 10%;
 
-    --primary: 43 100% 36%; /* Muted gold */
-    --primary-foreground: 43 85% 95%; /* Very light color for text on primary */
+    --primary: 48 96% 50%; /* Bright Yellow */
+    --primary-foreground: 220 10% 10%; /* Dark text on yellow */
+    --primary-darker: 48 96% 40%; /* Darker yellow for shadow */
 
-    --secondary: 240 4.8% 95.9%; /* Light gray */
-    --secondary-foreground: 240 5.9% 10%; /* Dark text for secondary */
+    --secondary: 220 15% 95%; /* Light Gray-Blue */
+    --secondary-foreground: 220 10% 10%;
 
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%; /* Grayer text */
+    --muted: 220 15% 95%;
+    --muted-foreground: 220 10% 45%; /* Medium Gray-Blue */
 
-    --accent: 30 45% 64%; /* Soft amber */
-    --accent-foreground: 240 5.9% 10%; /* Dark text for accent */
+    --accent: 45 100% 55%; /* Slightly different Yellow/Orange for accent */
+    --accent-foreground: 220 10% 10%;
+    --accent-darker: 45 100% 40%; /* Darker accent for shadow */
     
-    --accent-darker: 30 45% 50%; /* For 3D button effect */
+    --destructive: 0 72% 51%; /* Red */
+    --destructive-foreground: 0 0% 98%; /* White text on red */
+    --destructive-darker: 0 72% 40%; /* Darker red for shadow */
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 60 90% 97.8%;
-
-    --border: 240 5.9% 90%; /* Light gray border */
-    --input: 240 5.9% 90%; /* Light gray input background */
-    --ring: 43 100% 46%; /* Brighter gold for focus rings */
+    --border: 220 15% 90%; /* Very Light Gray-Blue */
+    --input: 220 15% 90%;
+    --ring: 48 96% 55%; /* Slightly darker yellow for focus rings */
 
     --radius: 0.5rem;
 
-    /* Sidebar variables (can be same as main if not distinct sidebar theme) */
+    /* Sidebar variables */
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 240 10% 3.9%;
-    --sidebar-primary: 43 100% 36%;
-    --sidebar-primary-foreground: 43 85% 95%;
-    --sidebar-accent: 30 45% 64%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 240 5.9% 90%;
-    --sidebar-ring: 43 100% 46%;
+    --sidebar-foreground: 220 10% 10%;
+    --sidebar-primary: 48 96% 50%;
+    --sidebar-primary-foreground: 220 10% 10%;
+    --sidebar-accent: 45 100% 55%;
+    --sidebar-accent-foreground: 220 10% 10%;
+    --sidebar-border: 220 15% 90%;
+    --sidebar-ring: 48 96% 55%;
   }
 
   .dark {
-    --background: 240 10% 3.9%; /* Dark blue/gray */
-    --foreground: 60 90% 97.8%; /* Light text */
+    --background: 220 15% 10%; /* Very Dark Blue */
+    --foreground: 220 10% 95%; /* Light Gray-Blue text */
 
-    --card: 240 10% 3.9%;
-    --card-foreground: 60 90% 97.8%;
+    --card: 220 15% 12%; /* Slightly lighter dark blue for cards */
+    --card-foreground: 220 10% 95%;
 
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 60 90% 97.8%;
+    --popover: 220 15% 10%;
+    --popover-foreground: 220 10% 95%;
 
-    --primary: 43 100% 40%; /* Slightly brighter gold for dark mode */
-    --primary-foreground: 43 85% 95%; /* Lighter text on primary for dark mode */
+    --primary: 48 96% 55%; /* Yellow, adjusted for dark mode */
+    --primary-foreground: 220 10% 10%; 
+    --primary-darker: 48 96% 45%;
 
-    --secondary: 240 3.7% 15.9%; /* Darker gray */
-    --secondary-foreground: 60 90% 97.8%;
+    --secondary: 220 15% 20%; /* Darker Gray-Blue */
+    --secondary-foreground: 220 10% 95%;
 
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
+    --muted: 220 15% 20%;
+    --muted-foreground: 220 10% 60%; /* Lighter Muted text */
 
-    --accent: 30 45% 58%; /* Slightly adjusted amber */
-    --accent-foreground: 60 90% 97.8%; /* Light text for accent on dark */
-    
-    --accent-darker: 30 45% 40%;
+    --accent: 45 100% 60%; /* Yellow/Orange accent, adjusted for dark mode */
+    --accent-foreground: 220 10% 10%;
+    --accent-darker: 45 100% 45%;
 
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 60% 50%; /* Adjusted Red */
     --destructive-foreground: 0 0% 98%;
+    --destructive-darker: 0 60% 40%;
 
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 43 100% 50%;
+    --border: 220 15% 25%; /* Darker border */
+    --input: 220 15% 25%;
+    --ring: 48 96% 60%; /* Adjusted yellow for ring */
 
     /* Sidebar dark variables */
-    --sidebar-background: 240 10% 3.9%;
-    --sidebar-foreground: 60 90% 97.8%;
-    --sidebar-primary: 43 100% 40%;
-    --sidebar-primary-foreground: 43 85% 95%;
-    --sidebar-accent: 30 45% 58%;
-    --sidebar-accent-foreground: 60 90% 97.8%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 43 100% 50%;
+    --sidebar-background: 220 15% 10%;
+    --sidebar-foreground: 220 10% 95%;
+    --sidebar-primary: 48 96% 55%;
+    --sidebar-primary-foreground: 220 10% 10%;
+    --sidebar-accent: 45 100% 60%;
+    --sidebar-accent-foreground: 220 10% 10%;
+    --sidebar-border: 220 15% 25%;
+    --sidebar-ring: 48 96% 60%;
   }
 }
 

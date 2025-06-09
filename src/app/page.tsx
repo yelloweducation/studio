@@ -12,7 +12,7 @@ export default function Home() {
 
   const performSearch = () => {
     if (!searchQuery.trim()) {
-      router.push(`/courses/search`); // Navigate even with empty query, let search page handle it
+      router.push(`/courses/search`); 
       return;
     }
     router.push(`/courses/search?query=${encodeURIComponent(searchQuery.trim())}`);
@@ -65,7 +65,7 @@ export default function Home() {
           <Button 
             type="button" 
             onClick={performSearch} 
-            className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90 shadow-md hover:shadow-sm active:translate-y-px transition-all duration-150"
+            className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90 shadow-3d-accent hover:shadow-3d-accent-hover active:shadow-none active:translate-y-px active:translate-x-px transition-all duration-150"
           >
             <Search className="mr-2 h-5 w-5" /> Search Courses
           </Button>

@@ -28,6 +28,7 @@ export default {
         primary: {
           DEFAULT: 'hsl(var(--primary))',
           foreground: 'hsl(var(--primary-foreground))',
+          darker: 'hsl(var(--primary-darker))',
         },
         secondary: {
           DEFAULT: 'hsl(var(--secondary))',
@@ -45,6 +46,7 @@ export default {
         destructive: {
           DEFAULT: 'hsl(var(--destructive))',
           foreground: 'hsl(var(--destructive-foreground))',
+          darker: 'hsl(var(--destructive-darker))',
         },
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
@@ -105,8 +107,12 @@ export default {
         'fade-out': 'fade-out 0.3s ease-out forwards',
       },
       boxShadow: {
-        '3d': '4px 4px 0px 0px hsl(var(--accent-darker))',
-        '3d-hover': '2px 2px 0px 0px hsl(var(--accent-darker))',
+        '3d-primary': '4px 4px 0px 0px hsl(var(--primary-darker))',
+        '3d-primary-hover': '2px 2px 0px 0px hsl(var(--primary-darker))',
+        '3d-accent': '4px 4px 0px 0px hsl(var(--accent-darker))',
+        '3d-accent-hover': '2px 2px 0px 0px hsl(var(--accent-darker))',
+        '3d-destructive': '4px 4px 0px 0px hsl(var(--destructive-darker))',
+        '3d-destructive-hover': '2px 2px 0px 0px hsl(var(--destructive-darker))',
       }
     },
   },
