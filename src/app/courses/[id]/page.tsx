@@ -46,10 +46,10 @@ function getEmbedUrl(url: string): string | null {
     console.error("Error parsing embed URL, or URL is not standard:", error);
     // If URL parsing fails (e.g., not a full valid URL for the URL constructor)
     // or if it's a non-standard URL we don't specifically handle,
-    // we return the original URL. It might be directly embeddable or an error.
-    return url;
+    // return null to avoid passing an invalid URL to the iframe.
+    return null;
   }
-  // If no specific rule matches, return the original URL.
+  // If no specific rule matches but URL was valid for constructor, return the original URL.
   return url;
 }
 
@@ -85,9 +85,22 @@ export default function CourseDetailPage() {
     }
     
     // This effect depends on activeCourses. It will run when activeCourses is populated.
-    const foundCourse = activeCourses.find(c => c.id === courseId);
-    setCourse(foundCourse || null);
-    setIsLoading(false); // Always set loading to false after attempting to find.
+    // Ensure activeCourses has data before trying to find.
+    if (activeCourses.length > 0) {
+        const foundCourse = activeCourses.find(c => c.id === courseId);
+        setCourse(foundCourse || null);
+    } else if (!localStorage.getItem('adminCourses')) {
+        // If activeCourses is empty AND there was nothing in localStorage
+        // (meaning the first effect set it to allCourses, which might be empty or not have the ID)
+        // we might still be waiting for the first effect to correctly populate from allCourses if localStorage was empty.
+        // However, the dependency on activeCourses should handle this.
+        // If activeCourses is empty because localStorage parse failed and allCourses is also empty, then it's truly not found.
+    }
+    // Always set loading to false after attempting to find, once activeCourses is available.
+    // This check ensures we don't set loading to false prematurely if activeCourses isn't populated yet.
+    if (activeCourses.length > 0 || !localStorage.getItem('adminCourses')) {
+        setIsLoading(false);
+    }
     
   }, [courseId, activeCourses]);
 
