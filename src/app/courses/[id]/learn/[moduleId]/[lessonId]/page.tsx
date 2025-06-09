@@ -10,10 +10,14 @@ import { ChevronLeft, ChevronRight, BookOpen, Home, Loader2, AlertTriangle } fro
 import Link from 'next/link';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { getEmbedUrl } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 export default function LessonViewerPage() {
   const params = useParams();
   const router = useRouter();
+  const { user } = useAuth();
+  const { toast } = useToast();
 
   const courseId = params.id as string;
   const currentModuleId = params.moduleId as string;
@@ -98,6 +102,33 @@ export default function LessonViewerPage() {
       isLastLesson: currentIndex === allLessonsFlat.length - 1,
     };
   }, [course, currentModule, currentLesson, currentModuleId, currentLessonId]);
+
+  const handleFinishCourse = () => {
+    if (user && course) {
+      const completionKey = `user_${user.id}_completions`;
+      let completions: Record<string, string> = {};
+      try {
+        const storedCompletions = localStorage.getItem(completionKey);
+        if (storedCompletions) {
+          completions = JSON.parse(storedCompletions);
+        }
+      } catch (e) {
+        console.error("Error parsing completions from localStorage", e);
+      }
+
+      completions[course.id] = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      localStorage.setItem(completionKey, JSON.stringify(completions));
+
+      toast({
+        title: "Course Finished!",
+        description: `Congratulations, you've completed ${course.title}.`,
+      });
+      router.push(`/courses/${course.id}`);
+    } else {
+      // Fallback if no user or course somehow (should be protected by UI logic)
+      router.push(course ? `/courses/${course.id}` : '/');
+    }
+  };
 
 
   if (isLoading) {
@@ -190,16 +221,13 @@ export default function LessonViewerPage() {
             <Button variant="outline" disabled={isFirstLesson} onClick={() => prevLessonLink && router.push(prevLessonLink)}>
               <ChevronLeft className="mr-2 h-4 w-4" /> Previous Lesson
             </Button>
-            {/* For now, "Next Lesson" can also be "Finish Course" - full completion logic later */}
             <Button 
               variant={isLastLesson ? "default" : "default"} 
               onClick={() => {
                 if (nextLessonLink) {
                   router.push(nextLessonLink);
                 } else if (isLastLesson) {
-                  // Placeholder for "Finish Course" action
-                  // For now, could navigate back to course overview or dashboard
-                  router.push(`/courses/${course.id}`); 
+                  handleFinishCourse();
                 }
               }}
               className={isLastLesson ? "bg-green-600 hover:bg-green-700 text-white" : "bg-primary hover:bg-primary/90"}
@@ -213,3 +241,4 @@ export default function LessonViewerPage() {
     </ProtectedRoute>
   );
 }
+
