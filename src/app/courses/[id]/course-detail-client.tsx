@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useState, useEffect, useMemo, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation'; // useParams is removed as courseId is a prop
@@ -60,9 +61,9 @@ const courseDetailTranslations = {
     taughtBy: "သင်ကြားသူ: {instructor}",
     categoryLabel: "အမျိုးအစား: {category}",
     priceLabel: "စျေးနှုန်း: {price} {currency}",
-    courseAccess: "အတန်းအသုံးပြုခွင့်",
-    loginToPurchase: "{price} {currency} ဖြင့် ဝယ်ယူရန် လော့ဂ်အင်ဝင်ပါ",
-    purchaseFor: "{price} {currency} ဖြင့် ဝယ်ယူရန်",
+    courseAccess: "သင်တန်းကြေးသွင်းရန်",
+    loginToPurchase: "{price} {currency} လော့ဂ်အင်ဝင်ပါ",
+    purchaseFor: "{price} {currency}",
     paymentSubmitted: "ငွေပေးချေမှု တင်သွင်းပြီးပါပြီ",
     paymentSubmittedDesc: "သင်၏ ငွေပေးချေမှုကို လက်ရှိ ပြန်လည်သုံးသပ်နေပါသည်။",
     startLearning: "စတင်လေ့လာပါ",
@@ -525,3 +526,5 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
     </div>
   );
 }
+
+    
