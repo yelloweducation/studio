@@ -2,10 +2,10 @@
 "use client";
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
-import LuminaLogo from '@/components/LuminaLogo'; // Import LuminaLogo
+import LuminaLogo from '@/components/LuminaLogo';
 import { Button } from '@/components/ui/button';
-import { usePathname, useRouter } from 'next/navigation'; // Import usePathname
-import { Home, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Menu, Search } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Home, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Menu, Search, LayoutGrid, Loader2 } from 'lucide-react'; // Added LayoutGrid, Loader2
 import { useTheme } from '@/contexts/ThemeContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
@@ -22,7 +22,7 @@ import React from 'react';
 const Header = () => {
   const { isAuthenticated, user, role, logout, loading } = useAuth();
   const router = useRouter();
-  const pathname = usePathname(); // Get current pathname
+  const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
   const isMobile = useIsMobile();
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
@@ -40,24 +40,72 @@ const Header = () => {
   };
 
   const isCourseSearchPage = pathname === '/courses/search';
+  const isMobileHomepage = isMobile && pathname === '/';
 
   const commonNavButtonClasses = "w-full justify-start py-3 px-2 text-base";
   const commonIconClasses = "mr-2 h-5 w-5";
 
   return (
     <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b"> 
-      <nav className="container mx-auto px-4 py-3 flex justify-between items-center">
+      <nav className="container mx-auto px-4 py-3 flex justify-between items-center min-h-[57px]"> {/* Added min-height for consistency */}
+        {/* Left side: Logo or Page Title */}
         <div>
-          {isCourseSearchPage ? (
-            <h1 className="text-xl font-bold font-headline text-foreground flex items-center">
-              <Search className="mr-2 h-5 w-5 text-primary"/> Explore Learning
-            </h1>
-          ) : (
-            <LuminaLogo />
+          {!isMobileHomepage && (
+            isCourseSearchPage ? (
+              <h1 className="text-xl font-bold font-headline text-foreground flex items-center">
+                <Search className="mr-2 h-5 w-5 text-primary"/> Explore Learning
+              </h1>
+            ) : (
+              <LuminaLogo />
+            )
           )}
+          {/* On mobile homepage, this section is intentionally empty, creating space if needed or allowing minimalist look */}
         </div>
         
-        {isMobile ? (
+        {/* Right side: Navigation */}
+        {isMobileHomepage ? (
+          // New minimalist icon-based navigation for mobile homepage
+          <div className="flex items-center space-x-1">
+            <Button variant="ghost" size="icon" asChild aria-label="Home">
+              <Link href="/"><LayoutGrid className="h-6 w-6" /></Link>
+            </Button>
+            
+            {loading && (
+              <Button variant="ghost" size="icon" disabled>
+                <Loader2 className="h-5 w-5 animate-spin" />
+              </Button>
+            )}
+
+            {!loading && isAuthenticated && (
+              <>
+                <Button variant="ghost" size="icon" asChild aria-label="Dashboard">
+                  <Link href={getDashboardPath()}><LayoutDashboard className="h-6 w-6" /></Link>
+                </Button>
+                <Button variant="ghost" size="icon" onClick={handleLogout} aria-label="Logout">
+                  <LogOut className="h-6 w-6" />
+                </Button>
+              </>
+            )}
+
+            {!loading && !isAuthenticated && (
+              <>
+                <Button variant="ghost" size="icon" asChild aria-label="Login">
+                  <Link href="/login"><LogIn className="h-6 w-6" /></Link>
+                </Button>
+                {/* Register icon omitted for minimalism on mobile homepage header 
+                <Button variant="ghost" size="icon" asChild aria-label="Register">
+                  <Link href="/register"><UserPlus className="h-6 w-6" /></Link>
+                </Button> 
+                */}
+              </>
+            )}
+
+            <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
+              {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+            </Button>
+          </div>
+        ) : isMobile ? (
+          // Existing Sheet (hamburger menu) for other mobile pages
           <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon">
@@ -86,8 +134,6 @@ const Header = () => {
                     </Button>
                   </SheetClose>
                 )}
-
-
                 {loading ? (
                   <Button variant="ghost" className={commonNavButtonClasses} disabled>Loading...</Button>
                 ) : isAuthenticated ? (
@@ -119,9 +165,7 @@ const Header = () => {
                     </SheetClose>
                   </>
                 )}
-                
                 <Separator className="my-2" />
-
                 <Button 
                   variant="ghost" 
                   onClick={() => { toggleTheme(); setIsSheetOpen(false); }} 
@@ -134,6 +178,7 @@ const Header = () => {
             </SheetContent>
           </Sheet>
         ) : (
+          // Desktop navigation
           <div className="space-x-1 flex items-center">
             <Button variant="ghost" size="sm" asChild className="hover:bg-accent/20">
               <Link href="/"><Home className="mr-1 h-4 w-4" /> Home</Link>
@@ -187,3 +232,5 @@ const Header = () => {
 };
 
 export default Header;
+
+    
