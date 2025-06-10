@@ -32,11 +32,6 @@ const Header = () => {
   const lastScrollY = useRef(0);
   const headerScrollThreshold = 100;
 
-  // If it's the dedicated video page, don't render the header at all.
-  if (pathname === '/videos') {
-    return null;
-  }
-
   useEffect(() => {
     const controlHeader = () => {
       if (pathname === '/courses/search') {
@@ -52,14 +47,25 @@ const Header = () => {
       }
     };
 
-    window.addEventListener('scroll', controlHeader);
-    controlHeader(); 
+    // Only add scroll listener if not on the videos page, as header is hidden there
+    if (pathname !== '/videos') {
+        window.addEventListener('scroll', controlHeader);
+        controlHeader(); // Initial check
+    } else {
+        setHeaderVisible(true); // Ensure it's visible if we navigate away from /videos
+    }
+
 
     return () => {
       window.removeEventListener('scroll', controlHeader);
     };
   }, [pathname]);
 
+  // If it's the dedicated video page, don't render the header at all.
+  // This check MUST come AFTER all hook calls.
+  if (pathname === '/videos') {
+    return null;
+  }
 
   const handleLogout = () => {
     logout();
@@ -86,7 +92,7 @@ const Header = () => {
 
   return (
     <header className={cn(
-        headerBaseClasses, 
+        headerBaseClasses,
         headerBackgroundClasses,
         {'!-translate-y-full': !headerVisible && isCourseSearchPage}
       )}>
@@ -95,7 +101,7 @@ const Header = () => {
         <div className="flex items-center">
           {isMobileHomepage ? (
             <div className="flex items-center space-x-1">
-              <Button variant="ghost" size="sm" asChild 
+              <Button variant="ghost" size="sm" asChild
                 className={cn(
                   "text-foreground hover:bg-transparent hover:text-foreground/70 px-2 font-medium",
                   pathname === '/' && "underline underline-offset-4 decoration-primary decoration-2"
@@ -119,7 +125,7 @@ const Header = () => {
             )
           )}
         </div>
-        
+
         {/* === RIGHT SECTION === */}
         <div className="flex items-center space-x-1">
           {isMobileHomepage ? (
@@ -181,8 +187,8 @@ const Header = () => {
                           <Link href={getDashboardPath()}><LayoutDashboard className={commonIconClasses} /> Dashboard</Link>
                         </Button>
                       </SheetClose>
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         onClick={handleLogout}
                         className={`${commonNavButtonClasses} text-destructive hover:text-destructive hover:bg-destructive/10`}
                       >
@@ -204,9 +210,9 @@ const Header = () => {
                     </>
                   )}
                   <Separator className="my-2" />
-                  <Button 
-                    variant="ghost" 
-                    onClick={() => { toggleTheme(); setIsSheetOpen(false); }} 
+                  <Button
+                    variant="ghost"
+                    onClick={() => { toggleTheme(); setIsSheetOpen(false); }}
                     className={commonNavButtonClasses}
                   >
                     {theme === 'light' ? <Moon className={commonIconClasses} /> : <Sun className={commonIconClasses} />}
@@ -234,9 +240,9 @@ const Header = () => {
                   <Button variant="ghost" size="sm" asChild className={cn("hover:bg-accent/20", (pathname === '/dashboard/admin' || pathname === '/dashboard/student') && "bg-accent/10")}>
                     <Link href={getDashboardPath()}><LayoutDashboard className="mr-1 h-4 w-4" /> Dashboard</Link>
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={handleLogout}
                     className="border-primary/50 text-primary hover:bg-primary/10 hover:text-primary"
                   >
@@ -253,11 +259,11 @@ const Header = () => {
                   </Button>
                 </>
               )}
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={toggleTheme} 
-                aria-label="Toggle theme" 
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleTheme}
+                aria-label="Toggle theme"
                 className="hover:bg-accent/20 w-9 h-9"
               >
                 {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
