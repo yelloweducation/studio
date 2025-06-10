@@ -42,7 +42,7 @@ export function RegisterForm() {
     try {
       const user = await register(data.name, data.email, data.password);
       if (user) {
-        toast({ title: "Registration Successful", description: "Welcome to LuminaLearn!" });
+        toast({ title: "Registration Successful", description: "Welcome to Yellow Institute!" });
         // New users are students by default
         router.push('/dashboard/student');
       } else {
