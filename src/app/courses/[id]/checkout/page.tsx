@@ -169,7 +169,7 @@ export default function CheckoutPage() {
 
   if (!isAuthenticated || !user) {
     return (
-      <div className="max-w-lg mx-auto py-12 text-center">
+      <div className="max-w-lg mx-auto py-6 sm:py-12 text-center">
         <Card className="shadow-xl">
           <CardHeader>
             <CardTitle className="text-2xl font-headline flex items-center justify-center">
@@ -192,7 +192,7 @@ export default function CheckoutPage() {
   
   if (!currentCourse) {
      return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center py-10">
+      <div className="flex flex-col flex-grow justify-center items-center text-center pt-6 pb-12 sm:pt-10 sm:pb-10">
         <Card className="w-full max-w-lg shadow-xl">
           <CardHeader>
             <CardTitle className="text-2xl sm:text-3xl font-headline text-foreground flex items-center justify-center">

@@ -328,7 +328,7 @@ export default function CourseDetailPage() {
 
   if (!currentCourse) {
     return (
-      <div className="max-w-lg mx-auto py-12 text-center">
+      <div className="max-w-lg mx-auto py-6 sm:py-12 text-center">
         <Button variant="outline" onClick={() => router.push('/')} className="mb-6">
           <ChevronLeft className="mr-2 h-4 w-4" /> Back to Home
         </Button>
