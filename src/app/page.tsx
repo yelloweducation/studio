@@ -10,6 +10,7 @@ import VideoCard from '@/components/videos/VideoCard';
 import { videos as mockVideos, type Video } from '@/data/mockData'; 
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useTheme } from '@/contexts/ThemeContext'; // Added for theme status
 
 export default function Home() {
   const router = useRouter();
@@ -18,6 +19,7 @@ export default function Home() {
   const [showVideoFeed, setShowVideoFeed] = useState(false);
   const [allFeedVideos, setAllFeedVideos] = useState<Video[]>([]);
   const [isLoadingFeedVideos, setIsLoadingFeedVideos] = useState(false);
+  const { theme } = useTheme(); // Get theme status
 
   useEffect(() => {
     // Initial data loading for videos (if any were to be displayed directly, now only for feed)
@@ -135,6 +137,24 @@ export default function Home() {
               className="flex-1 sm:flex-none sm:w-auto">
                 <VideoIcon className="mr-2 h-5 w-5" /> Reels
             </Button>
+        </div>
+      </section>
+
+      {/* New Footer Links Section */}
+      <section className="w-full max-w-4xl text-center mt-12 mb-4">
+        <div className="flex flex-wrap justify-center items-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
+          <Link href="/privacy-policy" className="hover:text-primary hover:underline">
+            Privacy Policy
+          </Link>
+          <Link href="/terms-of-service" className="hover:text-primary hover:underline">
+            Terms of Service
+          </Link>
+          <Link href="/about" className="hover:text-primary hover:underline">
+            About Us
+          </Link>
+          <span>
+            Dark Theme: {theme === 'dark' ? 'On' : 'Off'}
+          </span>
         </div>
       </section>
     </div>
