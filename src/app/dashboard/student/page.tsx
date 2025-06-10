@@ -2,7 +2,7 @@
 "use client";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/hooks/useAuth";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"; // Added CardFooter
 import { BookUser, BookMarked, History, GraduationCap } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
