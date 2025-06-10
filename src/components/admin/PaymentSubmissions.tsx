@@ -1,12 +1,13 @@
 
 "use client";
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image'; // Added for image preview
 import { paymentSubmissions as initialSubmissions, users as mockUsers, courses as mockCourses, type PaymentSubmission, type User, type Course, type PaymentSubmissionStatus } from '@/data/mockData';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CreditCard, CheckCircle, XCircle, Hourglass, Edit, ExternalLink, FileText } from 'lucide-react';
+import { CreditCard, CheckCircle, XCircle, Hourglass, Edit, ExternalLink, FileText, Eye } from 'lucide-react'; // Added Eye
 import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -20,13 +21,13 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Input } from '../ui/input'; // Assuming Input is in ui folder
+import { Input } from '../ui/input';
 
 const USER_PAYMENT_SUBMISSIONS_KEY = 'adminPaymentSubmissions';
 
 export default function PaymentSubmissions() {
   const [submissions, setSubmissions] = useState<PaymentSubmission[]>([]);
-  const [allUsers, setAllUsers] = useState<User[]>(mockUsers); // Assuming users don't change often for this mock
+  const [allUsers, setAllUsers] = useState<User[]>(mockUsers);
   const [allCourses, setAllCourses] = useState<Course[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const { toast } = useToast();
@@ -36,7 +37,6 @@ export default function PaymentSubmissions() {
 
 
   useEffect(() => {
-    // Load courses (admin might have modified them)
     const storedCoursesString = localStorage.getItem('adminCourses');
     if (storedCoursesString) {
         try {
@@ -47,7 +47,6 @@ export default function PaymentSubmissions() {
         setAllCourses(mockCourses);
     }
 
-    // Load submissions
     const storedSubmissionsString = localStorage.getItem(USER_PAYMENT_SUBMISSIONS_KEY);
     if (storedSubmissionsString) {
       try {
@@ -91,8 +90,8 @@ export default function PaymentSubmissions() {
 
   const statusBadgeVariant = (status: PaymentSubmissionStatus) => {
     switch (status) {
-      case 'approved': return 'default'; // Default is usually primary/success
-      case 'pending': return 'secondary'; // Secondary is often neutral/pending
+      case 'approved': return 'default'; 
+      case 'pending': return 'secondary'; 
       case 'rejected': return 'destructive';
       default: return 'outline';
     }
@@ -124,7 +123,7 @@ export default function PaymentSubmissions() {
                   <TableHead>User</TableHead>
                   <TableHead>Course</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
-                  <TableHead>Screenshot</TableHead>
+                  {/* Screenshot column removed, details now in modal */}
                   <TableHead>Submitted At</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-center">Actions</TableHead>
@@ -136,13 +135,6 @@ export default function PaymentSubmissions() {
                     <TableCell className="font-medium">{getUserName(sub.userId)}</TableCell>
                     <TableCell>{getCourseTitle(sub.courseId)}</TableCell>
                     <TableCell className="text-right">{sub.amount.toFixed(2)} {sub.currency}</TableCell>
-                    <TableCell>
-                      <Button variant="link" size="sm" asChild className="p-0 h-auto">
-                        <a href={sub.screenshotUrl} target="_blank" rel="noopener noreferrer">
-                          View Proof <ExternalLink className="ml-1 h-3 w-3" />
-                        </a>
-                      </Button>
-                    </TableCell>
                     <TableCell>{new Date(sub.submittedAt).toLocaleDateString()}</TableCell>
                     <TableCell>
                       <Badge variant={statusBadgeVariant(sub.status)} className="capitalize flex items-center gap-1 w-28 justify-center">
@@ -152,7 +144,7 @@ export default function PaymentSubmissions() {
                     </TableCell>
                     <TableCell className="text-center">
                        <Button variant="outline" size="sm" onClick={() => openEditModal(sub)}>
-                         <Edit className="mr-1 h-4 w-4" /> Review
+                         <Eye className="mr-1 h-4 w-4" /> Review
                        </Button>
                     </TableCell>
                   </TableRow>
@@ -174,44 +166,54 @@ export default function PaymentSubmissions() {
                 Review details for {getCourseTitle(editingSubmission.courseId)} by {getUserName(editingSubmission.userId)}.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-2">
+            <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto pr-2">
                 <p><strong>Amount:</strong> {editingSubmission.amount.toFixed(2)} {editingSubmission.currency}</p>
                 <p><strong>Submitted:</strong> {new Date(editingSubmission.submittedAt).toLocaleString()}</p>
-                <p>
-                    <strong>Screenshot:</strong> 
-                    <Button variant="link" asChild className="p-0 h-auto ml-1">
-                        <a href={editingSubmission.screenshotUrl} target="_blank" rel="noopener noreferrer">
-                        View Proof <ExternalLink className="ml-1 h-3 w-3" />
-                        </a>
-                    </Button>
-                </p>
+                <div>
+                    <p className="font-medium mb-1"><strong>Screenshot Proof:</strong></p>
+                    {editingSubmission.screenshotUrl.startsWith('data:image') ? (
+                         <a href={editingSubmission.screenshotUrl} target="_blank" rel="noopener noreferrer" title="Open image in new tab">
+                            <Image src={editingSubmission.screenshotUrl} alt="Payment Screenshot" width={400} height={300} className="rounded-md border object-contain max-h-[300px] w-auto cursor-pointer hover:opacity-80 transition-opacity" />
+                         </a>
+                    ) : (
+                        <p className="text-sm text-muted-foreground">
+                            Invalid image data or URL. Link: 
+                            <Button variant="link" asChild className="p-0 h-auto ml-1">
+                                <a href={editingSubmission.screenshotUrl} target="_blank" rel="noopener noreferrer">
+                                    View Original <ExternalLink className="ml-1 h-3 w-3" />
+                                </a>
+                            </Button>
+                        </p>
+                    )}
+                </div>
                  <div>
                     <Label htmlFor="adminNotes">Admin Notes</Label>
                     <Textarea 
                         id="adminNotes" 
                         value={adminNotes} 
                         onChange={(e) => setAdminNotes(e.target.value)}
-                        placeholder="Optional notes for this submission..."
+                        placeholder="Optional notes for this submission (e.g., reason for rejection, confirmation details)..."
                         className="mt-1"
+                        rows={3}
                     />
                 </div>
-                {editingSubmission.adminNotes && !adminNotes && (
-                    <p className="text-xs text-muted-foreground">Previous notes: {editingSubmission.adminNotes}</p>
+                {editingSubmission.adminNotes && !adminNotes && ( // Show previous notes if current notes are empty but previous ones exist
+                    <p className="text-xs text-muted-foreground mt-1">Previous notes: {editingSubmission.adminNotes}</p>
                 )}
-
             </div>
-            <DialogFooter className="sm:justify-between gap-2">
+            <DialogFooter className="sm:justify-between gap-2 pt-4 border-t">
               <div className="flex gap-2">
                 <Button 
                     variant="destructive" 
                     onClick={() => handleUpdateStatus(editingSubmission.id, 'rejected', adminNotes)}
                     disabled={editingSubmission.status === 'rejected'}
+                    className="shadow-md hover:shadow-sm active:translate-y-px transition-all duration-150"
                 >
                     <XCircle className="mr-2 h-4 w-4" /> Reject
                 </Button>
                 <Button 
                     variant="default" 
-                    className="bg-green-600 hover:bg-green-700 text-white"
+                    className="bg-green-600 hover:bg-green-700 text-white shadow-md hover:shadow-sm active:translate-y-px transition-all duration-150"
                     onClick={() => handleUpdateStatus(editingSubmission.id, 'approved', adminNotes)}
                     disabled={editingSubmission.status === 'approved'}
                 >
@@ -219,7 +221,7 @@ export default function PaymentSubmissions() {
                 </Button>
               </div>
                <DialogClose asChild>
-                  <Button type="button" variant="outline">
+                  <Button type="button" variant="outline" className="shadow-md hover:shadow-sm active:translate-y-px transition-all duration-150">
                     Close
                   </Button>
                 </DialogClose>
@@ -230,3 +232,5 @@ export default function PaymentSubmissions() {
     </Card>
   );
 }
+
+    

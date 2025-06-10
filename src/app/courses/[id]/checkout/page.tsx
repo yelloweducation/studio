@@ -1,17 +1,18 @@
 
 "use client";
-import React, { useState, useEffect, type FormEvent } from 'react';
+import React, { useState, useEffect, type FormEvent, type ChangeEvent } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image'; // Added for image preview
 import { useAuth } from '@/hooks/useAuth';
-import { courses as defaultMockCourses, users as mockUsers, type Course, type PaymentSubmission, type User, initialPaymentSettings, type PaymentSettings } from '@/data/mockData'; // Added User, PaymentSettings
+import { courses as defaultMockCourses, users as mockUsers, type Course, type PaymentSubmission, type User, initialPaymentSettings, type PaymentSettings } from '@/data/mockData';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { ChevronLeft, AlertTriangle, ShoppingCart, UploadCloud, Info, ArrowRight, Home, Banknote, UserCircle as UserCircleIcon, ClipboardList } from 'lucide-react'; // Added Banknote, UserCircleIcon, ClipboardList
+import { ChevronLeft, AlertTriangle, ShoppingCart, UploadCloud, Info, ArrowRight, Home, Banknote, UserCircle as UserCircleIcon, ClipboardList, FileImage } from 'lucide-react'; // Added FileImage
 import { Skeleton } from '@/components/ui/skeleton';
 
 const USER_PAYMENT_SUBMISSIONS_KEY = 'adminPaymentSubmissions';
@@ -27,13 +28,13 @@ export default function CheckoutPage() {
 
   const [isLoadingCourse, setIsLoadingCourse] = useState(true);
   const [currentCourse, setCurrentCourse] = useState<Course | null>(null);
-  const [screenshotUrl, setScreenshotUrl] = useState('');
+  const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
+  const [screenshotPreviewUrl, setScreenshotPreviewUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentSettings, setPaymentSettings] = useState<PaymentSettings | null>(null);
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
 
   useEffect(() => {
-    // Load payment settings
     setIsLoadingSettings(true);
     const storedSettings = localStorage.getItem(PAYMENT_SETTINGS_KEY);
     if (storedSettings) {
@@ -41,14 +42,13 @@ export default function CheckoutPage() {
         setPaymentSettings(JSON.parse(storedSettings));
       } catch (e) {
         console.error("Failed to parse payment settings from localStorage", e);
-        setPaymentSettings(initialPaymentSettings); // Fallback
+        setPaymentSettings(initialPaymentSettings);
       }
     } else {
-      setPaymentSettings(initialPaymentSettings); // Use initial if not configured
+      setPaymentSettings(initialPaymentSettings);
     }
     setIsLoadingSettings(false);
 
-    // Load course details
     setIsLoadingCourse(true);
     let coursesToUse: Course[] = [];
     try {
@@ -69,26 +69,56 @@ export default function CheckoutPage() {
     setIsLoadingCourse(false);
   }, [courseId]);
 
-  const handleSubmitPaymentProof = (e: FormEvent) => {
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast({ variant: "destructive", title: "File Too Large", description: "Please upload an image smaller than 5MB." });
+        setScreenshotFile(null);
+        setScreenshotPreviewUrl(null);
+        e.target.value = ''; // Reset file input
+        return;
+      }
+      if (!file.type.startsWith('image/')) {
+        toast({ variant: "destructive", title: "Invalid File Type", description: "Please upload an image file (e.g., JPG, PNG)." });
+        setScreenshotFile(null);
+        setScreenshotPreviewUrl(null);
+        e.target.value = ''; // Reset file input
+        return;
+      }
+      setScreenshotFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setScreenshotPreviewUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setScreenshotFile(null);
+      setScreenshotPreviewUrl(null);
+    }
+  };
+
+  const handleSubmitPaymentProof = async (e: FormEvent) => {
     e.preventDefault();
     if (!isAuthenticated || !user || !currentCourse || !(currentCourse.price && currentCourse.price > 0)) {
       toast({ variant: "destructive", title: "Submission Error", description: "User not authenticated or course/price details missing." });
       return;
     }
-    if (!screenshotUrl.trim()) {
-        toast({ variant: "destructive", title: "Missing Information", description: "Please provide a screenshot URL."});
+    if (!screenshotFile || !screenshotPreviewUrl) {
+        toast({ variant: "destructive", title: "Missing Information", description: "Please upload a payment proof screenshot."});
         return;
     }
 
     setIsSubmitting(true);
 
+    // The screenshotPreviewUrl is already the Data URI
     const newSubmission: PaymentSubmission = {
       id: `ps-${Date.now()}`,
       userId: user.id,
       courseId: currentCourse.id,
       amount: currentCourse.price,
       currency: currentCourse.currency || 'USD',
-      screenshotUrl: screenshotUrl,
+      screenshotUrl: screenshotPreviewUrl, // This is the Data URI
       status: 'pending',
       submittedAt: new Date().toISOString(),
     };
@@ -118,19 +148,19 @@ export default function CheckoutPage() {
   if (authLoading || isLoadingCourse || isLoadingSettings) {
     return (
       <div className="max-w-2xl mx-auto py-8 px-4">
-        <Skeleton className="h-8 w-1/4 mb-6" /> {/* Back button */}
+        <Skeleton className="h-8 w-1/4 mb-6" />
         <Card className="shadow-xl">
           <CardHeader>
-            <Skeleton className="h-10 w-3/4 mb-2" /> {/* Title */}
-            <Skeleton className="h-6 w-1/2" /> {/* Description */}
+            <Skeleton className="h-10 w-3/4 mb-2" />
+            <Skeleton className="h-6 w-1/2" />
           </CardHeader>
           <CardContent className="space-y-6">
-            <Skeleton className="h-20 w-full" /> {/* Payment instructions */}
+            <Skeleton className="h-20 w-full" />
             <div className="space-y-2">
-                <Skeleton className="h-4 w-1/4" /> {/* Label */}
-                <Skeleton className="h-10 w-full" /> {/* Input */}
+                <Skeleton className="h-4 w-1/4" />
+                <Skeleton className="h-10 w-full" />
             </div>
-            <Skeleton className="h-12 w-full" /> {/* Submit Button */}
+            <Skeleton className="h-12 w-full" />
           </CardContent>
         </Card>
       </div>
@@ -247,7 +277,7 @@ export default function CheckoutPage() {
                     {paymentSettings?.accountHolderName && <p className="text-sm text-muted-foreground"><UserCircleIcon className="inline-block mr-1.5 h-4 w-4 align-text-bottom"/><strong>Account Name:</strong> {paymentSettings.accountHolderName}</p>}
                     {paymentSettings?.additionalInstructions && <p className="text-sm text-muted-foreground mt-2"><em>{paymentSettings.additionalInstructions}</em></p>}
                     <p className="text-sm text-muted-foreground mt-3">
-                        After making the payment, please upload a screenshot of your transaction receipt to an image hosting service (e.g., Imgur, Google Drive) and paste the direct image URL below.
+                        After making the payment, please upload a screenshot of your transaction receipt below.
                     </p>
                   </>
                 ) : (
@@ -258,28 +288,32 @@ export default function CheckoutPage() {
             </div>
             
             <div>
-              <Label htmlFor="screenshotUrl" className="text-base">Screenshot URL of Payment Proof</Label>
-              <div className="relative mt-1">
-                <UploadCloud className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input
-                    id="screenshotUrl"
-                    type="url"
-                    value={screenshotUrl}
-                    onChange={(e) => setScreenshotUrl(e.target.value)}
-                    placeholder="https://your-image-host.com/proof.png"
-                    required
-                    className="pl-10 shadow-sm"
-                    disabled={!hasPaymentDetails}
-                />
-              </div>
+              <Label htmlFor="screenshotFile" className="text-base flex items-center">
+                <UploadCloud className="mr-2 h-5 w-5 text-muted-foreground" /> Upload Payment Screenshot
+              </Label>
+              <Input
+                  id="screenshotFile"
+                  type="file"
+                  accept="image/png, image/jpeg, image/gif, image/webp" // Specify accepted image types
+                  onChange={handleFileChange}
+                  required
+                  className="mt-1 shadow-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                  disabled={!hasPaymentDetails}
+              />
+              {screenshotPreviewUrl && (
+                <div className="mt-3 border p-2 rounded-md inline-block bg-muted/50 shadow-sm">
+                  <p className="text-xs text-muted-foreground mb-1">Selected image preview:</p>
+                  <Image src={screenshotPreviewUrl} alt="Screenshot preview" width={200} height={150} className="rounded max-h-[150px] w-auto object-contain" />
+                </div>
+              )}
               <p className="text-xs text-muted-foreground mt-1">
-                Upload your screenshot to an image hosting service (e.g., Imgur, a cloud drive shared publicly) and paste the direct link here. Ensure the link is accessible.
+                Please upload an image of your payment receipt (e.g., JPG, PNG). Max file size: 5MB.
               </p>
             </div>
 
           </CardContent>
           <CardFooter>
-            <Button type="submit" className="w-full text-lg py-3" disabled={isSubmitting || !hasPaymentDetails}>
+            <Button type="submit" className="w-full text-lg py-3" disabled={isSubmitting || !hasPaymentDetails || !screenshotFile}>
               {isSubmitting ? 'Submitting...' : (
                 <>
                   Submit Payment Proof <ArrowRight className="ml-2 h-5 w-5" />
@@ -292,3 +326,5 @@ export default function CheckoutPage() {
     </div>
   );
 }
+
+    
