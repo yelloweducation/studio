@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, type ReactNode } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { courses as mockDataCourses, type Course, type Module, type Lesson, type User, enrollments as mockDataEnrollments, type Enrollment } from '@/data/mockData';
+import { courses as mockDataCourses, enrollments as initialEnrollments, type Course, type Module, type Lesson, type User, type Enrollment } from '@/data/mockData'; // enrollments renamed to initialEnrollments
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,6 +18,7 @@ interface CompletionInfo {
   isCompleted: boolean;
   progress: number;
 }
+const USER_ENROLLMENTS_KEY = 'userEnrollmentsData';
 
 export default function CourseDetailPage() {
   const params = useParams();
@@ -32,45 +33,49 @@ export default function CourseDetailPage() {
   const [currentCourse, setCurrentCourse] = useState<Course | null>(null);
   const [firstLessonPath, setFirstLessonPath] = useState<string | null>(null);
   const [completionInfo, setCompletionInfo] = useState<CompletionInfo | null>(null);
-  const [isLoadingPage, setIsLoadingPage] = useState(true); // Start in loading state
+  const [isLoadingPage, setIsLoadingPage] = useState(true); 
 
-  // Effect 1: Load allAppCourses (prioritizing localStorage)
+  // Effect 1: Load allAppCourses (prioritizing localStorage for admin-managed courses)
   useEffect(() => {
     let coursesToUse: Course[] = [];
     try {
       const storedCoursesString = localStorage.getItem('adminCourses');
       if (storedCoursesString) {
         const parsedCourses = JSON.parse(storedCoursesString) as Course[];
+        // Use parsedCourses directly if it's a valid array, even if empty
         if (Array.isArray(parsedCourses)) {
-          coursesToUse = parsedCourses; 
+            coursesToUse = parsedCourses;
         } else {
-          console.warn("adminCourses in localStorage was not an array, using default mock courses.");
-          coursesToUse = mockDataCourses;
+            // Fallback if not an array (malformed data)
+            console.warn("adminCourses in localStorage was not an array, using default mock courses.");
+            coursesToUse = mockDataCourses;
         }
       } else {
-        coursesToUse = mockDataCourses; 
+        // Fallback if item doesn't exist in localStorage
+        coursesToUse = mockDataCourses;
       }
     } catch (error) {
-      console.error("Error loading courses from localStorage:", error);
-      coursesToUse = mockDataCourses; 
+      console.error("Error loading courses from localStorage for CourseDetail:", error);
+      coursesToUse = mockDataCourses; // Fallback to mock data on error
     }
     setAllAppCourses(coursesToUse);
     setAreAppCoursesLoaded(true);
   }, []);
 
+
   // Effect 2: Determine currentCourse and firstLessonPath
-  // This effect runs when allAppCourses are loaded or courseId changes.
   useEffect(() => {
+    setIsLoadingPage(true); // Start loading whenever courseId or loaded courses change
+    setCurrentCourse(null); 
+    setFirstLessonPath(null);
+
     if (!areAppCoursesLoaded) {
-      setCurrentCourse(null); // Ensure reset if courses aren't loaded yet
-      setFirstLessonPath(null);
-      return; // Wait for allAppCourses to be loaded
+      return; 
     }
 
     if (!courseId) {
-      setCurrentCourse(null);
-      setFirstLessonPath(null);
-      return; // No course ID, so nothing to find
+      setIsLoadingPage(false);
+      return; 
     }
     
     const foundCourse = allAppCourses.find(c => c.id === courseId);
@@ -82,48 +87,65 @@ export default function CourseDetailPage() {
     } else {
       setFirstLessonPath(null);
     }
+    // isLoadingPage will be set to false in Effect 3 after user-specific data is processed
   }, [courseId, allAppCourses, areAppCoursesLoaded]);
 
 
   // Effect 3: Load user-specific data (completion) and manage final isLoadingPage state
   useEffect(() => {
-    setIsLoadingPage(true); // Always start this effect by setting loading to true
-    setCompletionInfo(null); // Reset completion info
+    // This effect relies on currentCourse being set by Effect 2.
+    // It also depends on areAppCoursesLoaded to ensure Effect 1 & 2 have had a chance to run.
+    
+    setIsLoadingPage(true); 
+    setCompletionInfo(null); 
 
     if (!areAppCoursesLoaded) {
-      // Still waiting for allAppCourses to load. isLoadingPage remains true.
       return;
     }
-
-    // At this point, areAppCoursesLoaded is true.
-    // Effect 2 should have attempted to set currentCourse based on allAppCourses and courseId.
-
+    
     if (!courseId) {
-      // No course ID in URL, so not loading a specific course.
       setIsLoadingPage(false);
       return;
     }
-    
-    // If courseId is present, but currentCourse is null (meaning Effect 2 determined it's not found)
-    if (courseId && !currentCourse) { 
-      setIsLoadingPage(false); // Course not found after checking allAppCourses
+        
+    // If Effect 2 determined course is not found, currentCourse will be null.
+    if (courseId && !currentCourse && areAppCoursesLoaded) { 
+      setIsLoadingPage(false); 
       return;
     }
     
-    // If we reach here, currentCourse is valid and set by Effect 2.
-    if (currentCourse) { // Redundant check as the one above handles null, but good for clarity
+    if (currentCourse) {
         if (isAuthenticated && user) {
-        const enrollment = mockDataEnrollments.find(e => e.userId === user.id && e.courseId === currentCourse.id);
-        if (enrollment) {
-            setCompletionInfo({ isCompleted: enrollment.progress === 100, progress: enrollment.progress });
+            let userEnrollments: Enrollment[] = [];
+            try {
+                const storedEnrollments = localStorage.getItem(USER_ENROLLMENTS_KEY);
+                if (storedEnrollments) {
+                    userEnrollments = JSON.parse(storedEnrollments) as Enrollment[];
+                    if(!Array.isArray(userEnrollments)){
+                        userEnrollments = JSON.parse(JSON.stringify(initialEnrollments));
+                    }
+                } else {
+                    userEnrollments = JSON.parse(JSON.stringify(initialEnrollments));
+                    localStorage.setItem(USER_ENROLLMENTS_KEY, JSON.stringify(userEnrollments)); // Initialize if not present
+                }
+            } catch (error) {
+                console.error("Error handling enrollments in localStorage:", error);
+                userEnrollments = JSON.parse(JSON.stringify(initialEnrollments));
+            }
+
+            const enrollment = userEnrollments.find(e => e.userId === user.id && e.courseId === currentCourse.id);
+            if (enrollment) {
+                setCompletionInfo({ isCompleted: enrollment.progress === 100, progress: enrollment.progress });
+            } else {
+                setCompletionInfo({ isCompleted: false, progress: 0 });
+            }
         } else {
-            setCompletionInfo({ isCompleted: false, progress: 0 });
-        }
+            // User not authenticated, no specific completion info.
+             setCompletionInfo({ isCompleted: false, progress: 0 });
         }
     }
-    // If user not authenticated, or no currentCourse somehow, completionInfo remains null or default.
     
-    setIsLoadingPage(false); // All data fetching/determination for this stage is complete
+    setIsLoadingPage(false);
 
   }, [user, isAuthenticated, currentCourse, courseId, areAppCoursesLoaded]);
 
@@ -285,10 +307,6 @@ export default function CourseDetailPage() {
                         {module.lessons && module.lessons.length > 0 ? (
                           <ul className="space-y-2 pl-2 border-l-2 border-primary/20 ml-2">
                             {module.lessons.map((lesson: Lesson, lessonIndex: number) => {
-                              // const lessonPath = `/courses/${courseId}/learn/${module.id}/${lesson.id}`;
-                              // In the non-payment version, all lessons are accessible if a firstLessonPath exists for the course.
-                              // The actual firstLessonPath is calculated based on the first module and lesson.
-                              // Here, we need to ensure the links are correct for each lesson individually.
                               const lessonPath = `/courses/${courseId}/learn/${module.id}/${lesson.id}`;
                               const isLessonAccessible = true; 
 
@@ -332,5 +350,3 @@ export default function CourseDetailPage() {
     </div>
   );
 }
-
-    

@@ -3,18 +3,22 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { courses as defaultMockCourses, type Course, type Module, type Lesson } from '@/data/mockData';
+import { courses as defaultMockCourses, enrollments as initialEnrollments, type Course, type Module, type Lesson, type Enrollment } from '@/data/mockData';
+import { useAuth } from '@/hooks/useAuth'; // Added
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChevronLeft, ChevronRight, CheckCircle, ListChecks, AlertTriangle, Home } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { getEmbedUrl } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
-import Image from 'next/image'; // Added for lesson image display
+import Image from 'next/image';
+
+const USER_ENROLLMENTS_KEY = 'userEnrollmentsData';
 
 export default function LessonViewerPage() {
   const params = useParams();
   const router = useRouter();
+  const { user } = useAuth(); // Added
 
   const courseId = params.id as string;
   const moduleId = params.moduleId as string;
@@ -64,7 +68,55 @@ export default function LessonViewerPage() {
     }
     setActiveCourses(coursesToUse);
     setIsLoading(false);
-  }, []); // Runs once on mount
+  }, []);
+
+  const handleFinishModule = () => {
+    if (!user || !courseId) {
+      router.push(`/courses/${courseId}`);
+      return;
+    }
+
+    let currentEnrollments: Enrollment[] = [];
+    try {
+      const storedEnrollments = localStorage.getItem(USER_ENROLLMENTS_KEY);
+      if (storedEnrollments) {
+        currentEnrollments = JSON.parse(storedEnrollments) as Enrollment[];
+        if (!Array.isArray(currentEnrollments)) {
+            currentEnrollments = JSON.parse(JSON.stringify(initialEnrollments)); // Deep copy
+        }
+      } else {
+        currentEnrollments = JSON.parse(JSON.stringify(initialEnrollments)); // Deep copy
+      }
+    } catch (error) {
+      console.error("Error reading enrollments from localStorage:", error);
+      currentEnrollments = JSON.parse(JSON.stringify(initialEnrollments)); // Deep copy
+    }
+
+    const existingEnrollmentIndex = currentEnrollments.findIndex(
+      (e) => e.userId === user.id && e.courseId === courseId
+    );
+
+    if (existingEnrollmentIndex > -1) {
+      currentEnrollments[existingEnrollmentIndex].progress = 100;
+    } else {
+      currentEnrollments.push({
+        id: `enroll${Date.now()}`,
+        userId: user.id,
+        courseId: courseId,
+        progress: 100,
+        enrolledDate: new Date().toISOString().split('T')[0],
+      });
+    }
+
+    try {
+      localStorage.setItem(USER_ENROLLMENTS_KEY, JSON.stringify(currentEnrollments));
+    } catch (error) {
+        console.error("Error saving enrollments to localStorage:", error);
+    }
+    
+    router.push(`/courses/${courseId}`);
+  };
+
 
   if (isLoading) {
     return (
@@ -226,16 +278,11 @@ export default function LessonViewerPage() {
             </Link>
           </Button>
         ) : (
-           <Button asChild variant="default">
-            <Link href={`/courses/${courseId}`}>
+           <Button onClick={handleFinishModule} variant="default">
               Finish Module <CheckCircle className="ml-2 h-4 w-4" />
-            </Link>
           </Button>
         )}
       </div>
     </div>
   );
 }
-
-
-      
