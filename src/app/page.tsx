@@ -5,13 +5,13 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Video as VideoIcon, Tv, Loader2, X, Search, LayoutGrid, Circle, Compass } from 'lucide-react'; // Added Circle, Compass
+import { Video as VideoIcon, Tv, Loader2, X, Search, LayoutGrid, Circle, Compass } from 'lucide-react'; 
 import VideoCard from '@/components/videos/VideoCard';
-import { videos as mockVideos, type Video } from '@/data/mockData'; // Categories removed from here
+import { videos as mockVideos, type Video } from '@/data/mockData'; 
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// CareerAdviceChatbox import removed
+const CareerAdviceChatbox = lazy(() => import('@/components/ai/CareerAdviceChatbox'));
 
 export default function Home() {
   const router = useRouter();
@@ -36,7 +36,20 @@ export default function Home() {
     if (allFeedVideos.length > 0 && !showVideoFeed) return; 
 
     setIsLoadingFeedVideos(true);
-    setAllFeedVideos(mockVideos); 
+    let videosToUse: Video[] = [];
+    try {
+        const storedVideosString = localStorage.getItem('adminVideos');
+        if (storedVideosString) {
+            const parsed = JSON.parse(storedVideosString);
+            videosToUse = Array.isArray(parsed) ? parsed : mockVideos;
+        } else {
+            videosToUse = mockVideos;
+        }
+    } catch (error) {
+        console.error("Error loading videos from localStorage for feed:", error);
+        videosToUse = mockVideos;
+    }
+    setAllFeedVideos(videosToUse); 
     setIsLoadingFeedVideos(false);
   };
 
@@ -86,8 +99,10 @@ export default function Home() {
   return (
     <div className="flex flex-col items-center pb-8">
       <section className="w-full max-w-2xl text-center pt-8 mb-10">
-        <div className="flex items-center justify-center space-x-3 text-4xl sm:text-5xl font-bold font-headline text-foreground mb-4">
-          <Circle size={48} className="text-primary" />
+        <div className="flex items-center justify-center space-x-2 sm:space-x-3 text-4xl sm:text-5xl font-bold font-headline text-foreground mb-4">
+          {/* Responsive Icon Sizes */}
+          <Circle size={40} className="text-primary block sm:hidden" />
+          <Circle size={48} className="text-primary hidden sm:block" />
           <span>Yellow Institute</span>
         </div>
         <p className="text-lg sm:text-xl text-muted-foreground mb-8">
@@ -118,9 +133,6 @@ export default function Home() {
             </Button>
         </div>
       </section>
-
-      {/* AI Career Advisor section removed from here */}
-      
     </div>
   );
 }
