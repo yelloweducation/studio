@@ -1,4 +1,5 @@
 
+
 // This directive applies to the module, making SearchCoursesClientLogic a client component.
 "use client"; 
 
@@ -11,7 +12,7 @@ import CourseCard from '@/components/courses/CourseCard';
 import CategoryCard from '@/components/categories/CategoryCard';
 import { courses as defaultMockCourses, type Course, categories as defaultMockCategories, type Category, type LearningPath, initialLearningPaths } from '@/data/mockData';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { Search, X, LayoutGrid, GraduationCap, Lightbulb, Star, Milestone, Send, Loader2, AlertTriangle, ListFilter } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -52,6 +53,15 @@ function SearchCoursesClientLogic() {
   const [isQuickRecLoading, setIsQuickRecLoading] = useState(false);
   const [quickRecError, setQuickRecError] = useState<string | null>(null);
 
+  const [isMobile, setIsMobile] = useState(false); // Added for carousel responsive opts
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
 
   useEffect(() => {
     setIsLoading(true);
@@ -74,7 +84,7 @@ function SearchCoursesClientLogic() {
     setAvailableCourses(coursesToUse);
     setFeaturedCourses(coursesToUse.filter(c => c.isFeatured));
     
-    const uniqueCategories = Array.from(new Set(coursesToUse.map(c => c.category))).filter(Boolean);
+    const uniqueCategories = Array.from(new Set(coursesToUse.map(c => c.category))).filter(Boolean) as string[];
     setPopularTopics(uniqueCategories);
 
 
@@ -547,3 +557,4 @@ export default function SearchCoursesPage() {
     </Suspense>
   );
 }
+
