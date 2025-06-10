@@ -5,6 +5,12 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft } from 'lucide-react';
 import { useLanguage, type Language } from '@/contexts/LanguageContext';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Terms of Service | Yellow Institute',
+  description: 'Review the Terms of Service for Yellow Institute before using our platform and services.',
+};
 
 const tosTranslations = {
   en: {

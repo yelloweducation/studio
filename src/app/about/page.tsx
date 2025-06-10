@@ -5,6 +5,12 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft } from 'lucide-react';
 import { useLanguage, type Language } from '@/contexts/LanguageContext';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'About Us | Yellow Institute',
+  description: 'Learn more about Yellow Institute, our mission, vision, and values in providing quality online education.',
+};
 
 const aboutPageTranslations = {
   en: {

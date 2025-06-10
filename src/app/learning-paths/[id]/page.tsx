@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronLeft, AlertTriangle, Home, BookOpenCheck, BookMarked, ArrowRight } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
+import type { Metadata, ResolvingMetadata } from 'next';
 
 const LEARNING_PATHS_KEY = 'adminLearningPaths';
 const ADMIN_COURSES_KEY = 'adminCourses';
@@ -17,6 +18,45 @@ const ADMIN_COURSES_KEY = 'adminCourses';
 const isValidLucideIcon = (iconName: string): iconName is keyof typeof LucideIcons => {
   return iconName in LucideIcons;
 };
+
+type Props = {
+  params: { id: string }
+}
+
+export async function generateMetadata(
+  { params }: Props,
+  parent: ResolvingMetadata
+): Promise<Metadata> {
+  const id = params.id;
+  // Note: In a real app, fetch this from your CMS or database
+  // For generateMetadata, we can't use localStorage, so we rely on the initial mock data.
+  const learningPath = initialLearningPaths.find((p) => p.id === id);
+
+  if (!learningPath) {
+    return {
+      title: "Learning Path Not Found | Yellow Institute",
+      description: "The learning path you are looking for could not be found.",
+    }
+  }
+
+  const pathCourses = defaultMockCourses.filter(course => learningPath.courseIds.includes(course.id));
+  const courseTitles = pathCourses.map(c => c.title).slice(0, 3); // Get first 3 course titles for description
+
+  const previousImages = (await parent).openGraph?.images || []
+
+  return {
+    title: `${learningPath.title} | Yellow Institute`,
+    description: `${learningPath.description.substring(0, 150)}${learningPath.description.length > 150 ? '...' : ''} Includes courses like ${courseTitles.join(', ')}.`,
+    keywords: [learningPath.title, 'learning path', 'education', ...courseTitles, 'Yellow Institute'],
+    openGraph: {
+      title: learningPath.title,
+      description: learningPath.description.substring(0, 120) + '...',
+      images: learningPath.imageUrl ? [learningPath.imageUrl, ...previousImages] : previousImages,
+      type: 'article',
+    },
+  }
+}
+
 
 export default function LearningPathDetailPage() {
   const params = useParams();
@@ -79,7 +119,7 @@ export default function LearningPathDetailPage() {
             <Skeleton className="h-8 w-1/3 mb-3" /> {/* "Courses in this path" title */}
             <div className="space-y-3">
               {[1, 2].map(i => (
-                <Skeleton key={i} className="h-20 w-full rounded-lg" /> 
+                <Skeleton key={i} className="h-20 w-full rounded-lg" />
               ))}
             </div>
           </CardContent>
@@ -113,8 +153,8 @@ export default function LearningPathDetailPage() {
     );
   }
 
-  const PathIconComponent = learningPath.icon && isValidLucideIcon(learningPath.icon) 
-    ? LucideIcons[learningPath.icon] as React.ElementType 
+  const PathIconComponent = learningPath.icon && isValidLucideIcon(learningPath.icon)
+    ? LucideIcons[learningPath.icon] as React.ElementType
     : BookOpenCheck;
 
   return (

@@ -5,6 +5,12 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft } from 'lucide-react';
 import { useLanguage, type Language } from '@/contexts/LanguageContext';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Privacy Policy | Yellow Institute',
+  description: 'Read the Privacy Policy for Yellow Institute to understand how we collect, use, and protect your personal information.',
+};
 
 const privacyPolicyTranslations = {
   en: {
