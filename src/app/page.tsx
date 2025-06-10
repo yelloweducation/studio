@@ -122,8 +122,8 @@ export default function Home() {
           </Button>
         </form>
         
-        <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4 w-full max-w-md sm:max-w-lg lg:max-w-xl mx-auto">
-            <Button asChild size="lg" variant="default" className="w-full sm:w-auto">
+        <div className="mt-8 flex flex-row items-center justify-center gap-4 w-full max-w-md sm:max-w-lg lg:max-w-xl mx-auto">
+            <Button asChild size="lg" variant="default" className="flex-1 sm:flex-none sm:w-auto">
                 <Link href="/courses/search">
                     <Compass className="mr-2 h-5 w-5" /> Explore
                 </Link>
@@ -132,7 +132,7 @@ export default function Home() {
               onClick={handleShowVideos} 
               size="lg" 
               variant="accent"
-              className="w-full sm:w-auto">
+              className="flex-1 sm:flex-none sm:w-auto">
                 <VideoIcon className="mr-2 h-5 w-5" /> View Reels
             </Button>
         </div>
