@@ -394,21 +394,34 @@ const CourseForm = ({
             {quizzes.length > 0 && (
               <div className="mt-4 space-y-3">
                 <h4 className="font-medium text-md">Existing Quizzes:</h4>
-                {quizzes.map((quiz, index) => (
+                {quizzes.map((quiz) => (
                   <Card key={quiz.id} className="p-3 bg-muted/30">
-                    <div className="flex justify-between items-center">
-                      <div>
+                    <div className="flex justify-between items-start">
+                      <div className="flex-grow">
                         <p className="font-medium text-sm">{quiz.title}</p>
                         <p className="text-xs text-muted-foreground capitalize">{quiz.quizType} Quiz</p>
+                        
+                        {quiz.questions && quiz.questions.length > 0 && (
+                          <div className="mt-2 pl-3 border-l-2 border-accent/50">
+                            <p className="text-xs font-semibold text-muted-foreground mb-1">Questions ({quiz.questions.length}):</p>
+                            <ul className="list-disc list-inside space-y-0.5 pl-2">
+                              {quiz.questions.map((q, qIdx) => (
+                                <li key={q.id || qIdx} className="text-xs text-foreground/80 truncate max-w-xs sm:max-w-sm md:max-w-md" title={q.text}>
+                                  {q.text.length > 60 ? `${q.text.substring(0, 57)}...` : q.text}
+                                  <span className="text-muted-foreground/80"> ({q.options?.length || 0} opts)</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        <p className="text-xs text-primary/80 mt-2 italic">
+                          (Full question & option editing UI coming in a future update.)
+                        </p>
                       </div>
-                      <Button type="button" variant="ghost" size="icon_sm" onClick={() => removeQuiz(quiz.id)}>
+                      <Button type="button" variant="ghost" size="icon_sm" onClick={() => removeQuiz(quiz.id)} className="shrink-0">
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
-                    {/* Placeholder for future question editing UI for this quiz */}
-                    <p className="text-xs text-muted-foreground mt-1 italic">
-                      ({quiz.questions.length} questions - full question editing UI coming soon)
-                    </p>
                   </Card>
                 ))}
               </div>
