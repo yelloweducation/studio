@@ -1,13 +1,14 @@
 
 "use client";
-import React, { useState, type ChangeEvent } from 'react';
+import React, { useState, useEffect, type ChangeEvent } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import { Brain, Palette, Users, Zap, CheckCircle, Lightbulb, ArrowRight, RotateCcw, HelpCircle } from 'lucide-react';
+import { Brain, Palette, Users, Zap, CheckCircle, Lightbulb, ArrowRight, RotateCcw, HelpCircle, ListChecks, History, UserCircle, type LucideIcon } from 'lucide-react';
 import { useLanguage, type Language } from '@/contexts/LanguageContext';
+import { useAuth } from '@/hooks/useAuth'; // Added for user identification
 import { 
   initialQuizQuestions, 
   additionalQuizQuestions, 
@@ -15,9 +16,17 @@ import {
   type StyleId, 
   type StyleOutcome, 
   type QuizQuestion, 
-  type PersonalityTestsTranslations,
-  type TranslatedText
+  type PersonalityTestsTranslations, // Import the main translations type
+  type TranslatedText,
+  type QuizCompletionRecord // Import QuizCompletionRecord
 } from '@/data/personalityQuizData';
+import * as LucideIcons from 'lucide-react'; // For dynamic icon rendering
+import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
+
+const QUIZ_HISTORY_STORAGE_KEY = 'personalityQuizHistory';
+const MAX_HISTORY_ITEMS = 10;
+
 
 const personalityTestsPageTranslations: PersonalityTestsTranslations = {
   en: {
@@ -50,6 +59,12 @@ const personalityTestsPageTranslations: PersonalityTestsTranslations = {
     askMoreQuestionsDescription: `Answer ${additionalQuizQuestions.length} more questions to help us fine-tune your learning and working style profile.`,
     askMoreQuestionsConfirm: "Yes, Ask More Questions",
     askMoreQuestionsDecline: "No, Show My Results Now",
+    possibleStylesTitle: "Possible Styles You Can Discover",
+    recentCompletionsTitle: "Recent Quiz Completions",
+    historyUser: "User",
+    historyStyle: "Style",
+    historyDate: "Date",
+    noHistory: "No quiz completions recorded yet. Be the first!",
   },
   my: {
     pageTitle: "ကိုယ်ရည်ကိုယ်သွေးနှင့် ကျွမ်းကျင်မှု အကဲဖြတ်ချက်များ",
@@ -81,19 +96,57 @@ const personalityTestsPageTranslations: PersonalityTestsTranslations = {
     askMoreQuestionsDescription: `သင်၏ သင်ယူမှုနှင့် အလုပ်လုပ်ပုံစံကို ပိုမိုတိကျစေရန် နောက်ထပ် မေးခွန်း ${additionalQuizQuestions.length} ခု ဖြေဆိုပေးပါ။`,
     askMoreQuestionsConfirm: "ဟုတ်ကဲ့၊ နောက်ထပ်မေးခွန်းများ မေးပါ",
     askMoreQuestionsDecline: "မဟုတ်ပါ၊ ကျွန်ုပ်၏ရလဒ်များကို ယခုပြပါ",
+    possibleStylesTitle: "သင်ရှာဖွေတွေ့ရှိနိုင်သော ပုံစံများ",
+    recentCompletionsTitle: "မကြာသေးမီက ပြီးဆုံးခဲ့သော စစ်ဆေးမှုများ",
+    historyUser: "အသုံးပြုသူ",
+    historyStyle: "ပုံစံ",
+    historyDate: "ရက်စွဲ",
+    noHistory: "စစ်ဆေးမှု ပြီးဆုံးခြင်း မှတ်တမ်း မရှိသေးပါ။ ပထမဆုံးဖြစ်လိုက်ပါ။",
   }
 };
 
 type QuizState = 'not_started' | 'in_progress_initial' | 'asking_for_more' | 'in_progress_additional' | 'completed';
 
+const getLucideIcon = (iconName?: string): LucideIcon => {
+  if (iconName && iconName in LucideIcons) {
+    return LucideIcons[iconName as keyof typeof LucideIcons] as LucideIcon;
+  }
+  return HelpCircle; // Default icon
+};
+
+const asteriskEmail = (email: string): string => {
+  const [localPart, domain] = email.split('@');
+  if (!domain) return "Invalid Email"; // Should not happen with valid emails
+
+  if (localPart.length <= 4) {
+    return `${localPart.substring(0,1)}${"*".repeat(Math.max(0, localPart.length -1))}@${domain}`;
+  }
+  return `${localPart.substring(0, 4)}${"*".repeat(localPart.length - 4)}@${domain}`;
+};
+
+
 export default function PersonalityTestsClient() {
   const { language } = useLanguage();
   const t = personalityTestsPageTranslations[language];
+  const { user: loggedInUser } = useAuth();
 
   const [quizState, setQuizState] = useState<QuizState>('not_started');
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<{ [questionId: string]: StyleId }>({});
   const [resultStyle, setResultStyle] = useState<StyleOutcome | null>(null);
+  const [quizHistory, setQuizHistory] = useState<QuizCompletionRecord[]>([]);
+
+  useEffect(() => {
+    const storedHistory = localStorage.getItem(QUIZ_HISTORY_STORAGE_KEY);
+    if (storedHistory) {
+      try {
+        setQuizHistory(JSON.parse(storedHistory));
+      } catch (e) {
+        console.error("Failed to parse quiz history:", e);
+        setQuizHistory([]);
+      }
+    }
+  }, []);
 
   const getCurrentQuestionSet = () => {
     if (quizState === 'in_progress_initial') return initialQuizQuestions;
@@ -115,6 +168,14 @@ export default function PersonalityTestsClient() {
     setAnswers(prev => ({ ...prev, [questionId]: optionValue }));
   };
 
+  const getTranslatedText = (textObj: TranslatedText): string => {
+    return textObj[language] || textObj.en;
+  };
+
+  const getStyleDetailsById = (styleId: StyleId): StyleOutcome | undefined => {
+    return styleOutcomes.find(s => s.id === styleId);
+  };
+
   const calculateAndSetResults = () => {
     const styleCounts: { [key in StyleId]?: number } = {};
     Object.values(answers).forEach(styleId => {
@@ -130,16 +191,37 @@ export default function PersonalityTestsClient() {
       }
     }
     
-    const determinedStyle = styleOutcomes.find(s => s.id === dominantStyleId);
-    setResultStyle(determinedStyle || styleOutcomes[0]);
+    const determinedStyle = getStyleDetailsById(dominantStyleId);
+    setResultStyle(determinedStyle || styleOutcomes[0]); // Fallback to first style if not found
     setQuizState('completed');
+
+    // Save to history
+    if (determinedStyle) {
+      const userIdentifier = loggedInUser ? asteriskEmail(loggedInUser.email) : "Guest";
+      // @ts-ignore // Accessing nested translation like this is okay if keys are consistent
+      const styleTitle = t.styles[determinedStyle.titleKey as keyof typeof t.styles] || determinedStyle.titleKey;
+
+      const newRecord: QuizCompletionRecord = {
+        id: `hist-${Date.now()}`,
+        userIdentifier,
+        styleId: determinedStyle.id,
+        styleTitle: styleTitle as string,
+        styleIconName: determinedStyle.iconName,
+        completedAt: new Date().toISOString(),
+      };
+
+      setQuizHistory(prevHistory => {
+        const updatedHistory = [newRecord, ...prevHistory].slice(0, MAX_HISTORY_ITEMS);
+        localStorage.setItem(QUIZ_HISTORY_STORAGE_KEY, JSON.stringify(updatedHistory));
+        return updatedHistory;
+      });
+    }
   };
 
   const handleNextQuestion = () => {
     if (currentQuestionIndex < currentQuestionSet.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
     } else {
-      // End of current question set
       if (quizState === 'in_progress_initial' && additionalQuizQuestions.length > 0) {
         setQuizState('asking_for_more');
       } else {
@@ -149,7 +231,7 @@ export default function PersonalityTestsClient() {
   };
 
   const handleProceedWithAdditionalQuestions = () => {
-    setCurrentQuestionIndex(0); // Reset for the additional questions
+    setCurrentQuestionIndex(0); 
     setQuizState('in_progress_additional');
   };
 
@@ -161,45 +243,102 @@ export default function PersonalityTestsClient() {
   const overallQuestionNumber = quizState === 'in_progress_initial' 
     ? currentQuestionIndex + 1
     : initialQuizQuestions.length + currentQuestionIndex + 1;
-  const overallTotalQuestions = initialQuizQuestions.length + (quizState === 'in_progress_additional' || quizState === 'asking_for_more' ? additionalQuizQuestions.length : 0);
-
-
+  
   const progressPercentage = totalQuestionsInCurrentSet > 0 
     ? ((currentQuestionIndex + 1) / totalQuestionsInCurrentSet) * 100 
     : 0;
-  
-  const getTranslatedText = (textObj: TranslatedText): string => {
-    return textObj[language] || textObj.en;
-  };
+
+  const PossibleStylesSection = () => (
+    <section className="w-full max-w-3xl mt-10 md:mt-12">
+      <h2 className="text-xl md:text-2xl font-bold font-headline mb-4 md:mb-6 text-center flex items-center justify-center">
+        <ListChecks className="mr-2 md:mr-3 h-6 w-6 text-primary" />
+        {t.possibleStylesTitle}
+      </h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+        {styleOutcomes.map(style => {
+          const StyleIcon = getLucideIcon(style.iconName);
+           // @ts-ignore
+          const title = t.styles[style.titleKey as keyof typeof t.styles] || style.titleKey;
+           // @ts-ignore
+          const descriptionKey = t.styles[style.id]?.descriptionKey as keyof typeof t.styles;
+          const description = descriptionKey ? t.styles[descriptionKey] as string : "Description not found.";
+
+          return (
+            <Card key={style.id} className="shadow-md">
+              <CardHeader className="flex flex-row items-center gap-3 pb-3">
+                <StyleIcon className="h-8 w-8 text-accent" />
+                <CardTitle className="text-lg md:text-xl font-semibold">{title}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">{description}</p>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+    </section>
+  );
+
+  const HistoryBoardSection = () => (
+    <section className="w-full max-w-3xl mt-10 md:mt-12">
+      <h2 className="text-xl md:text-2xl font-bold font-headline mb-4 md:mb-6 text-center flex items-center justify-center">
+        <History className="mr-2 md:mr-3 h-6 w-6 text-primary" />
+        {t.recentCompletionsTitle}
+      </h2>
+      {quizHistory.length > 0 ? (
+        <ScrollArea className="h-72 border rounded-lg shadow-md">
+          <div className="p-1 sm:p-2 md:p-3 space-y-2">
+            {quizHistory.map(record => {
+              const StyleIcon = getLucideIcon(record.styleIconName);
+              return (
+                <Card key={record.id} className="p-2 sm:p-3 bg-card hover:shadow-sm transition-shadow">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
+                    <div className="flex items-center gap-2">
+                      <StyleIcon className="h-5 w-5 text-accent shrink-0" />
+                      <div>
+                        <p className="text-xs sm:text-sm font-medium text-foreground">{record.styleTitle}</p>
+                        <p className="text-xs text-muted-foreground">{record.userIdentifier}</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground text-left sm:text-right shrink-0">
+                      {new Date(record.completedAt).toLocaleDateString(language === 'my' ? 'my-MM' : 'en-US', { 
+                        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+                      })}
+                    </p>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </ScrollArea>
+      ) : (
+        <Card className="shadow-md">
+          <CardContent className="pt-6 text-center">
+            <UserCircle className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+            <p className="text-sm text-muted-foreground">{t.noHistory}</p>
+          </CardContent>
+        </Card>
+      )}
+    </section>
+  );
 
 
   if (quizState === 'not_started') {
     return (
-      <div className="space-y-8 md:space-y-10 flex flex-col items-center">
+      <div className="space-y-8 md:space-y-10 flex flex-col items-center pb-8">
         <section className="text-center max-w-2xl">
-          <Lightbulb className="mx-auto h-12 w-12 md:h-16 md:w-16 text-primary mb-3 md:mb-4" />
-          <h1 className="text-2xl md:text-3xl font-bold font-headline mb-2 md:mb-3">{t.quizIntroTitle}</h1>
-          <p className="text-base md:text-lg text-muted-foreground">{t.quizIntroDescription}</p>
+          <Lightbulb className="mx-auto h-10 w-10 md:h-12 md:w-12 text-primary mb-2 md:mb-3" />
+          <h1 className="text-xl md:text-2xl font-bold font-headline mb-1 md:mb-2">{t.quizIntroTitle}</h1>
+          <p className="text-sm md:text-base text-muted-foreground">{t.quizIntroDescription}</p>
         </section>
-        <Button size="lg" onClick={handleStartQuiz} className="shadow-lg text-base md:text-lg">
-          {t.startQuizButton} <ArrowRight className="ml-2 h-5 w-5" />
+        <Button size="lg" onClick={handleStartQuiz} className="shadow-lg text-base py-2.5">
+          {t.startQuizButton} <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
-        <section className="w-full max-w-2xl mt-10 md:mt-12">
-          <Card className="bg-accent/10 border-accent/30 shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-lg md:text-xl font-headline flex items-center">
-                <CheckCircle className="mr-2 md:mr-3 h-5 w-5 md:h-6 md:w-6 text-accent" />
-                {t.pageTitle}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm md:text-base text-muted-foreground">{t.pageDescription}</p>
-              <p className="text-xs md:text-sm text-muted-foreground mt-2 md:mt-3">
-                Note: This is a simplified illustrative quiz. For a comprehensive personality assessment like MBTI (e.g., ENFJ, INTP), further development is planned.
-              </p>
-            </CardContent>
-          </Card>
-        </section>
+        
+        <Separator className="my-6 md:my-8 w-full max-w-3xl" />
+        <PossibleStylesSection />
+        <Separator className="my-6 md:my-8 w-full max-w-3xl" />
+        <HistoryBoardSection />
       </div>
     );
   }
@@ -208,17 +347,17 @@ export default function PersonalityTestsClient() {
     if (!currentQuestion) return <p>Loading question...</p>; 
 
     return (
-      <div className="max-w-lg md:max-w-xl mx-auto">
+      <div className="max-w-md md:max-w-lg mx-auto">
         <Card className="shadow-xl">
           <CardHeader>
-            <Progress value={progressPercentage} className="w-full h-1.5 md:h-2 mb-2 md:mb-3" />
-            <CardTitle className="text-sm md:text-base font-headline text-center text-muted-foreground">
+            <Progress value={progressPercentage} className="w-full h-1 md:h-1.5 mb-1.5 md:mb-2" />
+            <CardTitle className="text-xs md:text-sm font-headline text-center text-muted-foreground">
               {t.questionProgress
                 .replace('{current}', overallQuestionNumber.toString())
                 .replace('{total}', (quizState === 'in_progress_initial' ? initialQuizQuestions.length : initialQuizQuestions.length + additionalQuizQuestions.length).toString())
               }
             </CardTitle>
-            <CardDescription className="text-lg md:text-xl text-center text-foreground pt-1 md:pt-2 min-h-[50px] md:min-h-[60px]">
+            <CardDescription className="text-md md:text-lg text-center text-foreground pt-1 md:pt-1.5 min-h-[40px] md:min-h-[50px]">
               {getTranslatedText(currentQuestion.text)}
             </CardDescription>
           </CardHeader>
@@ -226,31 +365,31 @@ export default function PersonalityTestsClient() {
             <RadioGroup
               value={answers[currentQuestion.id]}
               onValueChange={(value) => handleAnswerSelect(currentQuestion.id, value as StyleId)}
-              className="space-y-2.5 md:space-y-3"
+              className="space-y-2 md:space-y-2.5"
             >
               {currentQuestion.options.map(option => (
                 <Label
                   key={option.value}
                   htmlFor={`option-${currentQuestion.id}-${option.value}`}
-                  className={`flex items-center space-x-2 md:space-x-3 p-3 md:p-4 border rounded-lg cursor-pointer transition-all text-sm leading-snug
-                    ${answers[currentQuestion.id] === option.value ? 'bg-primary/10 border-primary ring-1 md:ring-2 ring-primary' : 'hover:bg-muted/50'}`}
+                  className={`flex items-center space-x-1.5 md:space-x-2 p-2.5 md:p-3 border rounded-md cursor-pointer transition-all text-xs leading-snug md:text-sm 
+                    ${answers[currentQuestion.id] === option.value ? 'bg-primary/10 border-primary ring-1 ring-primary' : 'hover:bg-muted/50'}`}
                 >
                   <RadioGroupItem value={option.value} id={`option-${currentQuestion.id}-${option.value}`} />
-                  <span>{getTranslatedText(option.text)}</span>
+                  <span className="leading-tight">{getTranslatedText(option.text)}</span>
                 </Label>
               ))}
             </RadioGroup>
           </CardContent>
           <CardFooter>
             <Button 
-              className="w-full text-base md:text-lg py-2.5 md:py-3" 
+              className="w-full text-sm md:text-base py-2 md:py-2.5" 
               onClick={handleNextQuestion}
               disabled={!answers[currentQuestion.id]}
             >
               {currentQuestionIndex < totalQuestionsInCurrentSet - 1 ? t.nextButton : 
                 (quizState === 'in_progress_initial' && additionalQuizQuestions.length > 0 ? t.nextButton : t.seeResultsButton)
               }
-              <ArrowRight className="ml-2 h-5 w-5" />
+              <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </CardFooter>
         </Card>
@@ -260,20 +399,20 @@ export default function PersonalityTestsClient() {
 
   if (quizState === 'asking_for_more') {
     return (
-      <div className="max-w-lg md:max-w-xl mx-auto">
+      <div className="max-w-md md:max-w-lg mx-auto">
         <Card className="shadow-xl text-center">
           <CardHeader>
-            <HelpCircle className="mx-auto h-12 w-12 md:h-16 md:w-16 text-primary mb-2 md:mb-3" />
-            <CardTitle className="text-xl md:text-2xl font-headline">{t.askMoreQuestionsTitle}</CardTitle>
-            <CardDescription className="text-base md:text-lg text-muted-foreground pt-1">
+            <HelpCircle className="mx-auto h-10 w-10 md:h-12 md:w-12 text-primary mb-1.5 md:mb-2" />
+            <CardTitle className="text-lg md:text-xl font-headline">{t.askMoreQuestionsTitle}</CardTitle>
+            <CardDescription className="text-sm md:text-base text-muted-foreground pt-0.5">
               {t.askMoreQuestionsDescription.replace(`${additionalQuizQuestions.length} more questions`, `${additionalQuizQuestions.length} ${language === 'my' ? 'ခု နောက်ထပ်မေးခွန်းများ' : 'more questions'}`)}
             </CardDescription>
           </CardHeader>
-          <CardFooter className="flex flex-col sm:flex-row gap-2 md:gap-3">
-            <Button className="w-full sm:flex-1 text-base md:text-lg py-2.5 md:py-3" onClick={handleProceedWithAdditionalQuestions}>
+          <CardFooter className="flex flex-col sm:flex-row gap-1.5 md:gap-2">
+            <Button className="w-full sm:flex-1 text-sm md:text-base py-2 md:py-2.5" onClick={handleProceedWithAdditionalQuestions}>
               {t.askMoreQuestionsConfirm}
             </Button>
-            <Button className="w-full sm:flex-1 text-base md:text-lg py-2.5 md:py-3" variant="outline" onClick={handleDeclineAdditionalQuestions}>
+            <Button className="w-full sm:flex-1 text-sm md:text-base py-2 md:py-2.5" variant="outline" onClick={handleDeclineAdditionalQuestions}>
               {t.askMoreQuestionsDecline}
             </Button>
           </CardFooter>
@@ -283,31 +422,35 @@ export default function PersonalityTestsClient() {
   }
 
   if (quizState === 'completed' && resultStyle) {
-    const styleTitle = t.styles[resultStyle.titleKey as keyof typeof t.styles] as string;
-    // @ts-ignore - This is tricky with nested keys in translations, but should work if keys match.
+    const ResultIcon = getLucideIcon(resultStyle.iconName);
+    // @ts-ignore
+    const styleTitle = t.styles[resultStyle.titleKey as keyof typeof t.styles] || resultStyle.titleKey;
+    // @ts-ignore
     const styleDescriptionKey = t.styles[resultStyle.id]?.descriptionKey as keyof typeof t.styles;
     const styleDescription = styleDescriptionKey ? t.styles[styleDescriptionKey] as string : "Description not found.";
 
 
     return (
-      <div className="max-w-lg md:max-w-xl mx-auto">
+      <div className="max-w-md md:max-w-lg mx-auto">
         <Card className="shadow-xl text-center">
           <CardHeader>
-            <resultStyle.Icon className="mx-auto h-12 w-12 md:h-16 md:w-16 text-primary mb-2 md:mb-3" />
-            <CardTitle className="text-xl md:text-2xl font-headline">{t.resultTitle}</CardTitle>
-            <CardDescription className="text-2xl md:text-3xl font-bold text-accent pt-1">
+            <ResultIcon className="mx-auto h-10 w-10 md:h-12 md:w-12 text-primary mb-1.5 md:mb-2" />
+            <CardTitle className="text-lg md:text-xl font-headline">{t.resultTitle}</CardTitle>
+            <CardDescription className="text-xl md:text-2xl font-bold text-accent pt-0.5">
               {styleTitle}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-base md:text-lg text-foreground/90">{styleDescription}</p>
+            <p className="text-sm md:text-base text-foreground/90">{styleDescription}</p>
           </CardContent>
           <CardFooter>
-            <Button className="w-full text-base md:text-lg py-2.5 md:py-3" onClick={handleStartQuiz} variant="outline">
-              <RotateCcw className="mr-2 h-5 w-5" /> {t.retakeQuizButton}
+            <Button className="w-full text-sm md:text-base py-2 md:py-2.5" onClick={handleStartQuiz} variant="outline">
+              <RotateCcw className="mr-2 h-4 w-4" /> {t.retakeQuizButton}
             </Button>
           </CardFooter>
         </Card>
+         <Separator className="my-6 md:my-8 w-full" />
+        <HistoryBoardSection />
       </div>
     );
   }

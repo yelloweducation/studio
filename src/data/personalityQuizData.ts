@@ -1,6 +1,6 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { Brain, Palette, Users, Zap } from 'lucide-react';
+import * as LucideIcons from 'lucide-react'; // Import all for dynamic icon lookup
 
 export type StyleId = 'analytical' | 'creative' | 'collaborative' | 'practical';
 
@@ -22,10 +22,20 @@ export interface QuizQuestion {
 
 export interface StyleOutcome {
   id: StyleId;
-  titleKey: keyof typeof personalityTestsPageTranslations.en.styles;
-  descriptionKey: keyof typeof personalityTestsPageTranslations.en.styles[StyleId]['descriptionKey'];
-  Icon: LucideIcon;
+  titleKey: keyof PersonalityTestsTranslations['en']['styles']; // For easy title lookup
+  descriptionKey: keyof PersonalityTestsTranslations['en']['styles'][StyleId]['descriptionKey']; // For easy description lookup
+  iconName: keyof typeof LucideIcons; // Store the string name of the Lucide icon
 }
+
+export interface QuizCompletionRecord {
+  id: string; // unique id for the record
+  userIdentifier: string; // e.g., "john****@example.com" or "Guest"
+  styleId: StyleId;
+  styleTitle: string; // Store the translated title at time of completion
+  styleIconName: keyof typeof LucideIcons; // Store icon name string
+  completedAt: string; // ISO Date string
+}
+
 
 export const initialQuizQuestions: QuizQuestion[] = [
   {
@@ -143,25 +153,25 @@ export const styleOutcomes: StyleOutcome[] = [
     id: 'analytical',
     titleKey: 'analyticalTitle',
     descriptionKey: 'analyticalDescription',
-    Icon: Brain,
+    iconName: 'Brain',
   },
   {
     id: 'creative',
     titleKey: 'creativeTitle',
     descriptionKey: 'creativeDescription',
-    Icon: Palette,
+    iconName: 'Palette',
   },
   {
     id: 'collaborative',
     titleKey: 'collaborativeTitle',
     descriptionKey: 'collaborativeDescription',
-    Icon: Users,
+    iconName: 'Users',
   },
   {
     id: 'practical',
     titleKey: 'practicalTitle',
     descriptionKey: 'practicalDescription',
-    Icon: Zap,
+    iconName: 'Zap',
   },
 ];
 
@@ -187,13 +197,19 @@ export type PersonalityTestsTranslations = {
       collaborativeDescription: string;
       practicalTitle: string;
       practicalDescription: string;
-      [key: string]: string | {descriptionKey: string};
+      [key: string]: string | {descriptionKey: string}; // Allows for nested description keys
     };
     comingSoon: string;
     askMoreQuestionsTitle: string;
     askMoreQuestionsDescription: string;
     askMoreQuestionsConfirm: string;
     askMoreQuestionsDecline: string;
+    possibleStylesTitle: string; // New
+    recentCompletionsTitle: string; // New
+    historyUser: string; // New
+    historyStyle: string; // New
+    historyDate: string; // New
+    noHistory: string; // New
   };
   my: {
     pageTitle: string;
@@ -222,72 +238,15 @@ export type PersonalityTestsTranslations = {
     askMoreQuestionsDescription: string;
     askMoreQuestionsConfirm: string;
     askMoreQuestionsDecline: string;
+    possibleStylesTitle: string; // New
+    recentCompletionsTitle: string; // New
+    historyUser: string; // New
+    historyStyle: string; // New
+    historyDate: string; // New
+    noHistory: string; // New
   };
 };
+// Note: The actual translation dictionary is in personality-tests-client.tsx
+// This just defines the expected structure for type safety.
 
-const personalityTestsPageTranslations: PersonalityTestsTranslations = {
-  en: {
-    pageTitle: "Personality & Skill Assessments",
-    pageDescription: "Gain deeper insights into your strengths, preferences, and potential pathways.",
-    quizIntroTitle: "Discover Your Learning & Working Style",
-    quizIntroDescription: "Answer a few short questions to understand your dominant approach to learning and working. This quick quiz can help you identify environments and strategies where you might thrive.",
-    startQuizButton: "Start Style Discovery Quiz",
-    nextButton: "Next Question",
-    seeResultsButton: "See My Style",
-    retakeQuizButton: "Retake Quiz",
-    questionProgress: "Question {current} of {total}",
-    resultTitle: "Your Dominant Style:",
-    styles: {
-      analyticalTitle: "Analytical Thinker",
-      analyticalDescription: "You excel at dissecting complex problems, focusing on logic, data, and systematic approaches. You value accuracy and thorough understanding.",
-      creativeTitle: "Creative Explorer",
-      creativeDescription: "You thrive on originality and innovation, often thinking outside the box. You enjoy experimenting and expressing new ideas.",
-      collaborativeTitle: "Collaborative Leader",
-      collaborativeDescription: "You're a people-person who values teamwork and harmony. You excel at motivating others and building consensus.",
-      practicalTitle: "Practical Doer",
-      practicalDescription: "You're results-oriented and hands-on, preferring to take action and see tangible outcomes. You value efficiency and common sense.",
-      analytical: { descriptionKey: "analyticalDescription" },
-      creative: { descriptionKey: "creativeDescription" },
-      collaborative: { descriptionKey: "collaborativeDescription" },
-      practical: { descriptionKey: "practicalDescription" }
-    },
-    comingSoon: "Quiz functionality is under development and will be available soon!",
-    askMoreQuestionsTitle: "Want a More Refined Result?",
-    askMoreQuestionsDescription: "Answer 3 more questions to help us fine-tune your learning and working style profile.",
-    askMoreQuestionsConfirm: "Yes, Ask More Questions",
-    askMoreQuestionsDecline: "No, Show My Results Now",
-  },
-  my: {
-    pageTitle: "ကိုယ်ရည်ကိုယ်သွေးနှင့် ကျွမ်းကျင်မှု အကဲဖြတ်ချက်များ",
-    pageDescription: "သင်၏ အားသာချက်များ၊ ဦးစားပေးမှုများနှင့် ဖြစ်နိုင်ခြေရှိသော လမ်းကြောင်းများကို ပိုမိုနက်ရှိုင်းစွာ ထိုးထွင်းသိမြင်ပါ။",
-    quizIntroTitle: "သင်၏ သင်ယူမှုနှင့် အလုပ်လုပ်ပုံစံကို ရှာဖွေပါ",
-    quizIntroDescription: "သင်၏ သင်ယူမှုနှင့် အလုပ်လုပ်ပုံစံကို နားလည်ရန် မေးခွန်းအနည်းငယ်ကို ဖြေဆိုပါ။ ဤအမြန်စစ်ဆေးမှုသည် သင်တိုးတက်နိုင်သော ပတ်ဝန်းကျင်များနှင့် နည်းဗျူဟာများကို ဖော်ထုတ်ရန် ကူညီနိုင်ပါသည်။",
-    startQuizButton: "ပုံစံရှာဖွေမှု စတင်ပါ",
-    nextButton: "နောက်မေးခွန်း",
-    seeResultsButton: "ကျွန်ုပ်၏ပုံစံကို ကြည့်ပါ",
-    retakeQuizButton: "ထပ်မံဖြေဆိုပါ",
-    questionProgress: "မေးခွန်း {current} / {total}",
-    resultTitle: "သင်၏ အဓိက ပုံစံ:",
-    styles: {
-      analyticalTitle: "ခွဲခြမ်းစိတ်ဖြာတတ်သော တွေးခေါ်ရှင်",
-      analyticalDescription: "သင်သည် ရှုပ်ထွေးသော ပြဿနာများကို ခွဲခြမ်းစိတ်ဖြာခြင်း၊ ယုတ္တိဗေဒ၊ အချက်အလက်များနှင့် စနစ်တကျ ချဉ်းကပ်မှုများကို အာရုံစိုက်ခြင်းတွင် ထူးချွန်သည်။ တိကျမှန်ကန်မှုနှင့် ပြည့်စုံသော နားလည်မှုကို တန်ဖိုးထားသည်။",
-      creativeTitle: "တီထွင်ဖန်တီးနိုင်သော စူးစမ်းရှာဖွေသူ",
-      creativeDescription: "သင်သည် မူလဖန်တီးမှုနှင့် ဆန်းသစ်တီထွင်မှုတွင် ရှင်သန်ပြီး ဘောင်အပြင်ဘက်တွင် မကြာခဏ တွေးခေါ်တတ်သည်။ စမ်းသပ်ခြင်းနှင့် အကြံဉာဏ်သစ်များ ဖော်ပြခြင်းကို နှစ်သက်သည်။",
-      collaborativeTitle: "ပူးပေါင်းဆောင်ရွက်တတ်သော ခေါင်းဆောင်",
-      collaborativeDescription: "သင်သည် အဖွဲ့လိုက်လုပ်ဆောင်မှုနှင့် သဟဇာတဖြစ်မှုကို တန်ဖိုးထားသော လူမှုဆက်ဆံရေးကောင်းမွန်သူတစ်ဦးဖြစ်သည်။ အခြားသူများကို လှုံ့ဆော်ခြင်းနှင့် သဘောတူညီမှုတည်ဆောက်ခြင်းတွင် ထူးချွန်သည်။",
-      practicalTitle: "လက်တွေ့လုပ်ဆောင်တတ်သူ",
-      practicalDescription: "သင်သည် ရလဒ်ကို ဦးတည်ပြီး လက်တွေ့လုပ်ဆောင်လိုသူဖြစ်ပြီး တိကျသောရလဒ်များကို မြင်တွေ့လိုသည်။ ထိရောက်မှုနှင့် လက်တွေ့ကျမှုကို တန်ဖိုးထားသည်။",
-      analytical: { descriptionKey: "analyticalDescription" },
-      creative: { descriptionKey: "creativeDescription" },
-      collaborative: { descriptionKey: "collaborativeDescription" },
-      practical: { descriptionKey: "practicalDescription" }
-    },
-    comingSoon: "စစ်ဆေးမှုလုပ်ဆောင်ချက်ကို ဖန်တီးနေဆဲဖြစ်ပြီး မကြာမီ ရရှိနိုင်ပါမည်!",
-    askMoreQuestionsTitle: "ပိုမိုတိကျသော ရလဒ်ကို လိုချင်ပါသလား။",
-    askMoreQuestionsDescription: "သင်၏ သင်ယူမှုနှင့် အလုပ်လုပ်ပုံစံကို ပိုမိုတိကျစေရန် နောက်ထပ် မေးခွန်း ၃ ခု ဖြေဆိုပေးပါ။",
-    askMoreQuestionsConfirm: "ဟုတ်ကဲ့၊ နောက်ထပ်မေးခွန်းများ မေးပါ",
-    askMoreQuestionsDecline: "မဟုတ်ပါ၊ ကျွန်ုပ်၏ရလဒ်များကို ယခုပြပါ",
-  }
-};
-// Ensure this is exported if the client component needs it directly (though it likely won't if using useLanguage hook)
-// export { personalityTestsPageTranslations };
+```
