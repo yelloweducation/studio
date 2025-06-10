@@ -3,13 +3,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { courses as allCourses, type Course, type Module, type Lesson } from '@/data/mockData';
+import { courses as defaultMockCourses, type Course, type Module, type Lesson } from '@/data/mockData';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChevronLeft, ChevronRight, CheckCircle, ListChecks, AlertTriangle, Home } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { getEmbedUrl } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import Image from 'next/image'; // Added for lesson image display
 
 export default function LessonViewerPage() {
   const params = useParams();
@@ -43,10 +44,27 @@ export default function LessonViewerPage() {
 
   useEffect(() => {
     setIsLoading(true);
-    // For stability, student-facing views use mock data directly
-    setActiveCourses(allCourses);
+    let coursesToUse: Course[] = [];
+    try {
+      const storedCoursesString = localStorage.getItem('adminCourses');
+      if (storedCoursesString) {
+        const parsedCourses = JSON.parse(storedCoursesString) as Course[];
+        if (Array.isArray(parsedCourses)) {
+          coursesToUse = parsedCourses;
+        } else {
+          console.warn("adminCourses in localStorage was not an array for LessonViewer, using default mock courses.");
+          coursesToUse = defaultMockCourses;
+        }
+      } else {
+        coursesToUse = defaultMockCourses;
+      }
+    } catch (error) {
+      console.error("Error loading courses from localStorage for LessonViewer:", error);
+      coursesToUse = defaultMockCourses;
+    }
+    setActiveCourses(coursesToUse);
     setIsLoading(false);
-  }, []);
+  }, []); // Runs once on mount
 
   if (isLoading) {
     return (
@@ -89,7 +107,7 @@ export default function LessonViewerPage() {
           </CardHeader>
           <CardContent className="space-y-6">
             <p className="text-muted-foreground">
-              The lesson you are trying to access (ID: {lessonId}) may not exist or might have been moved.
+              The lesson you are trying to access (ID: {lessonId}) within module (ID: {moduleId}) of course (ID: {courseId}) may not exist or might have been moved.
             </p>
             <div className="flex flex-col sm:flex-row gap-2 justify-center">
               {courseId && (
@@ -218,3 +236,6 @@ export default function LessonViewerPage() {
     </div>
   );
 }
+
+
+      
