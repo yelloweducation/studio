@@ -119,12 +119,13 @@ function SearchCoursesClientLogic() {
   return (
     <div className="space-y-8">
       <section className="pt-2 pb-6 border-b">
+        {/* "Explore Learning" h1 removed from here */}
         <div className="flex items-center mb-4">
-          <Button variant="outline" size="icon" className="mr-3" onClick={() => router.back()}>
-            <ChevronLeft className="h-5 w-5" />
-            <span className="sr-only">Back</span>
-          </Button>
-          <h1 className="text-3xl font-headline font-semibold">Explore Learning</h1>
+            <Button variant="outline" size="icon" className="mr-3 md:hidden" onClick={() => router.back()}>
+                <ChevronLeft className="h-5 w-5" />
+                <span className="sr-only">Back</span>
+            </Button>
+            {/* Placeholder for title if needed on mobile if header doesn't show full text */}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
           <div className="md:col-span-2">
@@ -276,8 +277,7 @@ function SearchPageInitialSkeleton() {
     <div className="space-y-8">
       <section className="pt-2 pb-6 border-b">
         <div className="flex items-center mb-4">
-          <Skeleton className="h-10 w-10 mr-3 rounded-md" />
-          <Skeleton className="h-8 w-1/3 rounded-md" />
+          {/* Skeleton for Back Button removed or adjusted as title is now in header */}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
           <div className="md:col-span-2">
@@ -348,3 +348,4 @@ export default function SearchCoursesPage() {
     </Suspense>
   );
 }
+

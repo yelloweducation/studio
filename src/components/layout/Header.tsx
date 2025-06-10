@@ -2,10 +2,10 @@
 "use client";
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
-// LuminaLogo import removed as it's no longer used directly in the header's main bar
+import LuminaLogo from '@/components/LuminaLogo'; // Import LuminaLogo
 import { Button } from '@/components/ui/button';
-import { useRouter } from 'next/navigation';
-import { Home, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Menu } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation'; // Import usePathname
+import { Home, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Menu, Search } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
@@ -22,6 +22,7 @@ import React from 'react';
 const Header = () => {
   const { isAuthenticated, user, role, logout, loading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname(); // Get current pathname
   const { theme, toggleTheme } = useTheme();
   const isMobile = useIsMobile();
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
@@ -38,13 +39,23 @@ const Header = () => {
     return '/';
   };
 
+  const isCourseSearchPage = pathname === '/courses/search';
+
   const commonNavButtonClasses = "w-full justify-start py-3 px-2 text-base";
   const commonIconClasses = "mr-2 h-5 w-5";
 
   return (
-    <header className="sticky top-0 z-50 bg-transparent"> {/* Removed bg-card and shadow-md, added bg-transparent */}
-      <nav className="container mx-auto px-4 py-3 flex justify-end items-center"> {/* Changed justify-between to justify-end */}
-        {/* LuminaLogo component removed from here */}
+    <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b"> 
+      <nav className="container mx-auto px-4 py-3 flex justify-between items-center">
+        <div>
+          {isCourseSearchPage ? (
+            <h1 className="text-xl font-bold font-headline text-foreground flex items-center">
+              <Search className="mr-2 h-5 w-5 text-primary"/> Explore Learning
+            </h1>
+          ) : (
+            <LuminaLogo />
+          )}
+        </div>
         
         {isMobile ? (
           <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
@@ -56,7 +67,11 @@ const Header = () => {
             </SheetTrigger>
             <SheetContent side="right" className="w-[280px] sm:w-[320px] p-0">
               <SheetHeader className="p-4 border-b">
-                <SheetTitle>Menu</SheetTitle>
+                 {isCourseSearchPage ? (
+                  <SheetTitle className="flex items-center"><Search className="mr-2 h-5 w-5 text-primary"/>Explore Learning</SheetTitle>
+                ) : (
+                  <SheetTitle><LuminaLogo /></SheetTitle>
+                )}
               </SheetHeader>
               <div className="flex flex-col space-y-1 p-4">
                 <SheetClose asChild>
@@ -64,6 +79,14 @@ const Header = () => {
                     <Link href="/"><Home className={commonIconClasses} /> Home</Link>
                   </Button>
                 </SheetClose>
+                 {!isCourseSearchPage && (
+                  <SheetClose asChild>
+                    <Button variant="ghost" asChild className={commonNavButtonClasses}>
+                      <Link href="/courses/search"><Search className={commonIconClasses} /> Explore Courses</Link>
+                    </Button>
+                  </SheetClose>
+                )}
+
 
                 {loading ? (
                   <Button variant="ghost" className={commonNavButtonClasses} disabled>Loading...</Button>
@@ -115,6 +138,11 @@ const Header = () => {
             <Button variant="ghost" size="sm" asChild className="hover:bg-accent/20">
               <Link href="/"><Home className="mr-1 h-4 w-4" /> Home</Link>
             </Button>
+            {!isCourseSearchPage && (
+                 <Button variant="ghost" size="sm" asChild className="hover:bg-accent/20">
+                    <Link href="/courses/search"><Search className="mr-1 h-4 w-4" /> Explore</Link>
+                </Button>
+            )}
             {loading ? (
                <Button variant="ghost" size="sm" disabled>Loading...</Button>
             ) : isAuthenticated ? (
@@ -127,7 +155,7 @@ const Header = () => {
                   variant="outline" 
                   size="sm" 
                   onClick={handleLogout}
-                  className="border-primary text-primary hover:bg-primary/10"
+                  className="border-primary/50 text-primary hover:bg-primary/10 hover:text-primary"
                 >
                   <LogOut className="mr-1 h-4 w-4" /> Logout
                 </Button>
