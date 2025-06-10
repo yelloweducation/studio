@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   viewport: {
     width: 'device-width',
     initialScale: 1,
-    viewportFit: 'cover', // Added for edge-to-edge display
+    // Removed viewportFit: 'cover'
   },
 };
 
