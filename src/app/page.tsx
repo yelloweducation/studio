@@ -69,7 +69,10 @@ export default function Home() {
       <div className="fixed inset-0 bg-background z-50 flex flex-col items-center justify-center p-0 sm:p-4">
         <Card className="w-full max-w-md h-full sm:h-[calc(100vh-4rem)] sm:rounded-lg shadow-2xl flex flex-col">
           <div className="p-3 border-b flex justify-between items-center shrink-0">
-            <h2 className="text-lg font-semibold font-headline">For You</h2>
+            <h2 className="text-lg font-semibold font-headline flex items-center">
+              For You
+              <Circle className="ml-2 h-4 w-4 text-primary fill-current" />
+            </h2>
             <Button variant="ghost" size="icon" onClick={handleCloseVideoFeed} aria-label="Close video feed">
               <X className="h-5 w-5" />
             </Button>
@@ -122,7 +125,7 @@ export default function Home() {
         </form>
         
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4 w-full max-w-md mx-auto">
-            <Button asChild size="lg" className="w-full sm:w-auto transition-all duration-150">
+            <Button asChild size="lg" className="w-full sm:w-auto">
                 <Link href="/courses/search">
                     <Compass className="mr-2 h-5 w-5" /> Explore
                 </Link>
@@ -131,7 +134,7 @@ export default function Home() {
               onClick={handleShowVideos} 
               size="lg" 
               variant="accent"
-              className="w-full sm:w-auto transition-all duration-150">
+              className="w-full sm:w-auto">
                 <VideoIcon className="mr-2 h-5 w-5" /> View Reels
             </Button>
         </div>
