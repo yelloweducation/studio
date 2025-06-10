@@ -34,7 +34,7 @@ const homePageTranslations = {
     searchPlaceholder: "အတန်းများရှာပါ၊ ဥပမာ - Web Development",
     coursesButton: "အတန်း", // Updated from သင်တန်းများ to သင်တန်း, then to အတန်း
     reelsButton: "ဗီဒီယို", // Updated from ရီးလ်များ
-    flashCardsButton: "ကတ်ပြား", // Added (Katt Pyar - Card)
+    flashCardsButton: "ကတ်ပြားများ", // Changed from ကတ်ပြား
     personalityTestLink: "သင်၏ အားသာချက်များကို ရှာဖွေပါ",
     privacyPolicy: "ကိုယ်ရေးအချက်အလက်မူဝါဒ",
     termsOfService: "ဝန်ဆောင်မှုစည်းမျဉ်းများ",
@@ -92,13 +92,13 @@ export default function Home() {
           </Button>
         </form>
         
-        <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 items-center justify-center gap-3 sm:gap-4 w-full max-w-xs sm:max-w-lg lg:max-w-xl mx-auto">
+        <div className="mt-8 grid grid-cols-2 items-center justify-center gap-3 sm:gap-4 w-full max-w-xs sm:max-w-md lg:max-w-lg mx-auto">
             <Button 
               asChild 
               size="lg" 
               variant="default" 
               className={cn(
-                "w-full", // Changed from flex-1 for grid layout
+                "w-full",
                 language === 'my' ? 'text-xs sm:text-sm' : 'text-sm'
               )}
             >
@@ -111,7 +111,7 @@ export default function Home() {
               size="lg" 
               variant="accent"
               className={cn(
-                "w-full", // Changed from flex-1 for grid layout
+                "w-full", 
                 language === 'my' ? 'text-xs sm:text-sm' : 'text-sm'
               )}
             >
@@ -119,29 +119,24 @@ export default function Home() {
                     <VideoIcon className="mr-2 h-5 w-5" /> {t.reelsButton}
                 </Link>
             </Button>
-            <Button 
-              asChild 
-              size="lg" 
-              variant="secondary" // Or another variant if preferred
-              className={cn(
-                "w-full col-span-2 sm:col-span-1", // Span full width on smallest, then normal
-                language === 'my' ? 'text-xs sm:text-sm' : 'text-sm'
-              )}
-            >
-                <Link href="/flash-cards"> 
-                    <Layers className="mr-2 h-5 w-5" /> {t.flashCardsButton}
-                </Link>
-            </Button>
         </div>
 
-        {/* Personality Test Link Section */}
-        <div className="mt-6 text-center">
+        {/* Text Links Section */}
+        <div className="mt-6 text-center space-y-2">
           <Link href="/personality-tests" className={cn(
-            "inline-flex items-center text-sm font-medium text-foreground hover:text-primary transition-colors blinking-cursor-text py-2 group",
+            "inline-flex items-center text-sm font-medium text-foreground hover:text-primary transition-colors blinking-cursor-text py-1 group",
             language === 'my' ? 'text-xs sm:text-sm' : 'text-sm'
           )}>
             <Brain className="mr-2 h-4 w-4 text-primary/80 group-hover:text-primary transition-colors" />
             {t.personalityTestLink}
+          </Link>
+          <br /> {/* Ensure it's on a new line */}
+          <Link href="/flash-cards" className={cn(
+            "inline-flex items-center text-sm font-medium text-foreground hover:text-primary transition-colors blinking-cursor-text py-1 group",
+            language === 'my' ? 'text-xs sm:text-sm' : 'text-sm'
+          )}>
+            <Layers className="mr-2 h-4 w-4 text-primary/80 group-hover:text-primary transition-colors" />
+            {t.flashCardsButton}
           </Link>
         </div>
       </section>
@@ -188,4 +183,4 @@ export default function Home() {
     </div>
   );
 }
-
+    
