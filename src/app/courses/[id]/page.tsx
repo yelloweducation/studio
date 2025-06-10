@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChevronLeft, BookOpenText, PlayCircle, Lock, CheckCircle, AlertTriangle, Clock, ExternalLink, ArrowRight } from 'lucide-react';
+import { ChevronLeft, BookOpenText, PlayCircle, Lock, CheckCircle, AlertTriangle, Clock, ExternalLink, ArrowRight, Home } from 'lucide-react';
 import { getEmbedUrl } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
@@ -34,63 +34,87 @@ export default function CourseDetailPage() {
   const [completionInfo, setCompletionInfo] = useState<CompletionInfo | null>(null);
   const [isLoadingPage, setIsLoadingPage] = useState(true);
 
-  // Effect 1: Load allAppCourses (using mock data for student view stability)
+  // Effect 1: Load allAppCourses (prioritizing localStorage)
   useEffect(() => {
-    setAllAppCourses(mockDataCourses);
+    setIsLoadingPage(true); // Start loading immediately
+    let coursesToUse: Course[] = [];
+    try {
+      const storedCoursesString = localStorage.getItem('adminCourses');
+      if (storedCoursesString) {
+        const parsedCourses = JSON.parse(storedCoursesString) as Course[];
+        if (Array.isArray(parsedCourses)) {
+          coursesToUse = parsedCourses; // Use admin-managed courses if valid
+        } else {
+          console.warn("adminCourses in localStorage was not an array, using default mock courses.");
+          coursesToUse = mockDataCourses;
+        }
+      } else {
+        coursesToUse = mockDataCourses; // Fallback if not in localStorage
+      }
+    } catch (error) {
+      console.error("Error loading courses from localStorage:", error);
+      coursesToUse = mockDataCourses; // Fallback on error
+    }
+    setAllAppCourses(coursesToUse);
     setAreAppCoursesLoaded(true);
+    // setIsLoadingPage(false) will be handled by Effect 3
   }, []);
 
   // Effect 2: Determine currentCourse and firstLessonPath
   useEffect(() => {
-    if (!areAppCoursesLoaded || !courseId) {
-      if (!courseId && areAppCoursesLoaded) { // Only set loading false if app courses loaded but no ID
-          setCurrentCourse(null);
-          setFirstLessonPath(null);
-      }
+    if (!areAppCoursesLoaded) {
+      setCurrentCourse(null); // Ensure reset if courses aren't loaded yet
+      setFirstLessonPath(null);
       return;
     }
+
+    if (!courseId) {
+      setCurrentCourse(null);
+      setFirstLessonPath(null);
+      setIsLoadingPage(false); // No course ID, so stop loading
+      return;
+    }
+    
+    // Ensure isLoadingPage is true while searching for the course
+    // This prevents premature rendering of "not found" if allAppCourses is still being set by Effect 1
+    if(!currentCourse && courseId) { // Only set true if we are actively looking for a course
+        setIsLoadingPage(true);
+    }
+
 
     const foundCourse = allAppCourses.find(c => c.id === courseId);
     setCurrentCourse(foundCourse || null);
 
     if (foundCourse && foundCourse.modules && foundCourse.modules.length > 0 &&
         foundCourse.modules[0].lessons && foundCourse.modules[0].lessons.length > 0) {
-      setFirstLessonPath(`/courses/${foundCourse.id}/learn/${foundCourse.modules[0].id}/${foundCourse.modules[0].lessons[0].id}`);
+      setFirstLessonPath(`/courses/${foundCourse.id}/learn/${foundCourse.id}/${foundCourse.modules[0].id}/${foundCourse.modules[0].lessons[0].id}`);
     } else {
       setFirstLessonPath(null);
     }
+    // setIsLoadingPage(false) will be handled by Effect 3
   }, [courseId, allAppCourses, areAppCoursesLoaded]);
+
 
   // Effect 3: Load user-specific data (completion) and manage final loading state
   useEffect(() => {
-    setIsLoadingPage(true); // Start loading whenever dependencies change
+    // Start loading if not already, or if dependencies change that require re-evaluation
+    if(!isLoadingPage && (currentCourse || courseId)) setIsLoadingPage(true);
     setCompletionInfo(null);
 
     if (!areAppCoursesLoaded) {
       // Still waiting for all courses to load, keep isLoadingPage true.
-      // Explicitly do not set isLoadingPage to false here.
-      return;
-    }
-
-    // If courseId is present but currentCourse is null after Effect 2, course not found
-    if (courseId && !currentCourse) {
-      setIsLoadingPage(false);
       return;
     }
     
-    // If no courseId, nothing to load
-    if (!courseId) {
-        setIsLoadingPage(false);
-        return;
-    }
-
-    // If no currentCourse, and courseId was present, it means it wasn't found.
-    if (!currentCourse) {
-      setIsLoadingPage(false);
+    // If no courseId, or if courseId is present but no currentCourse was found after Effect 2 finished
+    if (!courseId || (courseId && !currentCourse)) {
+      setIsLoadingPage(false); // Stop loading if no course or course not found
       return;
     }
     
-    // If user is authenticated, fetch their completion info
+    // At this point, currentCourse should be set (or null if not found after trying)
+    // and areAppCoursesLoaded is true.
+    
     if (isAuthenticated && user && currentCourse) {
       const enrollment = mockDataEnrollments.find(e => e.userId === user.id && e.courseId === currentCourse.id);
       if (enrollment) {
@@ -107,7 +131,7 @@ export default function CourseDetailPage() {
 
 
   const renderCTAButton = () => {
-    if (!currentCourse) return null;
+    if (!currentCourse) return null; // Handled by the main not found message
 
     if (completionInfo?.isCompleted) {
       return (
@@ -183,7 +207,7 @@ export default function CourseDetailPage() {
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground mb-6">
-              Sorry, we couldn't find the course you were looking for (ID: {courseId}). It might have been moved or removed.
+              Sorry, we couldn&apos;t find the course you were looking for (ID: {courseId}). It might have been moved or removed, or it&apos;s still being prepared.
             </p>
             <Button asChild>
               <Link href="/courses/search">Explore Other Courses</Link>

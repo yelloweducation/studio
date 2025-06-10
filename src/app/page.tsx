@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Video as VideoIcon, Tv, Loader2, X, Search, LayoutGrid } from 'lucide-react';
 import VideoCard from '@/components/videos/VideoCard';
-import { videos as mockVideos, type Video, categories as defaultMockCategories, type Category } from '@/data/mockData'; // Renamed mockCategories to defaultMockCategories
+import { videos as mockVideos, type Video, categories as defaultMockCategories, type Category } from '@/data/mockData';
 import CategoryCard from '@/components/categories/CategoryCard';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -29,18 +29,28 @@ export default function Home() {
 
   useEffect(() => {
     setIsLoadingCategories(true);
+    let loadedCategories: Category[] = [];
     try {
       const storedCategoriesString = localStorage.getItem('adminCategories');
       if (storedCategoriesString) {
         const parsedCategories = JSON.parse(storedCategoriesString) as Category[];
-        setCategories(parsedCategories.slice(0, 6)); // Show a limited number of categories
+        // Use parsedCategories directly if it's a valid array, even if empty
+        if (Array.isArray(parsedCategories)) {
+            loadedCategories = parsedCategories;
+        } else {
+            // Fallback if not an array (malformed data)
+            console.warn("adminCategories in localStorage was not an array, using default.");
+            loadedCategories = defaultMockCategories;
+        }
       } else {
-        setCategories(defaultMockCategories.slice(0, 6));
+        // Fallback if item doesn't exist in localStorage
+        loadedCategories = defaultMockCategories;
       }
     } catch (error) {
       console.error("Error loading categories from localStorage:", error);
-      setCategories(defaultMockCategories.slice(0, 6)); // Fallback to mock data on error
+      loadedCategories = defaultMockCategories; // Fallback to mock data on error
     } finally {
+      setCategories(loadedCategories.slice(0, 6)); // Show a limited number of categories
       setIsLoadingCategories(false);
     }
 
@@ -180,7 +190,7 @@ export default function Home() {
         ) : (
           <Card className="w-full mt-8">
             <CardContent className="pt-6">
-              <p className="text-center text-muted-foreground">No categories available right now.</p>
+              <p className="text-center text-muted-foreground">No categories available right now. Add some in the admin panel!</p>
             </CardContent>
           </Card>
         )}
