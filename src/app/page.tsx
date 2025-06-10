@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils"; // Added for conditional classnames
 const homePageTranslations = {
   en: {
     title: "Yellow Institute",
-    subtitle: "Your journey to knowledge and career insights.",
+    subtitle: "Your Future Tech Infused Education.",
     searchPlaceholder: "Search courses, e.g., Web Development",
     coursesButton: "Courses",
     reelsButton: "Reels",
@@ -28,7 +28,7 @@ const homePageTranslations = {
   },
   my: {
     title: "အဝါရောင်တက္ကသိုလ်", // Awar Yaung Tekkatho
-    subtitle: "သင့်ရဲ့ဗဟုသုတနှင့် အသက်မွေးဝမ်းကျောင်းဆိုင်ရာ ထိုးထွင်းသိမြင်မှုခရီးစဉ်။",
+    subtitle: "သင့်အတွက် အနာဂတ်နည်းပညာပညာရေး。",
     searchPlaceholder: "သင်တန်းများရှာပါ၊ ဥပမာ - Web Development",
     coursesButton: "သင်တန်း", // Updated from သင်တန်းများ
     reelsButton: "ဗီဒီယို", // Updated from ရီးလ်များ
