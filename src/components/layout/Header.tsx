@@ -46,7 +46,7 @@ const Header = () => {
   const commonIconClasses = "mr-2 h-5 w-5";
 
   return (
-    <header className={`sticky top-0 z-50 ${isMobileHomepage ? '' : 'bg-background/80 backdrop-blur-md border-b'}`}> 
+    <header className={`sticky top-0 z-50 ${(isMobileHomepage || (isMobile && isCourseSearchPage)) ? '' : 'bg-background/80 backdrop-blur-md border-b'}`}> 
       <nav className="container mx-auto px-4 py-3 flex justify-between items-center min-h-[57px]">
         {/* === LEFT SECTION === */}
         <div className="flex items-center">
@@ -62,7 +62,6 @@ const Header = () => {
               )}
             </div>
           ) : (
-            // Existing logic for logo or "Explore Learning" title for non-mobile-homepage
             isCourseSearchPage ? (
               <h1 className="text-xl font-bold font-headline text-foreground flex items-center">
                 <Search className="mr-2 h-5 w-5 text-primary"/> Explore Learning
@@ -76,7 +75,6 @@ const Header = () => {
         {/* === RIGHT SECTION === */}
         <div className="flex items-center space-x-1">
           {isMobileHomepage ? (
-            // Specific right-side icons for mobile homepage
             <>
               {loading && (
                 <Button variant="ghost" size="icon" disabled>
@@ -98,7 +96,6 @@ const Header = () => {
               </Button>
             </>
           ) : isMobile ? (
-            // Sheet (hamburger menu) for other mobile pages
             <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon">

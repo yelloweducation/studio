@@ -117,15 +117,13 @@ function SearchCoursesClientLogic() {
   };
 
   return (
-    <div className="space-y-8">
-      <section className="pt-2 pb-6 border-b">
-        {/* "Explore Learning" h1 removed from here */}
-        <div className="flex items-center mb-4">
+    <div className="space-y-4 md:space-y-6">
+      <section className="pt-2 pb-4 md:pb-6 border-b">
+        <div className="flex items-center mb-2"> {/* Reduced mb from mb-4 */}
             <Button variant="outline" size="icon" className="mr-3 md:hidden" onClick={() => router.back()}>
                 <ChevronLeft className="h-5 w-5" />
                 <span className="sr-only">Back</span>
             </Button>
-            {/* Placeholder for title if needed on mobile if header doesn't show full text */}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
           <div className="md:col-span-2">
@@ -178,7 +176,7 @@ function SearchCoursesClientLogic() {
             <LayoutGrid className="mr-2 h-6 w-6 text-primary" /> Browse Categories
           </h2>
         </div>
-        {isLoading && availableCategories.length === 0 ? ( // Show skeleton only if categories are truly loading and not yet available
+        {isLoading && availableCategories.length === 0 ? ( 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="bg-card rounded-lg shadow-md">
@@ -210,7 +208,7 @@ function SearchCoursesClientLogic() {
          <h2 className="text-2xl font-headline font-semibold mb-6 mt-8 flex items-center">
             <GraduationCap className="mr-2 h-6 w-6 text-primary" /> Available Courses
         </h2>
-        {isLoading && displayedCourses.length === 0 ? ( // Show skeleton only if courses are truly loading and not yet available
+        {isLoading && displayedCourses.length === 0 ? ( 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3, 4, 5, 6].map(i => (
               <Card key={i} className="flex flex-col overflow-hidden shadow-lg">
@@ -274,10 +272,9 @@ function SearchCoursesClientLogic() {
 
 function SearchPageInitialSkeleton() {
   return (
-    <div className="space-y-8">
-      <section className="pt-2 pb-6 border-b">
-        <div className="flex items-center mb-4">
-          {/* Skeleton for Back Button removed or adjusted as title is now in header */}
+    <div className="space-y-4 md:space-y-6"> {/* Adjusted space-y */}
+      <section className="pt-2 pb-4 md:pb-6 border-b"> {/* Adjusted pb */}
+        <div className="flex items-center mb-2"> {/* Adjusted mb */}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
           <div className="md:col-span-2">
