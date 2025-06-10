@@ -1,6 +1,8 @@
 
-"use client";
-import React, { useState, useEffect, useMemo } from 'react';
+// This directive applies to the module, making SearchCoursesClientLogic a client component.
+"use client"; 
+
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -11,71 +13,73 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Search, X, ChevronLeft } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
-export default function SearchCoursesPage() {
+// Client component containing the core logic and UI for the search page
+function SearchCoursesClientLogic() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  
   const initialQuery = searchParams.get('query') || '';
   const initialCategory = searchParams.get('category') || 'all';
 
   const [searchTerm, setSearchTerm] = useState(initialQuery);
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [displayedCourses, setDisplayedCourses] = useState<Course[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true); 
 
   const [availableCourses, setAvailableCourses] = useState<Course[]>([]);
   const [availableCategories, setAvailableCategories] = useState<Category[]>([]);
 
   useEffect(() => {
     setIsLoading(true);
-    // Load courses from localStorage or fallback to mock
+    let coursesToUse: Course[] = [];
+    let categoriesToUse: Category[] = [];
+
     try {
       const storedCoursesString = localStorage.getItem('adminCourses');
       if (storedCoursesString) {
-        const parsedCourses = JSON.parse(storedCoursesString) as Course[];
-        setAvailableCourses(parsedCourses);
+        const parsed = JSON.parse(storedCoursesString);
+        coursesToUse = Array.isArray(parsed) ? parsed : defaultMockCourses;
       } else {
-        setAvailableCourses(defaultMockCourses);
+        coursesToUse = defaultMockCourses;
       }
     } catch (error) {
       console.error("Error loading courses from localStorage:", error);
-      setAvailableCourses(defaultMockCourses);
+      coursesToUse = defaultMockCourses;
     }
+    setAvailableCourses(coursesToUse);
 
-    // Load categories from localStorage or fallback to mock
     try {
       const storedCategoriesString = localStorage.getItem('adminCategories');
       if (storedCategoriesString) {
-        const parsedCategories = JSON.parse(storedCategoriesString) as Category[];
-        setAvailableCategories(parsedCategories);
+        const parsed = JSON.parse(storedCategoriesString);
+        categoriesToUse = Array.isArray(parsed) ? parsed : defaultMockCategories;
       } else {
-        setAvailableCategories(defaultMockCategories);
+        categoriesToUse = defaultMockCategories;
       }
     } catch (error) {
       console.error("Error loading categories from localStorage:", error);
-      setAvailableCategories(defaultMockCategories);
+      categoriesToUse = defaultMockCategories;
     }
-    // Note: setIsLoading(false) will be handled in the filtering useEffect
+    setAvailableCategories(categoriesToUse);
+    // Initial loading based on localStorage/mock is done, further loading state changes in filter effect
   }, []);
 
+  useEffect(() => {
+    // Sync local state with URL params if they change (e.g. browser back/forward)
+    setSearchTerm(initialQuery);
+    setSelectedCategory(initialCategory);
+  }, [initialQuery, initialCategory]);
 
   useEffect(() => {
-    if (!availableCourses.length && !availableCategories.length && initialQuery === '' && initialCategory === 'all') {
-        // If everything is empty and no search params, might still be loading initial data
-        // or there's genuinely no data. Defer setIsLoading(false)
-        if(localStorage.getItem('adminCourses') || localStorage.getItem('adminCategories')){
-             // If local storage items exist, we are likely waiting for them.
-        } else {
-             setIsLoading(false); // No local storage, so assume initial mock data (or lack thereof) is final.
-        }
-    }
+    setIsLoading(true); // Start loading whenever filters or data change
 
-    let filtered = [...availableCourses]; // Create a new array to avoid mutating state directly
+    let filtered = [...availableCourses];
 
     if (searchTerm) {
       filtered = filtered.filter(course =>
         course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        course.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        course.instructor.toLowerCase().includes(searchTerm.toLowerCase())
+        (course.description && course.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (course.instructor && course.instructor.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 
@@ -84,21 +88,27 @@ export default function SearchCoursesPage() {
     }
 
     setDisplayedCourses(filtered);
-    setIsLoading(false); // Set loading to false after filtering is complete
+    setIsLoading(false);
 
     // Update URL
-    const params = new URLSearchParams();
-    if (searchTerm) params.set('query', searchTerm);
-    if (selectedCategory && selectedCategory !== 'all') params.set('category', selectedCategory);
-    
-    // Only push if params actually change to avoid redundant navigation
-    const currentQueryString = `?${params.toString()}`;
-    if (searchParams.toString() !== params.toString()) {
-        router.replace(`/courses/search${currentQueryString === '?' ? '' : currentQueryString}`, { scroll: false });
+    const params = new URLSearchParams(searchParams.toString()); // Current params as base
+    if (searchTerm) {
+      params.set('query', searchTerm);
+    } else {
+      params.delete('query');
+    }
+    if (selectedCategory && selectedCategory !== 'all') {
+      params.set('category', selectedCategory);
+    } else {
+      params.delete('category');
     }
     
-
-  }, [searchTerm, selectedCategory, availableCourses, availableCategories, router, searchParams, initialCategory, initialQuery]);
+    const newQueryString = params.toString();
+    // Only push if params actually change to avoid redundant navigation and history entries
+    if (newQueryString !== searchParams.toString()) {
+        router.replace(`/courses/search${newQueryString ? `?${newQueryString}` : ''}`, { scroll: false });
+    }
+  }, [searchTerm, selectedCategory, availableCourses, availableCategories, router, searchParams]);
 
 
   const handleClearFilters = () => {
@@ -203,5 +213,60 @@ export default function SearchCoursesPage() {
         )}
       </section>
     </div>
+  );
+}
+
+// Skeleton component for the Suspense fallback
+function SearchPageInitialSkeleton() {
+  return (
+    <div className="space-y-8">
+      <section className="pt-2 pb-6 border-b">
+        <div className="flex items-center mb-4">
+          <Skeleton className="h-10 w-10 mr-3 rounded-md" />
+          <Skeleton className="h-8 w-1/3 rounded-md" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+          <div className="md:col-span-2">
+            <Skeleton className="h-4 w-1/4 mb-1 rounded-md" />
+            <Skeleton className="h-10 w-full rounded-md" />
+          </div>
+          <div>
+            <Skeleton className="h-4 w-1/4 mb-1 rounded-md" />
+            <Skeleton className="h-10 w-full rounded-md" />
+          </div>
+        </div>
+      </section>
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {[1, 2, 3].map(i => (
+          <Card key={i} className="flex flex-col overflow-hidden shadow-lg">
+            <CardHeader className="p-0">
+              <Skeleton className="aspect-[16/9] w-full" />
+              <div className="p-6">
+                <Skeleton className="h-6 w-3/4 mb-2 rounded-md" />
+                <Skeleton className="h-4 w-1/2 rounded-md" />
+              </div>
+            </CardHeader>
+            <CardContent className="flex-grow px-6 pb-4">
+              <Skeleton className="h-4 w-full mb-1 rounded-md" />
+              <Skeleton className="h-4 w-5/6 mb-3 rounded-md" />
+              <Skeleton className="h-3 w-1/3 rounded-md" />
+            </CardContent>
+            <CardFooter className="px-6 pb-6">
+              <Skeleton className="h-10 w-full rounded-md" />
+            </CardFooter>
+          </Card>
+        ))}
+      </section>
+    </div>
+  );
+}
+
+// Default export for the page - this component sets up the Suspense boundary.
+// It does not need to be a client component if it's only rendering Suspense and the client child.
+export default function SearchCoursesPage() {
+  return (
+    <Suspense fallback={<SearchPageInitialSkeleton />}>
+      <SearchCoursesClientLogic />
+    </Suspense>
   );
 }
