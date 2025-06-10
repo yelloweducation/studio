@@ -25,40 +25,37 @@ export function getEmbedUrl(url: string | undefined | null): string | null {
     }
 
     // Handle TikTok URLs
-    // Standard URL: https://www.tiktok.com/@username/video/1234567890123456789
-    // Embed URL: https://www.tiktok.com/embed/v2/1234567890123456789
     if (urlObj.hostname === 'www.tiktok.com') {
-      if (urlObj.pathname.startsWith('/embed/')) {
+      if (urlObj.pathname.startsWith('/embed/')) { // e.g. /embed/123 or /embed/v2/123
         return url; // Already an embed URL
       }
+      
       const pathParts = urlObj.pathname.split('/');
       // Expected format: /@username/video/VIDEO_ID
+      // pathParts for /@username/video/VIDEO_ID will be ['', '@username', 'video', 'VIDEO_ID']
       if (pathParts.length >= 4 && pathParts[2] === 'video') {
         const videoId = pathParts[3];
-        // Ensure videoId is purely numeric for standard TikTok video IDs
-        if (videoId && /^\d+$/.test(videoId)) {
-             return `https://www.tiktok.com/embed/v2/${videoId}`;
+        if (videoId && /^\d+$/.test(videoId)) { // Ensure videoId is purely numeric
+          return `https://www.tiktok.com/embed/v2/${videoId}`;
         }
-        // If videoId format is not as expected (e.g., contains non-numeric characters where numeric is expected)
-        return null;
+        // If videoId is not numeric, or if the path structure matched but ID was invalid.
+        return null; 
       }
+      // If it's www.tiktok.com but not /embed/ and not the recognized /@user/video/ID format.
+      return null;
     }
 
     // Handle shortened TikTok URLs (e.g., vt.tiktok.com, vm.tiktok.com)
-    // These URLs redirect to the full video page. Extracting the final video ID
-    // for embedding requires following this redirect, which is not reliably feasible
-    // purely client-side due to potential CORS issues or the need for network requests.
-    // Therefore, these URLs will result in a null embed URL, and the UI should fall back
-    // to displaying a thumbnail or placeholder.
     if (urlObj.hostname === 'vt.tiktok.com' || urlObj.hostname === 'vm.tiktok.com') {
-      // console.warn(`Shortened TikTok URL (${url}) provided. These cannot be directly embedded client-side. Thumbnail fallback will be used.`);
+      // These URLs redirect. Extracting the final video ID for embedding is not reliably
+      // feasible client-side due to potential CORS or network request needs.
       return null;
     }
     
-    // Handle Google Drive URLs for course lessons (existing logic)
+    // Handle Google Drive URLs for course lessons
     if (urlObj.hostname === 'drive.google.com') {
       if (urlObj.pathname.includes('/preview')) {
-        return url;
+        return url; // Already a preview/embed URL
       }
       let fileId: string | null = null;
       if (urlObj.pathname.startsWith('/file/d/')) {
@@ -71,13 +68,13 @@ export function getEmbedUrl(url: string | undefined | null): string | null {
       if (fileId) {
         return `https://drive.google.com/file/d/${fileId}/preview`;
       }
-      return null;
+      return null; // Could not extract fileId from Google Drive URL
     }
 
   } catch (error) {
-    // console.error("Error parsing or transforming embed URL:", url, error); // Keep for debugging if needed
+    // console.error("Error parsing or transforming embed URL:", url, error);
     return null;
   }
-  // If it's a URL but not one we transform, and not caught by specific handlers, return null.
+  // If it's a valid URL but not handled by any specific logic above.
   return null;
 }
