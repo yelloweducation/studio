@@ -27,7 +27,7 @@ const homePageTranslations = {
     myanmar: "Myanmar"
   },
   my: {
-    title: "အဝါရောင်တက္ကသိုလ်", // Awar Yaung Tekkatho
+    title: "အဝါရောင်အင်စတီကျု", // Changed from "အဝါရောင်တက္ကသိုလ်"
     subtitle: "သင့်အတွက် အနာဂတ်နည်းပညာပညာရေး。",
     searchPlaceholder: "သင်တန်းများရှာပါ၊ ဥပမာ - Web Development",
     coursesButton: "သင်တန်း", // Updated from သင်တန်းများ
@@ -35,7 +35,7 @@ const homePageTranslations = {
     privacyPolicy: "ကိုယ်ရေးအချက်အလက်မူဝါဒ",
     termsOfService: "ဝန်ဆောင်မှုစည်းမျဉ်းများ",
     aboutUs: "ကျွန်ုပ်တို့အကြောင်း",
-    darkTheme: "အမှောင်ပုံစံ",
+    darkTheme: "အမဲရောင်", // Changed from "အမှောင်ပုံစံ"
     availableLanguages: "ရရှိနိုင်သောဘာသာစကားများ",
     english: "အင်္ဂလိပ်",
     myanmar: "မြန်မာ"
@@ -160,3 +160,4 @@ export default function Home() {
     </div>
   );
 }
+
