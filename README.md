@@ -1,3 +1,5 @@
-# Yellow Institute - Learning Platform
+# Firebase Studio
 
-This is the source code of Yellow Institute online Learning Platform.
+This is a NextJS starter in Firebase Studio.
+
+To get started, take a look at src/app/page.tsx.
