@@ -11,7 +11,7 @@ import CategoryCard from '@/components/categories/CategoryCard';
 import { courses as defaultMockCourses, type Course, categories as defaultMockCategories, type Category } from '@/data/mockData';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Search, X, ChevronLeft, LayoutGrid, GraduationCap } from 'lucide-react';
+import { Search, X, LayoutGrid, GraduationCap } from 'lucide-react'; // Removed ChevronLeft
 import { Skeleton } from '@/components/ui/skeleton';
 
 const CareerAdviceChatbox = lazy(() => import('@/components/ai/CareerAdviceChatbox'));
@@ -117,14 +117,9 @@ function SearchCoursesClientLogic() {
   };
 
   return (
-    <div className="space-y-4 md:space-y-6">
-      <section className="pt-2 pb-4 md:pb-6 border-b">
-        <div className="flex items-center mb-2"> {/* Reduced mb from mb-4 */}
-            <Button variant="outline" size="icon" className="mr-3 md:hidden" onClick={() => router.back()}>
-                <ChevronLeft className="h-5 w-5" />
-                <span className="sr-only">Back</span>
-            </Button>
-        </div>
+    <div className="space-y-4 md:space-y-6 pt-2 md:pt-0"> {/* Added pt-2 for mobile, md:pt-0 */}
+      <section className="pb-4 md:pb-6 border-b">
+        {/* Removed the mobile back button div */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
           <div className="md:col-span-2">
             <label htmlFor="search-input" className="block text-sm font-medium text-muted-foreground mb-1">
@@ -272,10 +267,9 @@ function SearchCoursesClientLogic() {
 
 function SearchPageInitialSkeleton() {
   return (
-    <div className="space-y-4 md:space-y-6"> {/* Adjusted space-y */}
-      <section className="pt-2 pb-4 md:pb-6 border-b"> {/* Adjusted pb */}
-        <div className="flex items-center mb-2"> {/* Adjusted mb */}
-        </div>
+    <div className="space-y-4 md:space-y-6 pt-2 md:pt-0"> {/* Adjusted pt-2 for mobile */}
+      <section className="pb-4 md:pb-6 border-b">
+        {/* Removed skeleton for back button */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
           <div className="md:col-span-2">
             <Skeleton className="h-4 w-1/4 mb-1 rounded-md" />
