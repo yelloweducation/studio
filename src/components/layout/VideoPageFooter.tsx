@@ -20,7 +20,7 @@ const videoFooterTranslations = {
     home: "ပင်မ", // Home
     explore: "ရှာဖွေရန်", // Explore
     reels: "ဗီဒီယို", // Reels (Video)
-    notifications: "အသိပေးချက်များ", // Notifications
+    notifications: "နိုတီ", // Notifications
     profile: "ပရိုဖိုင်" // Profile
   }
 };
