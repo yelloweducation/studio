@@ -44,23 +44,46 @@ export const getAuthState = (): AuthState => {
   if (storedState) {
     try {
       const parsedState = JSON.parse(storedState) as AuthState;
-      // Re-verify user details, especially role, from the central user list
       if (parsedState.isAuthenticated && parsedState.user) {
-        const allUsers = getUsersFromStorage();
-        const currentUserDetails = allUsers.find(u => u.id === parsedState.user?.id);
-        if (currentUserDetails) {
+        const allUsers = getUsersFromStorage(); // From localStorage or defaults to initialMockUsers
+        const userFromManagedList = allUsers.find(u => u.id === parsedState.user?.id);
+
+        if (userFromManagedList) {
+          // User found in the managed list, use its role and details (most up-to-date)
           return {
             isAuthenticated: true,
-            user: currentUserDetails,
-            role: currentUserDetails.role,
+            user: userFromManagedList,
+            role: userFromManagedList.role,
           };
         } else {
-          // User in auth state no longer exists in user list, treat as logged out
-          clearAuthState();
-          return { isAuthenticated: false, user: null, role: null };
+          // User NOT in managed list.
+          // Check if the ADMIN_MANAGED_USERS_KEY was actually present in localStorage.
+          // If it wasn't, it means `allUsers` is just `initialMockUsers`.
+          // In this scenario (e.g., after a fresh deploy resetting localStorage for users),
+          // we might trust the user details (including role) from the AUTH_STORAGE_KEY.
+          const adminManagedUsersLocalStorageEntry = localStorage.getItem(ADMIN_MANAGED_USERS_KEY);
+          if (adminManagedUsersLocalStorageEntry === null) {
+            // The user list from localStorage was genuinely empty (not just empty array string).
+            // This indicates a fresh state where `getUsersFromStorage` returned `initialMockUsers`.
+            // Trust the user object (including role) from the AUTH_STORAGE_KEY if it's a registered user.
+            return {
+              isAuthenticated: true,
+              user: parsedState.user, // Trust user from AUTH_STORAGE_KEY
+              role: parsedState.user.role, // Trust role from AUTH_STORAGE_KEY
+            };
+          } else {
+            // User list *did* exist in localStorage (even if it was an empty array string,
+            // or contained other users), but this specific authenticated user isn't in it.
+            // This implies the user was deleted or is invalid according to the managed list. Log them out.
+            clearAuthState();
+            return { isAuthenticated: false, user: null, role: null };
+          }
         }
       }
-      return parsedState;
+      // If parsedState.isAuthenticated is false or parsedState.user is null, it's an invalid/logged-out state.
+      // Or if the original parsedState was already { isAuthenticated: false, ... }
+      return { isAuthenticated: false, user: null, role: null };
+
     } catch (e) {
       console.error("Failed to parse auth state from localStorage", e);
       clearAuthState(); // Clear corrupted state
