@@ -29,8 +29,8 @@ const homePageTranslations = {
   my: {
     title: "အဝါရောင်အင်စတီကျု", // Changed from "အဝါရောင်တက္ကသိုလ်"
     subtitle: "သင့်အတွက် အနာဂတ်နည်းပညာပညာရေး。",
-    searchPlaceholder: "သင်တန်းများရှာပါ၊ ဥပမာ - Web Development",
-    coursesButton: "သင်တန်း", // Updated from သင်တန်းများ
+    searchPlaceholder: "အတန်းများရှာပါ၊ ဥပမာ - Web Development",
+    coursesButton: "အတန်း", // Updated from သင်တန်းများ to သင်တန်း, then to အတန်း
     reelsButton: "ဗီဒီယို", // Updated from ရီးလ်များ
     privacyPolicy: "ကိုယ်ရေးအချက်အလက်မူဝါဒ",
     termsOfService: "ဝန်ဆောင်မှုစည်းမျဉ်းများ",
@@ -160,4 +160,3 @@ export default function Home() {
     </div>
   );
 }
-

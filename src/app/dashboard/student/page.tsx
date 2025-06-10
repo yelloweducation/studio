@@ -28,11 +28,11 @@ const studentDashboardTranslations = {
   my: {
     welcome: "ကြိုဆိုပါတယ်", // Kyo So Ba Deh
     description: "ဤသည်မှာ သင်၏ကိုယ်ပိုင်သင်ယူမှု ဒက်ရှ်ဘုတ်ဖြစ်သည်။", // This is your personal learning dashboard.
-    myEnrolledCourses: "ကျွန်ုပ်၏ စာရင်းသွင်းထားသော သင်တန်းများ", // My Enrolled Courses
+    myEnrolledCourses: "ကျွန်ုပ်၏ စာရင်းသွင်းထားသော အတန်းများ", // My Enrolled Courses
     learningActivity: "သင်ယူမှု လှုပ်ရှားမှု", // Learning Activity
-    exploreCourses: "သင်တန်းများ ရှာဖွေရန်", // Explore Courses
-    noCoursesYet: "သင်သည် မည်သည့်သင်တန်းမှ စာရင်းမသွင်းရသေးပါ။", // You haven't enrolled in any courses yet.
-    activityPlaceholder: "သင်၏ မကြာသေးမီက သင်ယူမှု လှုပ်ရှားမှုများကို ဤနေရာတွင် ပြသပါမည်။ (ပြီးဆုံးမှု တိုးတက်မှုကို သင်တန်းအလိုက် ခြေရာခံသည်)။",
+    exploreCourses: "အတန်းများ ရှာဖွေရန်", // Explore Courses
+    noCoursesYet: "သင်သည် မည်သည့်အတန်းမှ စာရင်းမသွင်းရသေးပါ။", // You haven't enrolled in any courses yet.
+    activityPlaceholder: "သင်၏ မကြာသေးမီက သင်ယူမှု လှုပ်ရှားမှုများကို ဤနေရာတွင် ပြသပါမည်။ (ပြီးဆုံးမှု တိုးတက်မှုကို အတန်းအလိုက် ခြေရာခံသည်)။",
     student: "ကျောင်းသား" // Student
   }
 };

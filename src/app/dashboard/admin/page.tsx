@@ -40,7 +40,7 @@ const adminDashboardTranslations = {
   my: {
     title: "အက်ဒမင် ဒက်ရှ်ဘုတ်", // Admin Dashboard
     description: "သင်၏ လေ့လာရေး ပလက်ဖောင်းကို စီမံပါ။", // Manage your learning platform.
-    courses: "သင်တန်းများ", // Courses
+    courses: "အတန်းများ", // Courses
     categories: "အမျိုးအစားများ", // Categories
     learningPaths: "လမ်းကြောင်းများ", // Paths
     payments: "ငွေပေးချေမှုများ", // Payments

@@ -58,19 +58,19 @@ const searchPageTranslations = {
     filterCategoryLabel: "အမျိုးအစားအလိုက် စစ်ထုတ်ပါ", // Filter by category
     allCategories: "အမျိုးအစားအားလုံး", // All Categories
     clearFilters: "စစ်ထုတ်မှုများ ဖယ်ရှားရန်", // Clear Filters
-    featuredCourses: "အထူးပြု သင်တန်းများ", // Featured Courses
+    featuredCourses: "အထူးပြု အတန်းများ", // Featured Courses
     quickSuggestions: "အမြန် အကြံပြုချက်များ", // Quick Suggestions
-    quickSuggestionsDesc: "သင်၏ စိတ်ဝင်စားမှုကို ပြောပြပါ၊ သင်တန်းတစ်ခု အကြံပြုပေးပါမည်!", // Tell us your interest, and we'll suggest a course!
+    quickSuggestionsDesc: "သင်၏ စိတ်ဝင်စားမှုကို ပြောပြပါ၊ အတန်းတစ်ခု အကြံပြုပေးပါမည်!", // Tell us your interest, and we'll suggest a course!
     quickSuggestionsInputPlaceholder: "ဥပမာ - 'web အတွက် python လေ့လာရန်'", // e.g., 'learn python for web'
     getSuggestion: "အကြံပြုချက်ရယူပါ", // Get Suggestion
     quickRecsIdeas: "ဤတွင် အကြံဉာဏ်အချို့ရှိပါသည်:", // Here are some ideas:
     noQuickRecsFound: "\"{query}\" အတွက် သီးခြားအကြံပြုချက်များ မတွေ့ပါ။ ကျယ်ပြန့်သော စကားလုံးကို စမ်းကြည့်ပါ သို့မဟုတ် အောက်တွင် ရှာဖွေပါ။", // No specific recommendations found for "{query}". Try a broader term or browse below!
-    popularTopics: "ရှာဖွေမှုများသောသင်တန်းများ", // Popular Topics -> Courses with high attendance (updated)
+    popularTopics: "ရှာဖွေမှုများသောအတန်းများ", // Popular Topics -> Courses with high attendance (updated)
     browseCategories: "အမျိုးအစားများ ကြည့်ရှုရန်", // Browse Categories
     noCategoriesAvailable: "အမျိုးအစားများ မရှိသေးပါ", // No Categories Available
     noCategoriesDesc: "အမျိုးအစားများ ထည့်သွင်းပြီးနောက် ဤနေရာတွင် ပေါ်လာပါမည်။", // Categories will appear here once added.
     availableCourses: "တက်ရောက်နိုင်သောအတန်းများ", // Available Courses
-    noCoursesFound: "သင်တန်းများ မတွေ့ပါ", // No Courses Found
+    noCoursesFound: "အတန်းများ မတွေ့ပါ", // No Courses Found
     noCoursesDesc: "သင်၏ ရှာဖွေရေး စကားလုံးများ သို့မဟုတ် အမျိုးအစား စစ်ထုတ်မှုများကို ချိန်ညှိကြည့်ပါ။", // Try adjusting your search terms or category filters.
     exploreLearningPaths: "ပညာရေးလမ်းကြောင်းများ", // Explore Learning Paths
     viewPath: "လမ်းကြောင်းကြည့်ရန်" // View Path
@@ -606,4 +606,3 @@ export default function SearchCoursesPage() {
     </Suspense>
   );
 }
-
