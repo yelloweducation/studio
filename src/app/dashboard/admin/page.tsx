@@ -40,12 +40,12 @@ export default function AdminDashboardPage() {
 
   return (
     <ProtectedRoute allowedRoles={['admin']}>
-      <div className="space-y-6 md:space-y-8">
-        <section className="pb-4 border-b">
-            <h1 className="text-2xl md:text-3xl font-headline font-semibold flex items-center">
-                <SettingsIcon className="mr-2 md:mr-3 h-7 w-7 md:h-8 md:w-8 text-primary" /> Admin Dashboard
+      <div className="space-y-4 md:space-y-6">
+        <section className="pb-2 border-b">
+            <h1 className="text-xl md:text-2xl font-headline font-semibold flex items-center">
+                <SettingsIcon className="mr-2 h-6 w-6 md:h-7 md:w-7 text-primary" /> Admin Dashboard
             </h1>
-            <p className="text-sm md:text-base text-muted-foreground">Manage your learning platform.</p>
+            <p className="text-xs md:text-sm text-muted-foreground">Manage your learning platform.</p>
         </section>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
