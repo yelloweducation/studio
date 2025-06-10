@@ -26,6 +26,11 @@ const ptSans = PT_Sans({
 export const metadata: Metadata = {
   title: 'Yellow Institute',
   description: 'Your journey to knowledge starts here at Yellow Institute.',
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    viewportFit: 'cover', // Added for edge-to-edge display
+  },
 };
 
 export default function RootLayout({
@@ -38,7 +43,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className={`${poppins.variable} ${ptSans.variable}`}>
       <head>
-        {/* Google Font links removed, handled by next/font */}
+        {/* Viewport meta tag is now handled by the metadata object */}
       </head>
       <body className="font-body antialiased flex flex-col min-h-screen">
         <ThemeProvider>
@@ -60,3 +65,4 @@ export default function RootLayout({
     </html>
   );
 }
+

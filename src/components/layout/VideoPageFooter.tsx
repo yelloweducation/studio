@@ -27,7 +27,12 @@ const VideoPageFooter = () => {
 
   return (
     <footer className="w-full bg-background/80 backdrop-blur-sm border-t border-border text-foreground shrink-0">
-      <nav className="flex justify-around items-center h-14 px-2">
+      <nav
+        className={cn(
+          "flex justify-around items-center h-14 px-2",
+          "pb-[env(safe-area-inset-bottom)]" // Add padding for home indicator
+        )}
+      >
         {navItems.map((item) => {
           const isActive = pathname === item.href;
           return (
@@ -44,7 +49,6 @@ const VideoPageFooter = () => {
                 if (item.disabled) {
                   e.preventDefault();
                 }
-                // For non-disabled items, NextLink handles navigation automatically.
               }}
             >
               <item.icon className={cn("h-6 w-6 mb-0.5", isActive && "fill-current")} />
