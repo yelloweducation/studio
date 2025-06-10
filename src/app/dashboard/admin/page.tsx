@@ -8,8 +8,9 @@ import EnrollmentStats from "@/components/admin/EnrollmentStats";
 import VideoManagement from "@/components/admin/VideoManagement";
 import ImageManagement from "@/components/admin/ImageManagement";
 import CategoryManagement from "@/components/admin/CategoryManagement";
+import PaymentSubmissions from "@/components/admin/PaymentSubmissions"; // Added
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, BarChart3, Settings, Video as VideoIcon, Image as ImageIcon, Shapes, GraduationCap, Menu as MenuIcon } from "lucide-react";
+import { Users, BarChart3, Settings, Video as VideoIcon, Image as ImageIcon, Shapes, GraduationCap, Menu as MenuIcon, CreditCard } from "lucide-react"; // Added CreditCard
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import {
@@ -22,6 +23,7 @@ import {
 const adminTabs = [
   { value: "courses", label: "Courses", Icon: GraduationCap },
   { value: "categories", label: "Categories", Icon: Shapes },
+  { value: "payments", label: "Payments", Icon: CreditCard }, // Added Payments
   { value: "videos", label: "Videos", Icon: VideoIcon },
   { value: "images", label: "Images", Icon: ImageIcon },
   { value: "users", label: "Users", Icon: Users },
@@ -71,7 +73,7 @@ export default function AdminDashboardPage() {
               </DropdownMenu>
             </div>
           ) : (
-            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 mb-6">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 mb-6"> {/* Adjusted grid-cols for new tab */}
               {adminTabs.map((tab) => (
                 <TabsTrigger
                   key={tab.value}
@@ -89,6 +91,9 @@ export default function AdminDashboardPage() {
           </TabsContent>
           <TabsContent value="categories">
             <CategoryManagement />
+          </TabsContent>
+           <TabsContent value="payments">
+            <PaymentSubmissions />
           </TabsContent>
           <TabsContent value="videos">
             <VideoManagement />

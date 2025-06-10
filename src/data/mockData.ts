@@ -23,7 +23,8 @@ export type Course = {
   modules: Module[];
   imageUrl?: string;
   dataAiHint?: string;
-  // price and currency removed
+  price?: number;
+  currency?: string;
 };
 
 export type User = {
@@ -60,7 +61,21 @@ export type Category = {
   icon?: string;
 };
 
-// PaymentSettings interface removed
+export type PaymentSubmissionStatus = 'pending' | 'approved' | 'rejected';
+
+export type PaymentSubmission = {
+  id: string;
+  userId: string;
+  courseId: string;
+  amount: number;
+  currency: string;
+  screenshotUrl: string;
+  status: PaymentSubmissionStatus;
+  submittedAt: string; // ISO date string
+  reviewedAt?: string; // ISO date string
+  adminNotes?: string;
+};
+
 
 export const courses: Course[] = [
   {
@@ -71,6 +86,8 @@ export const courses: Course[] = [
     instructor: 'Dr. Web Coder',
     imageUrl: 'https://placehold.co/600x400.png',
     dataAiHint: 'programming code',
+    price: 0, // Free course
+    currency: 'USD',
     modules: [
       {
         id: 'm1c1',
@@ -106,6 +123,8 @@ export const courses: Course[] = [
     instructor: 'Prof. Script Master',
     imageUrl: 'https://placehold.co/600x400.png',
     dataAiHint: 'abstract javascript',
+    price: 49.99,
+    currency: 'USD',
     modules: [
       {
         id: 'm1c2',
@@ -132,6 +151,8 @@ export const courses: Course[] = [
     instructor: 'Dr. Data Insight',
     imageUrl: 'https://placehold.co/600x400.png',
     dataAiHint: 'python data',
+    price: 99.00,
+    currency: 'USD',
     modules: [
       {
         id: 'm1c3',
@@ -167,6 +188,8 @@ export const courses: Course[] = [
     instructor: 'Curriculum Planner',
     imageUrl: 'https://placehold.co/600x400.png',
     dataAiHint: 'planning document',
+    price: 19.99,
+    currency: 'USD',
     modules: [
       { id: 'm1c5', title: 'Module A - Concepts', lessons: [] },
       { id: 'm2c5', title: 'Module B - Drafts', lessons: [] },
@@ -200,4 +223,18 @@ export const categories: Category[] = [
   { id: 'cat3', name: 'JavaScript', imageUrl: 'https://placehold.co/200x150.png', dataAiHint: 'javascript logo', icon: 'Braces' },
   { id: 'cat4', name: 'Cloud Computing', imageUrl: 'https://placehold.co/200x150.png', dataAiHint: 'cloud network', icon: 'Cloud' },
   { id: 'cat5', name: 'AI & ML', imageUrl: 'https://placehold.co/200x150.png', dataAiHint: 'artificial intelligence', icon: 'BrainCircuit' },
+];
+
+export const paymentSubmissions: PaymentSubmission[] = [
+  // Example:
+  // {
+  //   id: 'ps1',
+  //   userId: 'user1',
+  //   courseId: 'course2',
+  //   amount: 49.99,
+  //   currency: 'USD',
+  //   screenshotUrl: 'https://placehold.co/300x200.png?text=Proof1',
+  //   status: 'pending',
+  //   submittedAt: new Date().toISOString(),
+  // },
 ];

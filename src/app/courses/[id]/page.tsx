@@ -4,13 +4,13 @@ import React, { useState, useEffect, useMemo, type ReactNode } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { courses as mockDataCourses, enrollments as initialEnrollments, type Course, type Module, type Lesson, type User, type Enrollment } from '@/data/mockData'; // enrollments renamed to initialEnrollments
+import { courses as mockDataCourses, enrollments as initialEnrollments, paymentSubmissions as initialPaymentSubmissions, type Course, type Module, type Lesson, type User, type Enrollment, type PaymentSubmission, type PaymentSubmissionStatus } from '@/data/mockData'; 
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChevronLeft, BookOpenText, PlayCircle, Lock, CheckCircle, AlertTriangle, Clock, ExternalLink, ArrowRight, Home } from 'lucide-react';
+import { ChevronLeft, BookOpenText, PlayCircle, Lock, CheckCircle, AlertTriangle, Clock, ExternalLink, ArrowRight, Home, ShoppingCart, BadgeDollarSign, Hourglass } from 'lucide-react';
 import { getEmbedUrl } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
@@ -18,13 +18,19 @@ interface CompletionInfo {
   isCompleted: boolean;
   progress: number;
 }
+interface PaymentInfo {
+  status: PaymentSubmissionStatus | null; // null if no submission found
+  submission?: PaymentSubmission;
+}
+
 const USER_ENROLLMENTS_KEY = 'userEnrollmentsData';
+const USER_PAYMENT_SUBMISSIONS_KEY = 'adminPaymentSubmissions'; // Admin manages these
 
 export default function CourseDetailPage() {
   const params = useParams();
   const courseId = params.id as string;
   const router = useRouter();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const { toast } = useToast();
 
   const [allAppCourses, setAllAppCourses] = useState<Course[]>([]);
@@ -33,46 +39,40 @@ export default function CourseDetailPage() {
   const [currentCourse, setCurrentCourse] = useState<Course | null>(null);
   const [firstLessonPath, setFirstLessonPath] = useState<string | null>(null);
   const [completionInfo, setCompletionInfo] = useState<CompletionInfo | null>(null);
+  const [paymentInfo, setPaymentInfo] = useState<PaymentInfo | null>(null);
   const [isLoadingPage, setIsLoadingPage] = useState(true); 
 
-  // Effect 1: Load allAppCourses (prioritizing localStorage for admin-managed courses)
   useEffect(() => {
     let coursesToUse: Course[] = [];
     try {
       const storedCoursesString = localStorage.getItem('adminCourses');
       if (storedCoursesString) {
         const parsedCourses = JSON.parse(storedCoursesString) as Course[];
-        // Use parsedCourses directly if it's a valid array, even if empty
         if (Array.isArray(parsedCourses)) {
             coursesToUse = parsedCourses;
         } else {
-            // Fallback if not an array (malformed data)
             console.warn("adminCourses in localStorage was not an array, using default mock courses.");
             coursesToUse = mockDataCourses;
         }
       } else {
-        // Fallback if item doesn't exist in localStorage
         coursesToUse = mockDataCourses;
       }
     } catch (error) {
       console.error("Error loading courses from localStorage for CourseDetail:", error);
-      coursesToUse = mockDataCourses; // Fallback to mock data on error
+      coursesToUse = mockDataCourses; 
     }
     setAllAppCourses(coursesToUse);
     setAreAppCoursesLoaded(true);
   }, []);
 
-
-  // Effect 2: Determine currentCourse and firstLessonPath
   useEffect(() => {
-    setIsLoadingPage(true); // Start loading whenever courseId or loaded courses change
+    setIsLoadingPage(true); 
     setCurrentCourse(null); 
     setFirstLessonPath(null);
 
     if (!areAppCoursesLoaded) {
       return; 
     }
-
     if (!courseId) {
       setIsLoadingPage(false);
       return; 
@@ -81,22 +81,19 @@ export default function CourseDetailPage() {
     const foundCourse = allAppCourses.find(c => c.id === courseId);
     setCurrentCourse(foundCourse || null);
 
-    if (foundCourse && foundCourse.modules && foundCourse.modules.length > 0 &&
-        foundCourse.modules[0].lessons && foundCourse.modules[0].lessons.length > 0) {
+    if (foundCourse?.modules?.[0]?.lessons?.[0]) {
       setFirstLessonPath(`/courses/${foundCourse.id}/learn/${foundCourse.modules[0].id}/${foundCourse.modules[0].lessons[0].id}`);
     } else {
       setFirstLessonPath(null);
     }
-    // isLoadingPage will be set to false in Effect 3 after user-specific data is processed
   }, [courseId, allAppCourses, areAppCoursesLoaded]);
 
-
-  // Effect 3: Load user-specific data (completion) and manage final isLoadingPage state
   useEffect(() => {
     setIsLoadingPage(true); 
     setCompletionInfo(null); 
+    setPaymentInfo(null);
 
-    if (!areAppCoursesLoaded) {
+    if (authLoading || !areAppCoursesLoaded) { // Wait for auth and courses
       return;
     }
     
@@ -116,22 +113,22 @@ export default function CourseDetailPage() {
             try {
                 const storedEnrollments = localStorage.getItem(USER_ENROLLMENTS_KEY);
                 if (storedEnrollments) {
-                    const parsedEnrollments = JSON.parse(storedEnrollments); // Parse once
+                    const parsedEnrollments = JSON.parse(storedEnrollments); 
                     if(Array.isArray(parsedEnrollments)){
                         userEnrollments = parsedEnrollments as Enrollment[];
-                    } else { // Malformed, not an array
+                    } else { 
                         console.warn(`${USER_ENROLLMENTS_KEY} in localStorage was not an array. Falling back and re-initializing.`);
-                        localStorage.setItem(USER_ENROLLMENTS_KEY, JSON.stringify(initialEnrollments)); // Re-initialize localStorage
-                        userEnrollments = JSON.parse(JSON.stringify(initialEnrollments)); // Use a deep copy
+                        localStorage.setItem(USER_ENROLLMENTS_KEY, JSON.stringify(initialEnrollments)); 
+                        userEnrollments = JSON.parse(JSON.stringify(initialEnrollments)); 
                     }
-                } else { // Not in localStorage
-                    localStorage.setItem(USER_ENROLLMENTS_KEY, JSON.stringify(initialEnrollments)); // Initialize localStorage
-                    userEnrollments = JSON.parse(JSON.stringify(initialEnrollments)); // Use a deep copy
+                } else { 
+                    localStorage.setItem(USER_ENROLLMENTS_KEY, JSON.stringify(initialEnrollments)); 
+                    userEnrollments = JSON.parse(JSON.stringify(initialEnrollments)); 
                 }
-            } catch (error) { // JSON.parse failed for storedEnrollments
+            } catch (error) { 
                 console.error(`Error parsing ${USER_ENROLLMENTS_KEY} from localStorage:`, error);
-                localStorage.setItem(USER_ENROLLMENTS_KEY, JSON.stringify(initialEnrollments)); // Re-initialize localStorage on error
-                userEnrollments = JSON.parse(JSON.stringify(initialEnrollments)); // Use a deep copy
+                localStorage.setItem(USER_ENROLLMENTS_KEY, JSON.stringify(initialEnrollments)); 
+                userEnrollments = JSON.parse(JSON.stringify(initialEnrollments)); 
             }
 
             const enrollment = userEnrollments.find(e => e.userId === user.id && e.courseId === currentCourse.id);
@@ -140,19 +137,121 @@ export default function CourseDetailPage() {
             } else {
                 setCompletionInfo({ isCompleted: false, progress: 0 });
             }
-        } else {
+
+            // Load payment submissions
+            if (currentCourse.price && currentCourse.price > 0) {
+                let allSubmissions: PaymentSubmission[] = [];
+                try {
+                    const storedSubmissions = localStorage.getItem(USER_PAYMENT_SUBMISSIONS_KEY);
+                    if (storedSubmissions) {
+                         const parsedSubmissions = JSON.parse(storedSubmissions);
+                         if (Array.isArray(parsedSubmissions)) {
+                            allSubmissions = parsedSubmissions as PaymentSubmission[];
+                         } else {
+                            localStorage.setItem(USER_PAYMENT_SUBMISSIONS_KEY, JSON.stringify(initialPaymentSubmissions));
+                            allSubmissions = JSON.parse(JSON.stringify(initialPaymentSubmissions));
+                         }
+                    } else {
+                        localStorage.setItem(USER_PAYMENT_SUBMISSIONS_KEY, JSON.stringify(initialPaymentSubmissions));
+                        allSubmissions = JSON.parse(JSON.stringify(initialPaymentSubmissions));
+                    }
+                } catch (error) {
+                    console.error("Error loading payment submissions from localStorage:", error);
+                     localStorage.setItem(USER_PAYMENT_SUBMISSIONS_KEY, JSON.stringify(initialPaymentSubmissions));
+                    allSubmissions = JSON.parse(JSON.stringify(initialPaymentSubmissions));
+                }
+                const userSubmission = allSubmissions.find(s => s.userId === user.id && s.courseId === currentCourse.id);
+                setPaymentInfo({ status: userSubmission?.status || null, submission: userSubmission });
+            } else {
+                setPaymentInfo({ status: null }); // Free course
+            }
+
+        } else { // Not authenticated
              setCompletionInfo({ isCompleted: false, progress: 0 });
+             setPaymentInfo({ status: null });
         }
     }
     
     setIsLoadingPage(false);
 
-  }, [user, isAuthenticated, currentCourse, courseId, areAppCoursesLoaded]);
+  }, [user, isAuthenticated, authLoading, currentCourse, courseId, areAppCoursesLoaded]);
 
 
   const renderCTAButton = () => {
     if (!currentCourse) return null; 
 
+    // Handle paid courses
+    if (currentCourse.price && currentCourse.price > 0) {
+        if (!isAuthenticated) {
+            return (
+                 <Button asChild size="lg" className="w-full shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150">
+                    <Link href={`/login?redirect=/courses/${courseId}`}>
+                        <BadgeDollarSign className="mr-2 h-5 w-5" /> Login to Purchase for {currentCourse.price.toFixed(2)} {currentCourse.currency}
+                    </Link>
+                </Button>
+            );
+        }
+        // Authenticated user, check payment status
+        if (paymentInfo?.status === 'approved') {
+            if (completionInfo?.isCompleted) {
+                return (
+                    <div className="flex flex-col items-center text-center p-4 bg-green-100 dark:bg-green-900/50 rounded-lg shadow">
+                        <CheckCircle className="w-12 h-12 text-green-600 dark:text-green-400 mb-2" />
+                        <p className="font-semibold text-green-700 dark:text-green-300">You finished this course!</p>
+                        <p className="text-sm text-green-600 dark:text-green-400">Progress: {completionInfo.progress}%</p>
+                        {firstLessonPath && (
+                            <Button asChild className="mt-3">
+                            <Link href={firstLessonPath}>Review Course</Link>
+                            </Button>
+                        )}
+                    </div>
+                );
+            }
+             if (!firstLessonPath) { // Paid & Approved, but no lessons
+                 return (
+                    <div className="flex flex-col items-center text-center p-4 bg-muted rounded-lg shadow">
+                        <AlertTriangle className="w-12 h-12 text-amber-500 mb-2" />
+                        <p className="font-semibold text-foreground">Course Content Coming Soon</p>
+                        <p className="text-sm text-muted-foreground">Lessons are being prepared. Check back later!</p>
+                    </div>
+                );
+            }
+            return ( // Approved, not yet completed
+                <Button asChild size="lg" className="w-full shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150">
+                    <Link href={firstLessonPath}>
+                    Start Learning <ArrowRight className="ml-2 h-5 w-5" />
+                    </Link>
+                </Button>
+            );
+        } else if (paymentInfo?.status === 'pending') {
+            return (
+                <div className="flex flex-col items-center text-center p-4 bg-blue-100 dark:bg-blue-900/50 rounded-lg shadow">
+                    <Hourglass className="w-12 h-12 text-blue-600 dark:text-blue-400 mb-2" />
+                    <p className="font-semibold text-blue-700 dark:text-blue-300">Payment Submitted</p>
+                    <p className="text-sm text-blue-600 dark:text-blue-400">Your payment is currently under review.</p>
+                </div>
+            );
+        } else { // No submission, or rejected
+             if (!firstLessonPath && !(currentCourse.modules && currentCourse.modules.length > 0)) { // No content to purchase
+                return (
+                    <div className="flex flex-col items-center text-center p-4 bg-muted rounded-lg shadow">
+                        <AlertTriangle className="w-12 h-12 text-amber-500 mb-2" />
+                        <p className="font-semibold text-foreground">Course Content Coming Soon</p>
+                        <p className="text-sm text-muted-foreground">This course is priced but lessons are not yet available. Check back later!</p>
+                    </div>
+                );
+            }
+            return ( // Needs purchase
+                <Button asChild size="lg" className="w-full shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150">
+                    <Link href={`/courses/${courseId}/checkout`}>
+                        <ShoppingCart className="mr-2 h-5 w-5" /> Purchase for {currentCourse.price.toFixed(2)} {currentCourse.currency}
+                    </Link>
+                </Button>
+            );
+        }
+    }
+
+    // Handle free courses (original logic)
     if (completionInfo?.isCompleted) {
       return (
         <div className="flex flex-col items-center text-center p-4 bg-green-100 dark:bg-green-900/50 rounded-lg shadow">
@@ -188,24 +287,24 @@ export default function CourseDetailPage() {
   };
 
 
-  if (isLoadingPage) {
+  if (isLoadingPage || authLoading) {
     return (
       <div className="max-w-4xl mx-auto py-8 space-y-6">
-        <Skeleton className="h-8 w-1/4" /> {/* Back button */}
-        <Skeleton className="h-12 w-3/4" /> {/* Title */}
-        <Skeleton className="h-6 w-1/2 mb-4" /> {/* Instructor/Category */}
+        <Skeleton className="h-8 w-1/4" /> 
+        <Skeleton className="h-12 w-3/4" /> 
+        <Skeleton className="h-6 w-1/2 mb-4" /> 
         <div className="grid md:grid-cols-3 gap-8">
           <div className="md:col-span-2 space-y-4">
-            <Skeleton className="w-full h-56" /> {/* Image */}
-            <Skeleton className="h-5 w-full" /> {/* Description line 1 */}
-            <Skeleton className="h-5 w-full" /> {/* Description line 2 */}
-            <Skeleton className="h-5 w-3/4" /> {/* Description line 3 */}
+            <Skeleton className="w-full h-56" /> 
+            <Skeleton className="h-5 w-full" /> 
+            <Skeleton className="h-5 w-full" /> 
+            <Skeleton className="h-5 w-3/4" /> 
           </div>
           <div className="space-y-4">
-            <Skeleton className="h-20 w-full" /> {/* CTA card */}
-            <Skeleton className="h-10 w-full" /> {/* Accordion item */}
-            <Skeleton className="h-10 w-full" /> {/* Accordion item */}
-            <Skeleton className="h-10 w-full" /> {/* Accordion item */}
+            <Skeleton className="h-20 w-full" /> 
+            <Skeleton className="h-10 w-full" /> 
+            <Skeleton className="h-10 w-full" /> 
+            <Skeleton className="h-10 w-full" /> 
           </div>
         </div>
       </div>
@@ -237,7 +336,7 @@ export default function CourseDetailPage() {
     );
   }
 
-  const { title, description, category, instructor, modules, imageUrl, dataAiHint } = currentCourse;
+  const { title, description, category, instructor, modules, imageUrl, dataAiHint, price, currency } = currentCourse;
 
   return (
     <div className="max-w-4xl mx-auto py-2 md:py-8">
@@ -246,7 +345,6 @@ export default function CourseDetailPage() {
       </Button>
 
       <div className="grid md:grid-cols-3 gap-6 lg:gap-8 items-start">
-        {/* Left Column / Main Content */}
         <div className="md:col-span-2 space-y-6">
           <Card className="shadow-lg overflow-hidden">
             {imageUrl && (
@@ -265,6 +363,11 @@ export default function CourseDetailPage() {
               <CardTitle className="text-2xl sm:text-3xl font-headline text-foreground">{title}</CardTitle>
               <CardDescription className="text-md text-muted-foreground">
                 Taught by {instructor} &bull; Category: {category}
+                {price && price > 0 && currency && (
+                    <span className="block mt-1 font-semibold text-primary">
+                        Price: {price.toFixed(2)} {currency}
+                    </span>
+                )}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -273,7 +376,6 @@ export default function CourseDetailPage() {
           </Card>
         </div>
 
-        {/* Right Column / CTA and Modules */}
         <div className="md:col-span-1 space-y-6 md:sticky md:top-24">
           <Card className="shadow-xl">
             <CardHeader className="pb-3">
@@ -282,7 +384,7 @@ export default function CourseDetailPage() {
             <CardContent>
               {renderCTAButton()}
             </CardContent>
-            {completionInfo && completionInfo.progress > 0 && completionInfo.progress < 100 && (
+            {isAuthenticated && completionInfo && completionInfo.progress > 0 && completionInfo.progress < 100 && (!price || price <=0 || paymentInfo?.status === 'approved') && (
                  <CardFooter className="text-sm text-muted-foreground pt-0 pb-4">
                     Progress: {completionInfo.progress}% completed
                 </CardFooter>
@@ -308,8 +410,9 @@ export default function CourseDetailPage() {
                           <ul className="space-y-2 pl-2 border-l-2 border-primary/20 ml-2">
                             {module.lessons.map((lesson: Lesson, lessonIndex: number) => {
                               const lessonPath = `/courses/${courseId}/learn/${module.id}/${lesson.id}`;
-                              const isLessonAccessible = true; 
-
+                              // Simplified access: if course is free or payment is approved, lesson is accessible
+                              const isLessonAccessible = (!price || price <= 0) || (isAuthenticated && paymentInfo?.status === 'approved');
+                              
                               return (
                                 <li key={lesson.id}>
                                   {isLessonAccessible ? (

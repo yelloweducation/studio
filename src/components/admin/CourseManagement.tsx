@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Edit3, Trash2, GraduationCap, BookOpen, Clock, Link as LinkIcon, Image as ImageIcon, Info, Tag } from 'lucide-react';
+import { PlusCircle, Edit3, Trash2, GraduationCap, BookOpen, Clock, Link as LinkIcon, Image as ImageIcon, Info, Tag, DollarSign, Filter } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -100,6 +100,8 @@ const CourseForm = ({
   const [instructor, setInstructor] = useState(course?.instructor || '');
   const [imageUrl, setImageUrl] = useState(course?.imageUrl || 'https://placehold.co/600x400.png');
   const [dataAiHint, setDataAiHint] = useState(course?.dataAiHint || 'education learning');
+  const [price, setPrice] = useState<number | string>(course?.price ?? '');
+  const [currency, setCurrency] = useState(course?.currency || 'USD');
   const [modules, setModules] = useState<Module[]>(course?.modules || []);
 
   const [editingLesson, setEditingLesson] = useState<{ moduleIndex: number, lessonIndex?: number, lesson?: Partial<Lesson> } | null>(null);
@@ -107,7 +109,6 @@ const CourseForm = ({
 
   const handleModuleChange = (index: number, field: keyof Module, value: string) => {
     const newModules = [...modules];
-    // Type assertion because we know 'title' is the only string field on Module we edit this way
     (newModules[index] as any)[field] = value;
     setModules(newModules);
   };
@@ -122,9 +123,9 @@ const CourseForm = ({
   
   const saveLesson = (lessonData: Lesson, moduleIndex: number, lessonIndex?: number) => {
     const newModules = [...modules];
-    if (lessonIndex !== undefined) { // Editing existing lesson
+    if (lessonIndex !== undefined) { 
       newModules[moduleIndex].lessons[lessonIndex] = lessonData;
-    } else { // Adding new lesson
+    } else { 
       newModules[moduleIndex].lessons.push(lessonData);
     }
     setModules(newModules);
@@ -147,6 +148,8 @@ const CourseForm = ({
       instructor,
       imageUrl,
       dataAiHint,
+      price: Number(price) || 0, // Ensure price is a number, default to 0 if empty or invalid
+      currency,
       modules,
     };
     onSubmit(courseData);
@@ -197,6 +200,22 @@ const CourseForm = ({
               <Input id="instructor" value={instructor} onChange={e => setInstructor(e.target.value)} required />
             </div>
           </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="price">Price (0 for free)</Label>
+              <div className="relative">
+                <DollarSign className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input id="price" type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="e.g., 49.99" className="pl-8" step="0.01" min="0" />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="currency">Currency</Label>
+              <div className="relative">
+                <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input id="currency" value={currency} onChange={e => setCurrency(e.target.value)} placeholder="e.g., USD" className="pl-8" />
+              </div>
+            </div>
+          </div>
           <div>
             <Label htmlFor="imageUrl">Course Image URL</Label>
             <div className="relative">
@@ -217,7 +236,6 @@ const CourseForm = ({
             </div>
           </div>
 
-          {/* Modules and Lessons Section */}
           <div className="space-y-4 pt-4 border-t">
             <h3 className="text-lg font-semibold flex items-center"><BookOpen className="mr-2 h-5 w-5 text-primary"/> Modules</h3>
             <Accordion type="multiple" className="w-full" defaultValue={modules.map(m => m.id)}>
@@ -229,7 +247,7 @@ const CourseForm = ({
                       onChange={e => handleModuleChange(moduleIndex, 'title', e.target.value)}
                       placeholder={`Module ${moduleIndex + 1} Title`}
                       className="text-md font-medium flex-grow mr-2"
-                      onClick={(e) => e.stopPropagation()} // Prevents accordion from toggling
+                      onClick={(e) => e.stopPropagation()} 
                     />
                   </AccordionTrigger>
                   <AccordionContent className="pl-2">
@@ -302,10 +320,10 @@ export default function CourseManagement() {
         setCourses(parsedCourses);
       } catch (e) {
         console.error("Failed to parse courses from localStorage", e);
-        setCourses(initialCoursesData); // Fallback to initial mock data
+        setCourses(initialCoursesData); 
       }
     } else {
-      setCourses(initialCoursesData); // Set initial mock data if nothing in localStorage
+      setCourses(initialCoursesData); 
     }
     setIsDataLoaded(true);
   }, []);
@@ -318,7 +336,7 @@ export default function CourseManagement() {
 
 
   const handleAddCourse = (data: Course) => {
-    setCourses(prev => [{ ...data, id: data.id || `course${Date.now()}` }, ...prev]); // Add to top
+    setCourses(prev => [{ ...data, id: data.id || `course${Date.now()}` }, ...prev]); 
     setIsFormOpen(false);
     setEditingCourse(undefined);
     toast({ title: "Course Added", description: `${data.title} has been successfully added.` });
@@ -334,11 +352,11 @@ export default function CourseManagement() {
   const handleDeleteCourse = (courseId: string) => {
     const courseToDelete = courses.find(c => c.id === courseId);
     setCourses(prev => prev.filter(c => c.id !== courseId));
-    toast({ title: "Course Deleted", description: `${courseToDelete?.name} has been deleted.`, variant: "destructive" });
+    toast({ title: "Course Deleted", description: `${courseToDelete?.title ?? 'Course'} has been deleted.`, variant: "destructive" });
   };
 
   const openForm = (course?: Course) => {
-    setEditingCourse(course ? JSON.parse(JSON.stringify(course)) : undefined); // Deep clone for editing
+    setEditingCourse(course ? JSON.parse(JSON.stringify(course)) : undefined); 
     setIsFormOpen(true);
   };
 
@@ -353,7 +371,7 @@ export default function CourseManagement() {
         <CardTitle className="flex items-center text-xl md:text-2xl font-headline">
           <GraduationCap className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Course Management
         </CardTitle>
-        <CardDescription>Add, edit, or delete courses, modules, and lessons.</CardDescription>
+        <CardDescription>Add, edit, or delete courses, modules, lessons, and set prices.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="mb-6 text-right">
@@ -363,7 +381,7 @@ export default function CourseManagement() {
                 <PlusCircle className="mr-2 h-5 w-5" /> Add New Course
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-2xl md:max-w-3xl"> {/* Wider dialog */}
+            <DialogContent className="sm:max-w-2xl md:max-w-3xl"> 
               <DialogHeader className="pb-4">
                 <DialogTitle className="font-headline text-xl md:text-2xl">{editingCourse ? 'Edit Course' : 'Add New Course'}</DialogTitle>
                 <DialogDescription>
@@ -395,7 +413,7 @@ export default function CourseManagement() {
                     <span>Category: {course.category}</span> | <span>Instructor: {course.instructor}</span>
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    Modules: {course.modules?.length || 0}
+                    Modules: {course.modules?.length || 0} | Price: {course.price && course.price > 0 ? `${course.price} ${course.currency}` : 'Free'}
                   </div>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:space-x-2 gap-2 sm:gap-0 w-full sm:w-auto sm:items-center mt-2 sm:mt-0 shrink-0 self-start sm:self-center">
