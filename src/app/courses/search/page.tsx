@@ -15,9 +15,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription }
 import { Search, X, LayoutGrid, GraduationCap, Lightbulb, Star, Milestone, Send, Loader2, AlertTriangle, ListFilter } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"; // Added
-import { getQuickRecommendations, type QuickRecommendationInput, type QuickRecommendationOutput } from '@/ai/flows/quick-recommendation-flow'; // Added
-import * as LucideIcons from 'lucide-react'; // For dynamic learning path icons
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { getQuickRecommendations, type QuickRecommendationInput, type QuickRecommendationOutput } from '@/ai/flows/quick-recommendation-flow';
+import * as LucideIcons from 'lucide-react';
+import { useLanguage, type Language } from '@/contexts/LanguageContext'; // Added
 
 const CareerAdviceChatbox = lazy(() => import('@/components/ai/CareerAdviceChatbox'));
 
@@ -27,11 +28,61 @@ const isValidLucideIcon = (iconName: string): iconName is keyof typeof LucideIco
 
 const LEARNING_PATHS_KEY = 'adminLearningPaths';
 
+const searchPageTranslations = {
+  en: {
+    searchKeywordLabel: "Search by keyword",
+    searchKeywordPlaceholder: "e.g., JavaScript, Data Science...",
+    filterCategoryLabel: "Filter by category",
+    allCategories: "All Categories",
+    clearFilters: "Clear Filters",
+    featuredCourses: "Featured Courses",
+    quickSuggestions: "Quick Suggestions",
+    quickSuggestionsDesc: "Tell us your interest, and we'll suggest a course!",
+    quickSuggestionsInputPlaceholder: "e.g., 'learn python for web'",
+    getSuggestion: "Get Suggestion",
+    quickRecsIdeas: "Here are some ideas:",
+    noQuickRecsFound: "No specific recommendations found for \"{query}\". Try a broader term or browse below!",
+    popularTopics: "Popular Topics",
+    browseCategories: "Browse Categories",
+    noCategoriesAvailable: "No Categories Available",
+    noCategoriesDesc: "Categories will appear here once added.",
+    availableCourses: "Available Courses",
+    noCoursesFound: "No Courses Found",
+    noCoursesDesc: "Try adjusting your search terms or category filters.",
+    exploreLearningPaths: "Explore Learning Paths",
+    viewPath: "View Path"
+  },
+  my: {
+    searchKeywordLabel: "သော့ချက်စာလုံးဖြင့် ရှာပါ", // Search by keyword
+    searchKeywordPlaceholder: "ဥပမာ - JavaScript, Data Science...", // e.g., JavaScript, Data Science...
+    filterCategoryLabel: "အမျိုးအစားအလိုက် စစ်ထုတ်ပါ", // Filter by category
+    allCategories: "အမျိုးအစားအားလုံး", // All Categories
+    clearFilters: "စစ်ထုတ်မှုများ ဖယ်ရှားရန်", // Clear Filters
+    featuredCourses: "အထူးပြု သင်တန်းများ", // Featured Courses
+    quickSuggestions: "အမြန် အကြံပြုချက်များ", // Quick Suggestions
+    quickSuggestionsDesc: "သင်၏ စိတ်ဝင်စားမှုကို ပြောပြပါ၊ သင်တန်းတစ်ခု အကြံပြုပေးပါမည်!", // Tell us your interest, and we'll suggest a course!
+    quickSuggestionsInputPlaceholder: "ဥပမာ - 'web အတွက် python လေ့လာရန်'", // e.g., 'learn python for web'
+    getSuggestion: "အကြံပြုချက်ရယူပါ", // Get Suggestion
+    quickRecsIdeas: "ဤတွင် အကြံဉာဏ်အချို့ရှိပါသည်:", // Here are some ideas:
+    noQuickRecsFound: "\"{query}\" အတွက် သီးခြားအကြံပြုချက်များ မတွေ့ပါ။ ကျယ်ပြန့်သော စကားလုံးကို စမ်းကြည့်ပါ သို့မဟုတ် အောက်တွင် ရှာဖွေပါ။", // No specific recommendations found for "{query}". Try a broader term or browse below!
+    popularTopics: "လူကြိုက်များသော ခေါင်းစဉ်များ", // Popular Topics
+    browseCategories: "အမျိုးအစားများ ကြည့်ရှုရန်", // Browse Categories
+    noCategoriesAvailable: "အမျိုးအစားများ မရှိသေးပါ", // No Categories Available
+    noCategoriesDesc: "အမျိုးအစားများ ထည့်သွင်းပြီးနောက် ဤနေရာတွင် ပေါ်လာပါမည်။", // Categories will appear here once added.
+    availableCourses: "ရရှိနိုင်သော သင်တန်းများ", // Available Courses
+    noCoursesFound: "သင်တန်းများ မတွေ့ပါ", // No Courses Found
+    noCoursesDesc: "သင်၏ ရှာဖွေရေး စကားလုံးများ သို့မဟုတ် အမျိုးအစား စစ်ထုတ်မှုများကို ချိန်ညှိကြည့်ပါ။", // Try adjusting your search terms or category filters.
+    exploreLearningPaths: "သင်ယူမှု လမ်းကြောင်းများ ရှာဖွေရန်", // Explore Learning Paths
+    viewPath: "လမ်းကြောင်းကြည့်ရန်" // View Path
+  }
+};
 
-// Client component containing the core logic and UI for the search page
+
 function SearchCoursesClientLogic() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { language } = useLanguage(); // Added
+  const t = searchPageTranslations[language]; // Added
   
   const initialQuery = searchParams.get('query') || '';
   const initialCategory = searchParams.get('category') || 'all';
@@ -43,16 +94,16 @@ function SearchCoursesClientLogic() {
 
   const [availableCourses, setAvailableCourses] = useState<Course[]>([]);
   const [availableCategories, setAvailableCategories] = useState<Category[]>([]);
-  const [featuredCourses, setFeaturedCourses] = useState<Course[]>([]); // Added
-  const [learningPaths, setLearningPaths] = useState<LearningPath[]>([]); // Added
-  const [popularTopics, setPopularTopics] = useState<string[]>([]); // Added
+  const [featuredCourses, setFeaturedCourses] = useState<Course[]>([]);
+  const [learningPaths, setLearningPaths] = useState<LearningPath[]>([]);
+  const [popularTopics, setPopularTopics] = useState<string[]>([]);
 
-  const [quickRecInput, setQuickRecInput] = useState(''); // For AI Quick Recs
+  const [quickRecInput, setQuickRecInput] = useState('');
   const [quickRecs, setQuickRecs] = useState<QuickRecommendationOutput['recommendations']>([]);
   const [isQuickRecLoading, setIsQuickRecLoading] = useState(false);
   const [quickRecError, setQuickRecError] = useState<string | null>(null);
 
-  const [isMobile, setIsMobile] = useState(false); // Added for carousel responsive opts
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -113,7 +164,7 @@ function SearchCoursesClientLogic() {
       console.error("Error loading learning paths from localStorage:", error);
       learningPathsToUse = initialLearningPaths;
     }
-    setLearningPaths(learningPathsToUse.slice(0, 3)); // Show max 3 paths
+    setLearningPaths(learningPathsToUse.slice(0, 3)); 
 
   }, []);
 
@@ -168,7 +219,7 @@ function SearchCoursesClientLogic() {
 
   const handlePopularTopicClick = (topic: string) => {
     setSelectedCategory(topic);
-    setSearchTerm(''); // Optionally clear search term or set it to topic
+    setSearchTerm(''); 
   };
 
   const handleQuickRecSubmit = async (e?: FormEvent) => {
@@ -181,7 +232,6 @@ function SearchCoursesClientLogic() {
     setQuickRecs([]);
 
     try {
-      // Map full Course objects to the simplified structure expected by the AI flow
       const coursesForAI = availableCourses.map(c => ({
         id: c.id,
         title: c.title,
@@ -205,13 +255,13 @@ function SearchCoursesClientLogic() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-1 md:gap-4 items-end">
           <div className="md:col-span-2">
             <label htmlFor="search-input" className="block text-sm font-medium text-muted-foreground mb-1">
-              Search by keyword
+              {t.searchKeywordLabel}
             </label>
             <div className="relative">
               <Input
                 id="search-input"
                 type="text"
-                placeholder="e.g., JavaScript, Data Science..."
+                placeholder={t.searchKeywordPlaceholder}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pr-10 shadow-sm"
@@ -221,14 +271,14 @@ function SearchCoursesClientLogic() {
           </div>
           <div>
             <label htmlFor="category-select" className="block text-sm font-medium text-muted-foreground mb-1">
-              Filter by category
+              {t.filterCategoryLabel}
             </label>
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
               <SelectTrigger id="category-select" className="shadow-sm">
-                <SelectValue placeholder="All Categories" />
+                <SelectValue placeholder={t.allCategories} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
+                <SelectItem value="all">{t.allCategories}</SelectItem>
                 {availableCategories.map(category => (
                   <SelectItem key={category.id} value={category.name}>
                     {category.name}
@@ -241,17 +291,16 @@ function SearchCoursesClientLogic() {
         {(searchTerm || selectedCategory !== 'all') && (
           <div className="mt-1 md:mt-3">
             <Button variant="ghost" onClick={handleClearFilters} className="text-sm text-muted-foreground hover:text-foreground h-auto py-1 px-2">
-              <X className="mr-1.5 h-4 w-4" /> Clear Filters
+              <X className="mr-1.5 h-4 w-4" /> {t.clearFilters}
             </Button>
           </div>
         )}
       </section>
 
-      {/* Featured Courses Carousel */}
       {featuredCourses.length > 0 && (
         <section className="py-4 md:py-6">
           <h2 className="text-xl md:text-2xl font-headline font-semibold mb-4 flex items-center">
-            <Star className="mr-2 h-6 w-6 text-primary fill-primary" /> Featured Courses
+            <Star className="mr-2 h-6 w-6 text-primary fill-primary" /> {t.featuredCourses}
           </h2>
           <Carousel opts={{ align: "start", loop: featuredCourses.length > (isMobile ? 1:3) }} className="w-full">
             <CarouselContent className="-ml-2 md:-ml-4">
@@ -269,34 +318,33 @@ function SearchCoursesClientLogic() {
         </section>
       )}
 
-      {/* Quick Recommendations AI Snippet */}
       <section className="py-4 md:py-6">
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="text-lg md:text-xl font-headline flex items-center">
-              <Lightbulb className="mr-2 h-5 w-5 text-primary" /> Quick Suggestions
+              <Lightbulb className="mr-2 h-5 w-5 text-primary" /> {t.quickSuggestions}
             </CardTitle>
-            <CardDescription>Tell us your interest, and we'll suggest a course!</CardDescription>
+            <CardDescription>{t.quickSuggestionsDesc}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleQuickRecSubmit} className="flex items-center gap-2">
               <Input
                 type="text"
-                placeholder="e.g., 'learn python for web'"
+                placeholder={t.quickSuggestionsInputPlaceholder}
                 value={quickRecInput}
                 onChange={(e) => setQuickRecInput(e.target.value)}
                 className="flex-grow shadow-sm"
                 disabled={isQuickRecLoading}
               />
-              <Button type="submit" disabled={isQuickRecLoading || !quickRecInput.trim()} className="shadow-sm">
+              <Button type="submit" disabled={isQuickRecLoading || !quickRecInput.trim()} className="shadow-sm" aria-label={t.getSuggestion}>
                 {isQuickRecLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-                <span className="sr-only">Get Suggestion</span>
+                <span className="sr-only">{t.getSuggestion}</span>
               </Button>
             </form>
             {quickRecError && <p className="text-destructive text-sm mt-2 flex items-center"><AlertTriangle className="h-4 w-4 mr-1.5"/>{quickRecError}</p>}
             {quickRecs.length > 0 && (
               <div className="mt-4 space-y-2">
-                <h4 className="text-sm font-medium text-muted-foreground">Here are some ideas:</h4>
+                <h4 className="text-sm font-medium text-muted-foreground">{t.quickRecsIdeas}</h4>
                 {quickRecs.map(rec => (
                   <Link key={rec.id} href={`/courses/${rec.id}`} passHref>
                     <Button 
@@ -314,17 +362,16 @@ function SearchCoursesClientLogic() {
               </div>
             )}
              {isQuickRecLoading === false && quickRecs.length === 0 && quickRecInput && !quickRecError && (
-                <p className="text-sm text-muted-foreground mt-3">No specific recommendations found for "{quickRecInput}". Try a broader term or browse below!</p>
+                <p className="text-sm text-muted-foreground mt-3">{t.noQuickRecsFound.replace('{query}', quickRecInput)}</p>
             )}
           </CardContent>
         </Card>
       </section>
       
-      {/* Popular Topics Cloud */}
       {popularTopics.length > 0 && (
         <section className="py-4 md:py-6">
           <h2 className="text-xl md:text-2xl font-headline font-semibold mb-4 flex items-center">
-            <ListFilter className="mr-2 h-6 w-6 text-primary" /> Popular Topics
+            <ListFilter className="mr-2 h-6 w-6 text-primary" /> {t.popularTopics}
           </h2>
           <div className="flex flex-wrap gap-2">
             {popularTopics.map(topic => (
@@ -345,7 +392,7 @@ function SearchCoursesClientLogic() {
       <section className="py-4 md:py-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl md:text-2xl font-headline font-semibold flex items-center">
-            <LayoutGrid className="mr-2 h-6 w-6 text-primary" /> Browse Categories
+            <LayoutGrid className="mr-2 h-6 w-6 text-primary" /> {t.browseCategories}
           </h2>
         </div>
         {isLoading && availableCategories.length === 0 ? ( 
@@ -369,8 +416,8 @@ function SearchCoursesClientLogic() {
           <Card className="col-span-full">
             <CardContent className="pt-6 text-center">
               <LayoutGrid className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
-              <h3 className="text-lg font-semibold">No Categories Available</h3>
-              <p className="text-sm text-muted-foreground">Categories will appear here once added.</p>
+              <h3 className="text-lg font-semibold">{t.noCategoriesAvailable}</h3>
+              <p className="text-sm text-muted-foreground">{t.noCategoriesDesc}</p>
             </CardContent>
           </Card>
         )}
@@ -378,7 +425,7 @@ function SearchCoursesClientLogic() {
 
       <section className="py-4 md:py-6">
          <h2 className="text-xl md:text-2xl font-headline font-semibold mb-4 md:mb-6 mt-4 md:mt-8 flex items-center">
-            <GraduationCap className="mr-2 h-6 w-6 text-primary" /> Available Courses
+            <GraduationCap className="mr-2 h-6 w-6 text-primary" /> {t.availableCourses}
         </h2>
         {isLoading && displayedCourses.length === 0 ? ( 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
@@ -412,20 +459,19 @@ function SearchCoursesClientLogic() {
           <Card className="col-span-full">
             <CardContent className="pt-10 pb-10 text-center">
               <Search className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-xl font-semibold mb-2">No Courses Found</h3>
+              <h3 className="text-xl font-semibold mb-2">{t.noCoursesFound}</h3>
               <p className="text-muted-foreground">
-                Try adjusting your search terms or category filters.
+                {t.noCoursesDesc}
               </p>
             </CardContent>
           </Card>
         )}
       </section>
       
-      {/* Learning Paths Teaser */}
       {learningPaths.length > 0 && (
         <section className="py-4 md:py-6">
           <h2 className="text-xl md:text-2xl font-headline font-semibold mb-4 flex items-center">
-            <Milestone className="mr-2 h-6 w-6 text-primary" /> Explore Learning Paths
+            <Milestone className="mr-2 h-6 w-6 text-primary" /> {t.exploreLearningPaths}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {learningPaths.map(path => {
@@ -448,7 +494,7 @@ function SearchCoursesClientLogic() {
                                 <p className="text-sm text-muted-foreground line-clamp-3">{path.description}</p>
                             </CardContent>
                             <CardFooter>
-                                <Button variant="link" className="p-0 h-auto text-primary group-hover:text-accent">View Path <X className="rotate-45 ml-1 h-4 w-4 transform transition-transform group-hover:translate-x-0.5"/></Button>
+                                <Button variant="link" className="p-0 h-auto text-primary group-hover:text-accent">{t.viewPath} <X className="rotate-45 ml-1 h-4 w-4 transform transition-transform group-hover:translate-x-0.5"/></Button>
                             </CardFooter>
                         </Card>
                     </Link>
@@ -481,6 +527,7 @@ function SearchCoursesClientLogic() {
 }
 
 function SearchPageInitialSkeleton() {
+  // This skeleton does not need translation as it's a loading state
   return (
     <div className="space-y-4 md:space-y-6 pt-0"> 
       <section className="pb-4 md:pb-6 border-b">
@@ -559,4 +606,3 @@ export default function SearchCoursesPage() {
     </Suspense>
   );
 }
-

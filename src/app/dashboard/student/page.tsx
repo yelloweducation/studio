@@ -2,7 +2,7 @@
 "use client";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/hooks/useAuth";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"; // Added CardFooter
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"; 
 import { BookUser, BookMarked, History, GraduationCap } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -10,11 +10,37 @@ import CourseCard from "@/components/courses/CourseCard";
 import { courses as mockCourses, enrollments as initialEnrollments, type Course, type Enrollment } from "@/data/mockData";
 import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useLanguage, type Language } from '@/contexts/LanguageContext'; // Added
 
 const USER_ENROLLMENTS_KEY = 'userEnrollmentsData';
 
+const studentDashboardTranslations = {
+  en: {
+    welcome: "Welcome",
+    description: "This is your personal learning dashboard.",
+    myEnrolledCourses: "My Enrolled Courses",
+    learningActivity: "Learning Activity",
+    exploreCourses: "Explore Courses",
+    noCoursesYet: "You haven't enrolled in any courses yet.",
+    activityPlaceholder: "Your recent learning activity will appear here. (Completion progress is tracked per course).",
+    student: "Student"
+  },
+  my: {
+    welcome: "ကြိုဆိုပါတယ်", // Kyo So Ba Deh
+    description: "ဤသည်မှာ သင်၏ကိုယ်ပိုင်သင်ယူမှု ဒက်ရှ်ဘုတ်ဖြစ်သည်။", // This is your personal learning dashboard.
+    myEnrolledCourses: "ကျွန်ုပ်၏ စာရင်းသွင်းထားသော သင်တန်းများ", // My Enrolled Courses
+    learningActivity: "သင်ယူမှု လှုပ်ရှားမှု", // Learning Activity
+    exploreCourses: "သင်တန်းများ ရှာဖွေရန်", // Explore Courses
+    noCoursesYet: "သင်သည် မည်သည့်သင်တန်းမှ စာရင်းမသွင်းရသေးပါ။", // You haven't enrolled in any courses yet.
+    activityPlaceholder: "သင်၏ မကြာသေးမီက သင်ယူမှု လှုပ်ရှားမှုများကို ဤနေရာတွင် ပြသပါမည်။ (ပြီးဆုံးမှု တိုးတက်မှုကို သင်တန်းအလိုက် ခြေရာခံသည်)။",
+    student: "ကျောင်းသား" // Student
+  }
+};
+
 export default function StudentDashboardPage() {
   const { user } = useAuth();
+  const { language } = useLanguage(); // Added
+  const t = studentDashboardTranslations[language]; // Added
   const [enrolledCoursesDetails, setEnrolledCoursesDetails] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -24,7 +50,6 @@ export default function StudentDashboardPage() {
       let userEnrollments: Enrollment[] = [];
       let allCourses: Course[] = [];
 
-      // Load courses (admin-managed first, then mock)
       try {
         const storedCoursesString = localStorage.getItem('adminCourses');
         if (storedCoursesString) {
@@ -38,12 +63,11 @@ export default function StudentDashboardPage() {
         allCourses = mockCourses;
       }
       
-      // Load enrollments from localStorage or initialize
       try {
         const storedEnrollments = localStorage.getItem(USER_ENROLLMENTS_KEY);
         if (storedEnrollments) {
           userEnrollments = JSON.parse(storedEnrollments) as Enrollment[];
-           if (!Array.isArray(userEnrollments)) { // Basic validation
+           if (!Array.isArray(userEnrollments)) { 
             userEnrollments = JSON.parse(JSON.stringify(initialEnrollments));
           }
         } else {
@@ -75,14 +99,14 @@ export default function StudentDashboardPage() {
       <div className="space-y-8">
         <section className="pb-4 border-b">
             <h1 className="text-2xl md:text-3xl font-headline font-semibold flex items-center">
-                <BookUser className="mr-2 md:mr-3 h-7 w-7 md:h-8 md:w-8 text-primary" /> Welcome, {user?.name || 'Student'}!
+                <BookUser className="mr-2 md:mr-3 h-7 w-7 md:h-8 md:w-8 text-primary" /> {t.welcome}, {user?.name || t.student}!
             </h1>
-            <p className="text-sm md:text-base text-muted-foreground">This is your personal learning dashboard.</p>
+            <p className="text-sm md:text-base text-muted-foreground">{t.description}</p>
         </section>
 
         <section>
             <h2 className="text-xl md:text-2xl font-headline font-semibold mb-4 flex items-center">
-                <GraduationCap className="mr-2 h-6 w-6 text-primary" /> My Enrolled Courses
+                <GraduationCap className="mr-2 h-6 w-6 text-primary" /> {t.myEnrolledCourses}
             </h2>
             {isLoading ? (
                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -115,9 +139,9 @@ export default function StudentDashboardPage() {
             ) : (
                 <Card>
                     <CardContent className="pt-6 text-center">
-                        <p className="text-muted-foreground mb-4">You haven&apos;t enrolled in any courses yet.</p>
+                        <p className="text-muted-foreground mb-4">{t.noCoursesYet}</p>
                         <Button asChild>
-                            <Link href="/courses/search">Explore Courses</Link>
+                            <Link href="/courses/search">{t.exploreCourses}</Link>
                         </Button>
                     </CardContent>
                 </Card>
@@ -126,12 +150,12 @@ export default function StudentDashboardPage() {
         
         <section>
              <h2 className="text-xl md:text-2xl font-headline font-semibold mb-4 flex items-center">
-                <History className="mr-2 h-6 w-6 text-primary" /> Learning Activity
+                <History className="mr-2 h-6 w-6 text-primary" /> {t.learningActivity}
             </h2>
              <Card>
                 <CardContent className="pt-6">
                     <p className="text-center text-muted-foreground">
-                        Your recent learning activity will appear here. (Completion progress is tracked per course).
+                        {t.activityPlaceholder}
                     </p>
                 </CardContent>
             </Card>

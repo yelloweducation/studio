@@ -13,18 +13,78 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronLeft, BookOpenText, PlayCircle, Lock, CheckCircle, AlertTriangle, Clock, ExternalLink, ArrowRight, Home, ShoppingCart, BadgeDollarSign, Hourglass } from 'lucide-react';
 import { getEmbedUrl } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useLanguage, type Language } from '@/contexts/LanguageContext'; // Added
 
 interface CompletionInfo {
   isCompleted: boolean;
   progress: number;
 }
 interface PaymentInfo {
-  status: PaymentSubmissionStatus | null; // null if no submission found
+  status: PaymentSubmissionStatus | null; 
   submission?: PaymentSubmission;
 }
 
 const USER_ENROLLMENTS_KEY = 'userEnrollmentsData';
-const USER_PAYMENT_SUBMISSIONS_KEY = 'adminPaymentSubmissions'; // Admin manages these
+const USER_PAYMENT_SUBMISSIONS_KEY = 'adminPaymentSubmissions'; 
+
+const courseDetailTranslations = {
+  en: {
+    backToCourses: "Back to Courses",
+    taughtBy: "Taught by {instructor}",
+    categoryLabel: "Category: {category}",
+    priceLabel: "Price: {price} {currency}",
+    courseAccess: "Course Access",
+    loginToPurchase: "Login to Purchase for {price} {currency}",
+    purchaseFor: "Purchase for {price} {currency}",
+    paymentSubmitted: "Payment Submitted",
+    paymentSubmittedDesc: "Your payment is currently under review.",
+    startLearning: "Start Learning",
+    courseContentComingSoon: "Course Content Coming Soon",
+    lessonsBeingPrepared: "Lessons are being prepared. Check back later!",
+    pricedNoLessons: "This course is priced but lessons are not yet available. Check back later!",
+    startLearningFree: "Start Learning (Free)",
+    reviewCourse: "Review Course",
+    finishedCourse: "You finished this course!",
+    progressLabel: "Progress: {progress}%",
+    progressCompleted: "Progress: {progress}% completed",
+    courseContent: "Course Content",
+    moduleLabel: "Module {index}: {title}",
+    noLessonsInModule: "No lessons in this module yet.",
+    noModulesAvailable: "No modules available for this course yet.",
+    courseNotFound: "Course Not Found",
+    courseNotFoundDesc: "Sorry, we couldn't find the course you were looking for (ID: {courseId}). It might have been moved or removed.",
+    exploreOtherCourses: "Explore Other Courses",
+    backToHome: "Back to Home"
+  },
+  my: {
+    backToCourses: "သင်တန်းများသို့ ပြန်သွားရန်",
+    taughtBy: "သင်ကြားသူ: {instructor}",
+    categoryLabel: "အမျိုးအစား: {category}",
+    priceLabel: "စျေးနှုန်း: {price} {currency}",
+    courseAccess: "သင်တန်းအသုံးပြုခွင့်",
+    loginToPurchase: "{price} {currency} ဖြင့် ဝယ်ယူရန် လော့ဂ်အင်ဝင်ပါ",
+    purchaseFor: "{price} {currency} ဖြင့် ဝယ်ယူရန်",
+    paymentSubmitted: "ငွေပေးချေမှု တင်သွင်းပြီးပါပြီ",
+    paymentSubmittedDesc: "သင်၏ ငွေပေးချေမှုကို လက်ရှိ ပြန်လည်သုံးသပ်နေပါသည်။",
+    startLearning: "စတင်လေ့လာပါ",
+    courseContentComingSoon: "သင်တန်းအကြောင်းအရာ မကြာမီလာမည်",
+    lessonsBeingPrepared: "သင်ခန်းစာများ ပြင်ဆင်နေပါသည်။ နောက်မှ ပြန်စစ်ဆေးပါ။",
+    pricedNoLessons: "ဤသင်တန်းသည် စျေးနှုန်းသတ်မှတ်ထားသော်လည်း သင်ခန်းစာများ မရရှိနိုင်သေးပါ။ နောက်မှ ပြန်စစ်ဆေးပါ။",
+    startLearningFree: "အခမဲ့ စတင်လေ့လာပါ",
+    reviewCourse: "သင်တန်း ပြန်လည်သုံးသပ်ရန်",
+    finishedCourse: "သင် ဤသင်တန်းကို ပြီးဆုံးသွားပါပြီ!",
+    progressLabel: "တိုးတက်မှု: {progress}%",
+    progressCompleted: "တိုးတက်မှု: {progress}% ပြီးဆုံး",
+    courseContent: "သင်တန်းမာတိကာ",
+    moduleLabel: "အခန်း {index}: {title}",
+    noLessonsInModule: "ဤအခန်းတွင် သင်ခန်းစာများ မရှိသေးပါ။",
+    noModulesAvailable: "ဤသင်တန်းအတွက် အခန်းများ မရှိသေးပါ။",
+    courseNotFound: "သင်တန်း မတွေ့ပါ",
+    courseNotFoundDesc: "တောင်းပန်ပါသည်၊ သင်ရှာဖွေနေသော သင်တန်း (ID: {courseId}) ကို ရှာမတွေ့ပါ။ ၎င်းကို ရွှေ့ပြောင်းခြင်း သို့မဟုတ် ဖယ်ရှားခြင်း ဖြစ်နိုင်ပါသည်။",
+    exploreOtherCourses: "အခြားသင်တန်းများ ရှာဖွေရန်",
+    backToHome: "ပင်မစာမျက်နှာသို့ ပြန်သွားရန်"
+  }
+};
 
 export default function CourseDetailPage() {
   const params = useParams();
@@ -32,6 +92,8 @@ export default function CourseDetailPage() {
   const router = useRouter();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const { toast } = useToast();
+  const { language } = useLanguage(); // Added
+  const t = courseDetailTranslations[language]; // Added
 
   const [allAppCourses, setAllAppCourses] = useState<Course[]>([]);
   const [areAppCoursesLoaded, setAreAppCoursesLoaded] = useState(false);
@@ -93,7 +155,7 @@ export default function CourseDetailPage() {
     setCompletionInfo(null); 
     setPaymentInfo(null);
 
-    if (authLoading || !areAppCoursesLoaded) { // Wait for auth and courses
+    if (authLoading || !areAppCoursesLoaded) { 
       return;
     }
     
@@ -117,7 +179,6 @@ export default function CourseDetailPage() {
                     if(Array.isArray(parsedEnrollments)){
                         userEnrollments = parsedEnrollments as Enrollment[];
                     } else { 
-                        console.warn(`${USER_ENROLLMENTS_KEY} in localStorage was not an array. Falling back and re-initializing.`);
                         localStorage.setItem(USER_ENROLLMENTS_KEY, JSON.stringify(initialEnrollments)); 
                         userEnrollments = JSON.parse(JSON.stringify(initialEnrollments)); 
                     }
@@ -126,7 +187,6 @@ export default function CourseDetailPage() {
                     userEnrollments = JSON.parse(JSON.stringify(initialEnrollments)); 
                 }
             } catch (error) { 
-                console.error(`Error parsing ${USER_ENROLLMENTS_KEY} from localStorage:`, error);
                 localStorage.setItem(USER_ENROLLMENTS_KEY, JSON.stringify(initialEnrollments)); 
                 userEnrollments = JSON.parse(JSON.stringify(initialEnrollments)); 
             }
@@ -138,7 +198,6 @@ export default function CourseDetailPage() {
                 setCompletionInfo({ isCompleted: false, progress: 0 });
             }
 
-            // Load payment submissions
             if (currentCourse.price && currentCourse.price > 0) {
                 let allSubmissions: PaymentSubmission[] = [];
                 try {
@@ -156,17 +215,16 @@ export default function CourseDetailPage() {
                         allSubmissions = JSON.parse(JSON.stringify(initialPaymentSubmissions));
                     }
                 } catch (error) {
-                    console.error("Error loading payment submissions from localStorage:", error);
                      localStorage.setItem(USER_PAYMENT_SUBMISSIONS_KEY, JSON.stringify(initialPaymentSubmissions));
                     allSubmissions = JSON.parse(JSON.stringify(initialPaymentSubmissions));
                 }
                 const userSubmission = allSubmissions.find(s => s.userId === user.id && s.courseId === currentCourse.id);
                 setPaymentInfo({ status: userSubmission?.status || null, submission: userSubmission });
             } else {
-                setPaymentInfo({ status: null }); // Free course
+                setPaymentInfo({ status: null }); 
             }
 
-        } else { // Not authenticated
+        } else { 
              setCompletionInfo({ isCompleted: false, progress: 0 });
              setPaymentInfo({ status: null });
         }
@@ -180,46 +238,45 @@ export default function CourseDetailPage() {
   const renderCTAButton = () => {
     if (!currentCourse) return null; 
 
-    // Handle paid courses
     if (currentCourse.price && currentCourse.price > 0) {
         if (!isAuthenticated) {
             return (
                  <Button asChild size="lg" className="w-full shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150 whitespace-normal h-auto">
                     <Link href={`/login?redirect=/courses/${courseId}`}>
-                        <BadgeDollarSign className="mr-2 h-5 w-5" /> Login to Purchase for {currentCourse.price.toFixed(2)} {currentCourse.currency}
+                        <BadgeDollarSign className="mr-2 h-5 w-5" /> 
+                        {t.loginToPurchase.replace('{price}', currentCourse.price.toFixed(2)).replace('{currency}', currentCourse.currency || 'USD')}
                     </Link>
                 </Button>
             );
         }
-        // Authenticated user, check payment status
         if (paymentInfo?.status === 'approved') {
             if (completionInfo?.isCompleted) {
                 return (
                     <div className="flex flex-col items-center text-center p-4 bg-green-100 dark:bg-green-900/50 rounded-lg shadow">
                         <CheckCircle className="w-12 h-12 text-green-600 dark:text-green-400 mb-2" />
-                        <p className="font-semibold text-green-700 dark:text-green-300">You finished this course!</p>
-                        <p className="text-sm text-green-600 dark:text-green-400">Progress: {completionInfo.progress}%</p>
+                        <p className="font-semibold text-green-700 dark:text-green-300">{t.finishedCourse}</p>
+                        <p className="text-sm text-green-600 dark:text-green-400">{t.progressLabel.replace('{progress}', (completionInfo.progress || 0).toString())}</p>
                         {firstLessonPath && (
                             <Button asChild className="mt-3 whitespace-normal h-auto">
-                            <Link href={firstLessonPath}>Review Course</Link>
+                            <Link href={firstLessonPath}>{t.reviewCourse}</Link>
                             </Button>
                         )}
                     </div>
                 );
             }
-             if (!firstLessonPath) { // Paid & Approved, but no lessons
+             if (!firstLessonPath) { 
                  return (
                     <div className="flex flex-col items-center text-center p-4 bg-muted rounded-lg shadow">
                         <AlertTriangle className="w-12 h-12 text-amber-500 mb-2" />
-                        <p className="font-semibold text-foreground">Course Content Coming Soon</p>
-                        <p className="text-sm text-muted-foreground">Lessons are being prepared. Check back later!</p>
+                        <p className="font-semibold text-foreground">{t.courseContentComingSoon}</p>
+                        <p className="text-sm text-muted-foreground">{t.lessonsBeingPrepared}</p>
                     </div>
                 );
             }
-            return ( // Approved, not yet completed
+            return ( 
                 <Button asChild size="lg" className="w-full shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150 whitespace-normal h-auto">
                     <Link href={firstLessonPath}>
-                    Start Learning <ArrowRight className="ml-2 h-5 w-5" />
+                    {t.startLearning} <ArrowRight className="ml-2 h-5 w-5" />
                     </Link>
                 </Button>
             );
@@ -227,40 +284,40 @@ export default function CourseDetailPage() {
             return (
                 <div className="flex flex-col items-center text-center p-4 bg-blue-100 dark:bg-blue-900/50 rounded-lg shadow">
                     <Hourglass className="w-12 h-12 text-blue-600 dark:text-blue-400 mb-2" />
-                    <p className="font-semibold text-blue-700 dark:text-blue-300">Payment Submitted</p>
-                    <p className="text-sm text-blue-600 dark:text-blue-400">Your payment is currently under review.</p>
+                    <p className="font-semibold text-blue-700 dark:text-blue-300">{t.paymentSubmitted}</p>
+                    <p className="text-sm text-blue-600 dark:text-blue-400">{t.paymentSubmittedDesc}</p>
                 </div>
             );
-        } else { // No submission, or rejected
-             if (!firstLessonPath && !(currentCourse.modules && currentCourse.modules.length > 0)) { // No content to purchase
+        } else { 
+             if (!firstLessonPath && !(currentCourse.modules && currentCourse.modules.length > 0)) { 
                 return (
                     <div className="flex flex-col items-center text-center p-4 bg-muted rounded-lg shadow">
                         <AlertTriangle className="w-12 h-12 text-amber-500 mb-2" />
-                        <p className="font-semibold text-foreground">Course Content Coming Soon</p>
-                        <p className="text-sm text-muted-foreground">This course is priced but lessons are not yet available. Check back later!</p>
+                        <p className="font-semibold text-foreground">{t.courseContentComingSoon}</p>
+                        <p className="text-sm text-muted-foreground">{t.pricedNoLessons}</p>
                     </div>
                 );
             }
-            return ( // Needs purchase
+            return ( 
                 <Button asChild size="lg" className="w-full shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150 whitespace-normal h-auto">
                     <Link href={`/courses/${courseId}/checkout`}>
-                        <ShoppingCart className="mr-2 h-5 w-5" /> Purchase for {currentCourse.price.toFixed(2)} {currentCourse.currency}
+                        <ShoppingCart className="mr-2 h-5 w-5" /> 
+                        {t.purchaseFor.replace('{price}', currentCourse.price.toFixed(2)).replace('{currency}', currentCourse.currency || 'USD')}
                     </Link>
                 </Button>
             );
         }
     }
 
-    // Handle free courses (original logic)
     if (completionInfo?.isCompleted) {
       return (
         <div className="flex flex-col items-center text-center p-4 bg-green-100 dark:bg-green-900/50 rounded-lg shadow">
           <CheckCircle className="w-12 h-12 text-green-600 dark:text-green-400 mb-2" />
-          <p className="font-semibold text-green-700 dark:text-green-300">You finished this course!</p>
-          <p className="text-sm text-green-600 dark:text-green-400">Progress: {completionInfo.progress}%</p>
+          <p className="font-semibold text-green-700 dark:text-green-300">{t.finishedCourse}</p>
+          <p className="text-sm text-green-600 dark:text-green-400">{t.progressLabel.replace('{progress}', (completionInfo.progress || 0).toString())}</p>
           {firstLessonPath && (
             <Button asChild className="mt-3 whitespace-normal h-auto">
-              <Link href={firstLessonPath}>Review Course</Link>
+              <Link href={firstLessonPath}>{t.reviewCourse}</Link>
             </Button>
           )}
         </div>
@@ -271,8 +328,8 @@ export default function CourseDetailPage() {
          return (
             <div className="flex flex-col items-center text-center p-4 bg-muted rounded-lg shadow">
                 <AlertTriangle className="w-12 h-12 text-amber-500 mb-2" />
-                <p className="font-semibold text-foreground">Course Content Coming Soon</p>
-                <p className="text-sm text-muted-foreground">Lessons are being prepared. Check back later!</p>
+                <p className="font-semibold text-foreground">{t.courseContentComingSoon}</p>
+                <p className="text-sm text-muted-foreground">{t.lessonsBeingPrepared}</p>
             </div>
         );
     }
@@ -280,7 +337,7 @@ export default function CourseDetailPage() {
     return (
       <Button asChild size="lg" className="w-full shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150 whitespace-normal h-auto">
         <Link href={firstLessonPath}>
-          Start Learning (Free) <ArrowRight className="ml-2 h-5 w-5" />
+          {t.startLearningFree} <ArrowRight className="ml-2 h-5 w-5" />
         </Link>
       </Button>
     );
@@ -330,20 +387,20 @@ export default function CourseDetailPage() {
     return (
       <div className="max-w-lg mx-auto py-6 sm:py-12 text-center">
         <Button variant="outline" onClick={() => router.push('/')} className="mb-6">
-          <ChevronLeft className="mr-2 h-4 w-4" /> Back to Home
+          <ChevronLeft className="mr-2 h-4 w-4" /> {t.backToHome}
         </Button>
         <Card className="shadow-xl">
           <CardHeader>
             <CardTitle className="text-2xl flex items-center justify-center font-headline">
-              <AlertTriangle className="mr-3 h-8 w-8 text-destructive" /> Course Not Found
+              <AlertTriangle className="mr-3 h-8 w-8 text-destructive" /> {t.courseNotFound}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground mb-6">
-              Sorry, we couldn&apos;t find the course you were looking for (ID: {courseId}). It might have been moved or removed.
+              {t.courseNotFoundDesc.replace('{courseId}', courseId)}
             </p>
             <Button asChild>
-              <Link href="/courses/search">Explore Other Courses</Link>
+              <Link href="/courses/search">{t.exploreOtherCourses}</Link>
             </Button>
           </CardContent>
         </Card>
@@ -356,7 +413,7 @@ export default function CourseDetailPage() {
   return (
     <div className="max-w-4xl mx-auto py-2 md:py-8">
       <Button variant="outline" onClick={() => router.back()} className="mb-4 md:mb-6 text-sm">
-        <ChevronLeft className="mr-2 h-4 w-4" /> Back to Courses
+        <ChevronLeft className="mr-2 h-4 w-4" /> {t.backToCourses}
       </Button>
 
       <div className="grid md:grid-cols-3 gap-6 lg:gap-8 items-start">
@@ -377,10 +434,10 @@ export default function CourseDetailPage() {
             <CardHeader>
               <CardTitle className="text-2xl sm:text-3xl font-headline text-foreground">{title}</CardTitle>
               <CardDescription className="text-md text-muted-foreground">
-                Taught by {instructor} &bull; Category: {category}
+                {t.taughtBy.replace('{instructor}', instructor || '')} &bull; {t.categoryLabel.replace('{category}', category || '')}
                 {price && price > 0 && currency && (
                     <span className="block mt-1 font-semibold text-primary">
-                        Price: {price.toFixed(2)} {currency}
+                        {t.priceLabel.replace('{price}', price.toFixed(2)).replace('{currency}', currency)}
                     </span>
                 )}
               </CardDescription>
@@ -394,14 +451,14 @@ export default function CourseDetailPage() {
         <div className="md:col-span-1 space-y-6 md:sticky md:top-24">
           <Card className="shadow-xl">
             <CardHeader className="pb-3">
-              <CardTitle className="text-xl font-headline">Course Access</CardTitle>
+              <CardTitle className="text-xl font-headline">{t.courseAccess}</CardTitle>
             </CardHeader>
             <CardContent>
               {renderCTAButton()}
             </CardContent>
             {isAuthenticated && completionInfo && completionInfo.progress > 0 && completionInfo.progress < 100 && (!price || price <=0 || paymentInfo?.status === 'approved') && (
                  <CardFooter className="text-sm text-muted-foreground pt-0 pb-4 text-center justify-center">
-                    Progress: {completionInfo.progress}% completed
+                    {t.progressCompleted.replace('{progress}', (completionInfo.progress || 0).toString())}
                 </CardFooter>
             )}
           </Card>
@@ -409,7 +466,7 @@ export default function CourseDetailPage() {
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle className="text-xl font-headline flex items-center">
-                <BookOpenText className="mr-2 h-6 w-6 text-primary" /> Course Content
+                <BookOpenText className="mr-2 h-6 w-6 text-primary" /> {t.courseContent}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -418,14 +475,13 @@ export default function CourseDetailPage() {
                   {modules.map((module: Module, moduleIndex: number) => (
                     <AccordionItem value={module.id} key={module.id}>
                       <AccordionTrigger className="text-md font-semibold hover:no-underline">
-                        {`Module ${moduleIndex + 1}: ${module.title}`}
+                        {t.moduleLabel.replace('{index}', (moduleIndex + 1).toString()).replace('{title}', module.title)}
                       </AccordionTrigger>
                       <AccordionContent>
                         {module.lessons && module.lessons.length > 0 ? (
                           <ul className="space-y-2 pl-2 border-l-2 border-primary/20 ml-2">
                             {module.lessons.map((lesson: Lesson, lessonIndex: number) => {
                               const lessonPath = `/courses/${courseId}/learn/${module.id}/${lesson.id}`;
-                              // Simplified access: if course is free or payment is approved, lesson is accessible
                               const isLessonAccessible = (!price || price <= 0) || (isAuthenticated && paymentInfo?.status === 'approved');
                               
                               return (
@@ -452,14 +508,14 @@ export default function CourseDetailPage() {
                             })}
                           </ul>
                         ) : (
-                          <p className="text-sm text-muted-foreground pl-4 py-2">No lessons in this module yet.</p>
+                          <p className="text-sm text-muted-foreground pl-4 py-2">{t.noLessonsInModule}</p>
                         )}
                       </AccordionContent>
                     </AccordionItem>
                   ))}
                 </Accordion>
               ) : (
-                <p className="text-muted-foreground text-center py-4">No modules available for this course yet.</p>
+                <p className="text-muted-foreground text-center py-4">{t.noModulesAvailable}</p>
               )}
             </CardContent>
           </Card>
@@ -468,6 +524,3 @@ export default function CourseDetailPage() {
     </div>
   );
 }
-
-
-    

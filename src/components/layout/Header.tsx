@@ -19,14 +19,44 @@ import {
 import { Separator } from '@/components/ui/separator';
 import React, { useEffect, useState, useRef } from 'react';
 import { cn } from "@/lib/utils";
+import { useLanguage, type Language } from '@/contexts/LanguageContext'; // Added
+
+const headerTranslations = {
+  en: {
+    home: "Home",
+    explore: "Explore",
+    welcome: "Welcome",
+    dashboard: "Dashboard",
+    logout: "Logout",
+    login: "Login",
+    register: "Register",
+    toggleTheme: "Toggle Theme",
+    openMenu: "Open menu",
+    loading: "Loading...",
+  },
+  my: {
+    home: "ပင်မ", // Pin-Ma (Main/Home)
+    explore: "ရှာဖွေရန်", // Sha Phway Yan (Explore)
+    welcome: "ကြိုဆိုပါတယ်", // Kyo So Ba Deh (Welcome)
+    dashboard: "ဒက်ရှ်ဘုတ်", // Dashboard
+    logout: "ထွက်ရန်", // Thwet Yan (Logout)
+    login: "ဝင်ရန်", // Win Yan (Login)
+    register: "စာရင်းသွင်းရန်", // Sa Yin Thwin Yan (Register)
+    toggleTheme: "အသွင်ပြောင်းရန်", // A Thwin Pyaung Yan (Toggle Theme)
+    openMenu: "မီနူးဖွင့်ပါ", // Menu Fwint Ba
+    loading: "လုပ်ဆောင်နေသည်...", // Lok Saung Nay De...
+  }
+};
 
 const Header = () => {
-  const { isAuthenticated, user, role, logout, loading } = useAuth();
+  const { isAuthenticated, user, role, logout, loading: authLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
   const isMobile = useIsMobile();
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
+  const { language } = useLanguage(); // Added
+  const t = headerTranslations[language]; // Added
 
   const [headerVisible, setHeaderVisible] = useState(true);
   const lastScrollY = useRef(0);
@@ -47,21 +77,18 @@ const Header = () => {
       }
     };
 
-    // Only add scroll listener if not on the videos page, as header is hidden there
     if (pathname !== '/videos') {
         window.addEventListener('scroll', controlHeader);
-        controlHeader(); // Initial check
+        controlHeader(); 
     } else {
-        setHeaderVisible(true); // Ensure it's visible if we navigate away from /videos
+        setHeaderVisible(true); 
     }
-
 
     return () => {
       window.removeEventListener('scroll', controlHeader);
     };
   }, [pathname]);
 
-  // If it's the dedicated video page, don't render the header at all.
   // This check MUST come AFTER all hook calls.
   if (pathname === '/videos') {
     return null;
@@ -89,7 +116,6 @@ const Header = () => {
   const headerBaseClasses = 'sticky top-0 z-50 transition-transform duration-300 ease-in-out';
   const headerBackgroundClasses = (isMobileHomepage || isMobileCourseSearchPage) ? '' : 'bg-background/80 backdrop-blur-md border-b';
 
-
   return (
     <header className={cn(
         headerBaseClasses,
@@ -107,18 +133,18 @@ const Header = () => {
                   pathname === '/' && "underline underline-offset-4 decoration-primary decoration-2"
                 )}
               >
-                <Link href="/">ALL</Link>
+                <Link href="/">{language === 'my' ? 'အားလုံး' : 'ALL'}</Link>
               </Button>
-              {!loading && isAuthenticated && (
+              {!authLoading && isAuthenticated && (
                 <Button variant="ghost" size="sm" asChild className="text-foreground hover:bg-transparent hover:text-foreground/70 px-2 font-medium">
-                  <Link href={getDashboardPath()}>Dashboard</Link>
+                  <Link href={getDashboardPath()}>{t.dashboard}</Link>
                 </Button>
               )}
             </div>
           ) : (
-            isCourseSearchPage && isMobile ? ( // Only show title for mobile course search
+            isCourseSearchPage && isMobile ? ( 
               <h1 className="text-xl font-bold font-headline text-foreground flex items-center">
-                <Search className="mr-2 h-5 w-5 text-primary"/> Explore Learning
+                <Search className="mr-2 h-5 w-5 text-primary"/> {t.explore}
               </h1>
             ) : (
               <LuminaLogo />
@@ -130,22 +156,22 @@ const Header = () => {
         <div className="flex items-center space-x-1">
           {isMobileHomepage ? (
             <>
-              {loading && (
+              {authLoading && (
                 <Button variant="ghost" size="icon" disabled>
                   <Loader2 className="h-5 w-5 animate-spin" />
                 </Button>
               )}
-              {!loading && isAuthenticated && (
-                <Button variant="ghost" size="icon" onClick={handleLogout} aria-label="Logout">
+              {!authLoading && isAuthenticated && (
+                <Button variant="ghost" size="icon" onClick={handleLogout} aria-label={t.logout}>
                   <LogOut className="h-5 w-5" />
                 </Button>
               )}
-              {!loading && !isAuthenticated && (
-                <Button variant="ghost" size="icon" asChild aria-label="Login">
+              {!authLoading && !isAuthenticated && (
+                <Button variant="ghost" size="icon" asChild aria-label={t.login}>
                   <Link href="/login"><LogIn className="h-5 w-5" /></Link>
                 </Button>
               )}
-              <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
+              <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label={t.toggleTheme}>
                 {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
               </Button>
             </>
@@ -154,13 +180,13 @@ const Header = () => {
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon">
                   <Menu className="h-6 w-6" />
-                  <span className="sr-only">Open menu</span>
+                  <span className="sr-only">{t.openMenu}</span>
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-[280px] sm:w-[320px] p-0">
                 <SheetHeader className="p-4 border-b">
                   {isCourseSearchPage ? (
-                    <SheetTitle className="flex items-center"><Search className="mr-2 h-5 w-5 text-primary"/>Explore Learning</SheetTitle>
+                    <SheetTitle className="flex items-center"><Search className="mr-2 h-5 w-5 text-primary"/>{t.explore}</SheetTitle>
                   ) : (
                     <SheetTitle><LuminaLogo /></SheetTitle>
                   )}
@@ -168,23 +194,23 @@ const Header = () => {
                 <div className="flex flex-col space-y-1 p-4">
                   <SheetClose asChild>
                     <Button variant="ghost" asChild className={commonNavButtonClasses}>
-                      <Link href="/"><Home className={commonIconClasses} /> Home</Link>
+                      <Link href="/"><Home className={commonIconClasses} /> {t.home}</Link>
                     </Button>
                   </SheetClose>
                   {!isCourseSearchPage && (
                     <SheetClose asChild>
                       <Button variant="ghost" asChild className={commonNavButtonClasses}>
-                        <Link href="/courses/search"><Search className={commonIconClasses} /> Explore Courses</Link>
+                        <Link href="/courses/search"><Search className={commonIconClasses} /> {t.explore}</Link>
                       </Button>
                     </SheetClose>
                   )}
-                  {loading ? (
-                    <Button variant="ghost" className={commonNavButtonClasses} disabled>Loading...</Button>
+                  {authLoading ? (
+                    <Button variant="ghost" className={commonNavButtonClasses} disabled>{t.loading}</Button>
                   ) : isAuthenticated ? (
                     <>
                       <SheetClose asChild>
                         <Button variant="ghost" asChild className={commonNavButtonClasses}>
-                          <Link href={getDashboardPath()}><LayoutDashboard className={commonIconClasses} /> Dashboard</Link>
+                          <Link href={getDashboardPath()}><LayoutDashboard className={commonIconClasses} /> {t.dashboard}</Link>
                         </Button>
                       </SheetClose>
                       <Button
@@ -192,19 +218,19 @@ const Header = () => {
                         onClick={handleLogout}
                         className={`${commonNavButtonClasses} text-destructive hover:text-destructive hover:bg-destructive/10`}
                       >
-                        <LogOut className={commonIconClasses} /> Logout
+                        <LogOut className={commonIconClasses} /> {t.logout}
                       </Button>
                     </>
                   ) : (
                     <>
                       <SheetClose asChild>
                         <Button variant="ghost" asChild className={commonNavButtonClasses}>
-                          <Link href="/login"><LogIn className={commonIconClasses} /> Login</Link>
+                          <Link href="/login"><LogIn className={commonIconClasses} /> {t.login}</Link>
                         </Button>
                       </SheetClose>
                       <SheetClose asChild>
                         <Button variant="ghost" asChild className={commonNavButtonClasses}>
-                          <Link href="/register"><UserPlus className={commonIconClasses} /> Register</Link>
+                          <Link href="/register"><UserPlus className={commonIconClasses} /> {t.register}</Link>
                         </Button>
                       </SheetClose>
                     </>
@@ -216,7 +242,7 @@ const Header = () => {
                     className={commonNavButtonClasses}
                   >
                     {theme === 'light' ? <Moon className={commonIconClasses} /> : <Sun className={commonIconClasses} />}
-                    Toggle Theme
+                    {t.toggleTheme}
                   </Button>
                 </div>
               </SheetContent>
@@ -225,20 +251,20 @@ const Header = () => {
             // Desktop navigation
             <>
               <Button variant="ghost" size="sm" asChild className={cn("hover:bg-accent/20", pathname === '/' && "bg-accent/10")}>
-                <Link href="/"><Home className="mr-1 h-4 w-4" /> Home</Link>
+                <Link href="/"><Home className="mr-1 h-4 w-4" /> {t.home}</Link>
               </Button>
               {!isCourseSearchPage && (
                   <Button variant="ghost" size="sm" asChild className={cn("hover:bg-accent/20", pathname === '/courses/search' && "bg-accent/10")}>
-                      <Link href="/courses/search"><Search className="mr-1 h-4 w-4" /> Explore</Link>
+                      <Link href="/courses/search"><Search className="mr-1 h-4 w-4" /> {t.explore}</Link>
                   </Button>
               )}
-              {loading ? (
-                <Button variant="ghost" size="sm" disabled>Loading...</Button>
+              {authLoading ? (
+                <Button variant="ghost" size="sm" disabled>{t.loading}</Button>
               ) : isAuthenticated ? (
                 <>
-                  <span className="text-sm text-muted-foreground hidden sm:inline">Welcome, {user?.name}!</span>
+                  <span className="text-sm text-muted-foreground hidden sm:inline">{t.welcome}, {user?.name}!</span>
                   <Button variant="ghost" size="sm" asChild className={cn("hover:bg-accent/20", (pathname === '/dashboard/admin' || pathname === '/dashboard/student') && "bg-accent/10")}>
-                    <Link href={getDashboardPath()}><LayoutDashboard className="mr-1 h-4 w-4" /> Dashboard</Link>
+                    <Link href={getDashboardPath()}><LayoutDashboard className="mr-1 h-4 w-4" /> {t.dashboard}</Link>
                   </Button>
                   <Button
                     variant="outline"
@@ -246,16 +272,16 @@ const Header = () => {
                     onClick={handleLogout}
                     className="border-primary/50 text-primary hover:bg-primary/10 hover:text-primary"
                   >
-                    <LogOut className="mr-1 h-4 w-4" /> Logout
+                    <LogOut className="mr-1 h-4 w-4" /> {t.logout}
                   </Button>
                 </>
               ) : (
                 <>
                   <Button variant="ghost" size="sm" asChild className={cn("hover:bg-accent/20", pathname === '/login' && "bg-accent/10")}>
-                    <Link href="/login"><LogIn className="mr-1 h-4 w-4" /> Login</Link>
+                    <Link href="/login"><LogIn className="mr-1 h-4 w-4" /> {t.login}</Link>
                   </Button>
                   <Button variant="default" size="sm" asChild className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md hover:shadow-sm active:translate-y-px transition-all duration-150">
-                    <Link href="/register"><UserPlus className="mr-1 h-4 w-4" /> Register</Link>
+                    <Link href="/register"><UserPlus className="mr-1 h-4 w-4" /> {t.register}</Link>
                   </Button>
                 </>
               )}
@@ -263,7 +289,7 @@ const Header = () => {
                 variant="ghost"
                 size="icon"
                 onClick={toggleTheme}
-                aria-label="Toggle theme"
+                aria-label={t.toggleTheme}
                 className="hover:bg-accent/20 w-9 h-9"
               >
                 {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}

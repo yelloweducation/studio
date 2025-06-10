@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { courses as defaultMockCourses, enrollments as initialEnrollments, type Course, type Module, type Lesson, type Enrollment } from '@/data/mockData';
-import { useAuth } from '@/hooks/useAuth'; // Added
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChevronLeft, ChevronRight, CheckCircle, ListChecks, AlertTriangle, Home } from 'lucide-react';
@@ -12,13 +12,47 @@ import { Progress } from '@/components/ui/progress';
 import { getEmbedUrl } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
+import { useLanguage, type Language } from '@/contexts/LanguageContext'; // Added
 
 const USER_ENROLLMENTS_KEY = 'userEnrollmentsData';
+
+const lessonViewerTranslations = {
+  en: {
+    backToCourse: "Back to {title}",
+    moduleLabel: "Module: {title}",
+    lessonProgress: "Lesson {current} of {total}",
+    contentNotFound: "Content Not Found",
+    contentNotFoundDesc: "This lesson or course content could not be loaded.",
+    contentNotFoundDetails: "The lesson you are trying to access (ID: {lessonId}) within module (ID: {moduleId}) of course (ID: {courseId}) may not exist or might have been moved.",
+    backToCourseDetails: "Back to Course Details",
+    goToHomepage: "Go to Homepage",
+    noVideoOrImage: "No video or image preview available.",
+    previous: "Previous",
+    next: "Next",
+    finishModule: "Finish Module"
+  },
+  my: {
+    backToCourse: "{title} သို့ ပြန်သွားရန်",
+    moduleLabel: "အခန်း: {title}",
+    lessonProgress: "သင်ခန်းစာ {current} / {total}",
+    contentNotFound: "အကြောင်းအရာ မတွေ့ပါ",
+    contentNotFoundDesc: "ဤသင်ခန်းစာ သို့မဟုတ် သင်တန်းအကြောင်းအရာကို တင်၍မရပါ။",
+    contentNotFoundDetails: "သင်ဝင်ရောက်ရန်ကြိုးစားနေသော သင်ခန်းစာ (ID: {lessonId})၊ အခန်း (ID: {moduleId})၊ သင်တန်း (ID: {courseId}) သည် မရှိတော့ခြင်း သို့မဟုတ် ရွှေ့ပြောင်းခြင်း ဖြစ်နိုင်သည်။",
+    backToCourseDetails: "သင်တန်းအသေးစိတ်သို့ ပြန်သွားရန်",
+    goToHomepage: "ပင်မစာမျက်နှာသို့ သွားရန်",
+    noVideoOrImage: "ဗီဒီယို သို့မဟုတ် ပုံ အကြိုကြည့်ရှုရန် မရှိပါ။",
+    previous: "ယခင်",
+    next: "နောက်တစ်ခု",
+    finishModule: "အခန်းပြီးပါပြီ"
+  }
+};
 
 export default function LessonViewerPage() {
   const params = useParams();
   const router = useRouter();
-  const { user } = useAuth(); // Added
+  const { user } = useAuth(); 
+  const { language } = useLanguage(); // Added
+  const t = lessonViewerTranslations[language]; // Added
 
   const courseId = params.id as string;
   const moduleId = params.moduleId as string;
@@ -82,14 +116,14 @@ export default function LessonViewerPage() {
       if (storedEnrollments) {
         currentEnrollments = JSON.parse(storedEnrollments) as Enrollment[];
         if (!Array.isArray(currentEnrollments)) {
-            currentEnrollments = JSON.parse(JSON.stringify(initialEnrollments)); // Deep copy
+            currentEnrollments = JSON.parse(JSON.stringify(initialEnrollments)); 
         }
       } else {
-        currentEnrollments = JSON.parse(JSON.stringify(initialEnrollments)); // Deep copy
+        currentEnrollments = JSON.parse(JSON.stringify(initialEnrollments)); 
       }
     } catch (error) {
       console.error("Error reading enrollments from localStorage:", error);
-      currentEnrollments = JSON.parse(JSON.stringify(initialEnrollments)); // Deep copy
+      currentEnrollments = JSON.parse(JSON.stringify(initialEnrollments)); 
     }
 
     const existingEnrollmentIndex = currentEnrollments.findIndex(
@@ -121,25 +155,25 @@ export default function LessonViewerPage() {
   if (isLoading) {
     return (
       <div className="max-w-5xl mx-auto py-8 px-4">
-        <Skeleton className="h-8 w-1/4 mb-4" /> {/* Back to course */}
+        <Skeleton className="h-8 w-1/4 mb-4" /> 
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-4">
-            <Skeleton className="h-10 w-3/4" /> {/* Lesson Title */}
-            <Skeleton className="w-full aspect-video" /> {/* Video Embed */}
-            <Skeleton className="h-5 w-full" /> {/* Description Line 1 */}
-            <Skeleton className="h-5 w-full" /> {/* Description Line 2 */}
-            <Skeleton className="h-5 w-2/3" /> {/* Description Line 3 */}
+            <Skeleton className="h-10 w-3/4" /> 
+            <Skeleton className="w-full aspect-video" /> 
+            <Skeleton className="h-5 w-full" /> 
+            <Skeleton className="h-5 w-full" /> 
+            <Skeleton className="h-5 w-2/3" /> 
           </div>
           <div className="lg:col-span-1 space-y-4">
-            <Skeleton className="h-8 w-1/2 mb-2" /> {/* Module Title */}
-            <Skeleton className="h-6 w-full mb-1" /> {/* Lesson Item */}
-            <Skeleton className="h-6 w-full mb-1" /> {/* Lesson Item */}
-            <Skeleton className="h-6 w-full" /> {/* Lesson Item */}
+            <Skeleton className="h-8 w-1/2 mb-2" /> 
+            <Skeleton className="h-6 w-full mb-1" /> 
+            <Skeleton className="h-6 w-full mb-1" /> 
+            <Skeleton className="h-6 w-full" /> 
           </div>
         </div>
         <div className="mt-8 flex justify-between">
-          <Skeleton className="h-10 w-24" /> {/* Prev Button */}
-          <Skeleton className="h-10 w-24" /> {/* Next Button */}
+          <Skeleton className="h-10 w-24" /> 
+          <Skeleton className="h-10 w-24" /> 
         </div>
       </div>
     );
@@ -151,25 +185,28 @@ export default function LessonViewerPage() {
         <Card className="w-full max-w-lg shadow-xl">
           <CardHeader>
             <CardTitle className="text-2xl sm:text-3xl font-headline text-foreground flex items-center justify-center">
-              <AlertTriangle className="mr-3 h-8 w-8 text-destructive" /> Content Not Found
+              <AlertTriangle className="mr-3 h-8 w-8 text-destructive" /> {t.contentNotFound}
             </CardTitle>
             <CardDescription className="text-lg">
-              This lesson or course content could not be loaded.
+              {t.contentNotFoundDesc}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <p className="text-muted-foreground">
-              The lesson you are trying to access (ID: {lessonId}) within module (ID: {moduleId}) of course (ID: {courseId}) may not exist or might have been moved.
+              {t.contentNotFoundDetails
+                .replace('{lessonId}', lessonId)
+                .replace('{moduleId}', moduleId)
+                .replace('{courseId}', courseId)}
             </p>
             <div className="flex flex-col sm:flex-row gap-2 justify-center">
               {courseId && (
                 <Button asChild variant="outline" className="w-full sm:w-auto">
-                    <Link href={`/courses/${courseId}`}>Back to Course Details</Link>
+                    <Link href={`/courses/${courseId}`}>{t.backToCourseDetails}</Link>
                 </Button>
               )}
               <Button asChild className="w-full sm:w-auto">
                 <Link href="/">
-                  <Home className="mr-2 h-4 w-4" /> Go to Homepage
+                  <Home className="mr-2 h-4 w-4" /> {t.goToHomepage}
                 </Link>
               </Button>
             </div>
@@ -185,16 +222,15 @@ export default function LessonViewerPage() {
   return (
     <div className="max-w-5xl mx-auto py-4 md:py-8 px-2 sm:px-4">
       <Button variant="outline" size="sm" onClick={() => router.push(`/courses/${courseId}`)} className="mb-4 text-xs sm:text-sm">
-        <ChevronLeft className="mr-1.5 h-4 w-4" /> Back to {currentCourse.title}
+        <ChevronLeft className="mr-1.5 h-4 w-4" /> {t.backToCourse.replace('{title}', currentCourse.title)}
       </Button>
 
       <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
-        {/* Main Content Area */}
         <div className="lg:col-span-2 space-y-4">
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle className="text-xl sm:text-2xl font-headline">{lessonIndex + 1}. {currentLesson.title}</CardTitle>
-              <CardDescription>Module: {currentModule.title}</CardDescription>
+              <CardDescription>{t.moduleLabel.replace('{title}', currentModule.title)}</CardDescription>
             </CardHeader>
             <CardContent>
               {embedUrl ? (
@@ -213,7 +249,7 @@ export default function LessonViewerPage() {
                  </div>
               ) : (
                 <div className="aspect-video bg-muted rounded-md flex items-center justify-center text-muted-foreground">
-                  <AlertTriangle className="h-10 w-10 mr-2" /> No video or image preview available.
+                  <AlertTriangle className="h-10 w-10 mr-2" /> {t.noVideoOrImage}
                 </div>
               )}
               {currentLesson.description && (
@@ -223,7 +259,6 @@ export default function LessonViewerPage() {
           </Card>
         </div>
 
-        {/* Sidebar / Lesson List */}
         <div className="lg:col-span-1 space-y-4 lg:sticky lg:top-20">
           <Card className="shadow-md">
             <CardHeader>
@@ -231,7 +266,7 @@ export default function LessonViewerPage() {
                 <ListChecks className="mr-2 h-5 w-5 text-primary" /> {currentModule.title}
               </CardTitle>
               <div className="text-xs text-muted-foreground">
-                Lesson {lessonIndex + 1} of {totalLessonsInModule}
+                {t.lessonProgress.replace('{current}', (lessonIndex + 1).toString()).replace('{total}', totalLessonsInModule.toString())}
               </div>
               <Progress value={progressPercentage} className="h-2 mt-1" />
             </CardHeader>
@@ -260,12 +295,11 @@ export default function LessonViewerPage() {
         </div>
       </div>
 
-      {/* Navigation Buttons */}
       <div className="mt-8 flex justify-between items-center">
         {previousLesson ? (
           <Button asChild variant="outline">
             <Link href={`/courses/${courseId}/learn/${moduleId}/${previousLesson.id}`}>
-              <ChevronLeft className="mr-2 h-4 w-4" /> Previous
+              <ChevronLeft className="mr-2 h-4 w-4" /> {t.previous}
             </Link>
           </Button>
         ) : (
@@ -274,12 +308,12 @@ export default function LessonViewerPage() {
         {nextLesson ? (
           <Button asChild>
             <Link href={`/courses/${courseId}/learn/${moduleId}/${nextLesson.id}`}>
-              Next <ChevronRight className="ml-2 h-4 w-4" />
+              {t.next} <ChevronRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
         ) : (
            <Button onClick={handleFinishModule} variant="default">
-              Finish Module <CheckCircle className="ml-2 h-4 w-4" />
+              {t.finishModule} <CheckCircle className="ml-2 h-4 w-4" />
           </Button>
         )}
       </div>

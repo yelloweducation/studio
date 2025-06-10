@@ -10,9 +10,9 @@ import ImageManagement from "@/components/admin/ImageManagement";
 import CategoryManagement from "@/components/admin/CategoryManagement";
 import PaymentSubmissions from "@/components/admin/PaymentSubmissions";
 import PaymentSettingsManagement from "@/components/admin/PaymentSettingsManagement";
-import LearningPathManagement from "@/components/admin/LearningPathManagement"; // Added
+import LearningPathManagement from "@/components/admin/LearningPathManagement";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, BarChart3, Settings as SettingsIcon, Video as VideoIcon, Image as ImageIcon, Shapes, GraduationCap, Menu as MenuIcon, CreditCard, BookOpenCheck } from "lucide-react"; // Added BookOpenCheck
+import { Users, BarChart3, Settings as SettingsIcon, Video as VideoIcon, Image as ImageIcon, Shapes, GraduationCap, Menu as MenuIcon, CreditCard, BookOpenCheck } from "lucide-react";
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import {
@@ -21,22 +21,55 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useLanguage, type Language } from '@/contexts/LanguageContext'; // Added
 
-const adminTabs = [
-  { value: "courses", label: "Courses", Icon: GraduationCap },
-  { value: "categories", label: "Categories", Icon: Shapes },
-  { value: "learningPaths", label: "Paths", Icon: BookOpenCheck }, // Added
-  { value: "payments", label: "Payments", Icon: CreditCard },
-  { value: "paymentSettings", label: "Payment Config", Icon: SettingsIcon },
-  { value: "videos", label: "Videos", Icon: VideoIcon },
-  { value: "images", label: "Images", Icon: ImageIcon },
-  { value: "users", label: "Users", Icon: Users },
-  { value: "stats", label: "Stats", Icon: BarChart3 },
+const adminDashboardTranslations = {
+  en: {
+    title: "Admin Dashboard",
+    description: "Manage your learning platform.",
+    courses: "Courses",
+    categories: "Categories",
+    learningPaths: "Paths",
+    payments: "Payments",
+    paymentConfig: "Payment Config",
+    videos: "Videos",
+    images: "Images",
+    users: "Users",
+    stats: "Stats",
+  },
+  my: {
+    title: "အက်ဒမင် ဒက်ရှ်ဘုတ်", // Admin Dashboard
+    description: "သင်၏ လေ့လာရေး ပလက်ဖောင်းကို စီမံပါ။", // Manage your learning platform.
+    courses: "သင်တန်းများ", // Courses
+    categories: "အမျိုးအစားများ", // Categories
+    learningPaths: "လမ်းကြောင်းများ", // Paths
+    payments: "ငွေပေးချေမှုများ", // Payments
+    paymentConfig: "ငွေပေးချေမှု ဆက်တင်", // Payment Config
+    videos: "ဗီဒီယိုများ", // Videos
+    images: "ပုံများ", // Images
+    users: "အသုံးပြုသူများ", // Users
+    stats: "စာရင်းအင်း", // Stats
+  }
+};
+
+const adminTabsConfig = (t: typeof adminDashboardTranslations.en) => [
+  { value: "courses", label: t.courses, Icon: GraduationCap },
+  { value: "categories", label: t.categories, Icon: Shapes },
+  { value: "learningPaths", label: t.learningPaths, Icon: BookOpenCheck },
+  { value: "payments", label: t.payments, Icon: CreditCard },
+  { value: "paymentSettings", label: t.paymentConfig, Icon: SettingsIcon },
+  { value: "videos", label: t.videos, Icon: VideoIcon },
+  { value: "images", label: t.images, Icon: ImageIcon },
+  { value: "users", label: t.users, Icon: Users },
+  { value: "stats", label: t.stats, Icon: BarChart3 },
 ];
 
 export default function AdminDashboardPage() {
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState("courses");
+  const { language } = useLanguage(); // Added
+  const t = adminDashboardTranslations[language]; // Added
+  const adminTabs = adminTabsConfig(t); // Added
 
   const currentTab = adminTabs.find(tab => tab.value === activeTab) || adminTabs[0];
 
@@ -45,9 +78,9 @@ export default function AdminDashboardPage() {
       <div className="space-y-4 md:space-y-6">
         <section className="pb-2 border-b">
             <h1 className="text-xl md:text-2xl font-headline font-semibold flex items-center">
-                <SettingsIcon className="mr-2 h-6 w-6 md:h-7 md:w-7 text-primary" /> Admin Dashboard
+                <SettingsIcon className="mr-2 h-6 w-6 md:h-7 md:w-7 text-primary" /> {t.title}
             </h1>
-            <p className="text-xs md:text-sm text-muted-foreground">Manage your learning platform.</p>
+            <p className="text-xs md:text-sm text-muted-foreground">{t.description}</p>
         </section>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -77,7 +110,7 @@ export default function AdminDashboardPage() {
               </DropdownMenu>
             </div>
           ) : (
-            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-2 mb-6"> {/* Adjusted grid-cols for new tab */}
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-2 mb-6">
               {adminTabs.map((tab) => (
                 <TabsTrigger
                   key={tab.value}
