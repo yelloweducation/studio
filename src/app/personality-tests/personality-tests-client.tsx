@@ -6,11 +6,19 @@ import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import { Brain, Palette, Users, Zap, CheckCircle, Lightbulb, ArrowRight, RotateCcw } from 'lucide-react';
+import { Brain, Palette, Users, Zap, CheckCircle, Lightbulb, ArrowRight, RotateCcw, HelpCircle } from 'lucide-react';
 import { useLanguage, type Language } from '@/contexts/LanguageContext';
-import { quizQuestions, styleOutcomes, type StyleId, type StyleOutcome, type QuizQuestion, type PersonalityTestsTranslations } from '@/data/personalityQuizData'; // Updated import
+import { 
+  initialQuizQuestions, 
+  additionalQuizQuestions, 
+  styleOutcomes, 
+  type StyleId, 
+  type StyleOutcome, 
+  type QuizQuestion, 
+  type PersonalityTestsTranslations,
+  type TranslatedText
+} from '@/data/personalityQuizData';
 
-// Translations (could be imported from personalityQuizData if preferred, but keeping here for component focus)
 const personalityTestsPageTranslations: PersonalityTestsTranslations = {
   en: {
     pageTitle: "Personality & Skill Assessments",
@@ -38,6 +46,10 @@ const personalityTestsPageTranslations: PersonalityTestsTranslations = {
       practical: { descriptionKey: "practicalDescription" }
     },
     comingSoon: "Quiz functionality is under development and will be available soon!",
+    askMoreQuestionsTitle: "Want a More Refined Result?",
+    askMoreQuestionsDescription: `Answer ${additionalQuizQuestions.length} more questions to help us fine-tune your learning and working style profile.`,
+    askMoreQuestionsConfirm: "Yes, Ask More Questions",
+    askMoreQuestionsDecline: "No, Show My Results Now",
   },
   my: {
     pageTitle: "ကိုယ်ရည်ကိုယ်သွေးနှင့် ကျွမ်းကျင်မှု အကဲဖြတ်ချက်များ",
@@ -65,11 +77,14 @@ const personalityTestsPageTranslations: PersonalityTestsTranslations = {
       practical: { descriptionKey: "practicalDescription" }
     },
     comingSoon: "စစ်ဆေးမှုလုပ်ဆောင်ချက်ကို ဖန်တီးနေဆဲဖြစ်ပြီး မကြာမီ ရရှိနိုင်ပါမည်!",
+    askMoreQuestionsTitle: "ပိုမိုတိကျသော ရလဒ်ကို လိုချင်ပါသလား။",
+    askMoreQuestionsDescription: `သင်၏ သင်ယူမှုနှင့် အလုပ်လုပ်ပုံစံကို ပိုမိုတိကျစေရန် နောက်ထပ် မေးခွန်း ${additionalQuizQuestions.length} ခု ဖြေဆိုပေးပါ။`,
+    askMoreQuestionsConfirm: "ဟုတ်ကဲ့၊ နောက်ထပ်မေးခွန်းများ မေးပါ",
+    askMoreQuestionsDecline: "မဟုတ်ပါ၊ ကျွန်ုပ်၏ရလဒ်များကို ယခုပြပါ",
   }
 };
 
-
-type QuizState = 'not_started' | 'in_progress' | 'completed';
+type QuizState = 'not_started' | 'in_progress_initial' | 'asking_for_more' | 'in_progress_additional' | 'completed';
 
 export default function PersonalityTestsClient() {
   const { language } = useLanguage();
@@ -80,45 +95,83 @@ export default function PersonalityTestsClient() {
   const [answers, setAnswers] = useState<{ [questionId: string]: StyleId }>({});
   const [resultStyle, setResultStyle] = useState<StyleOutcome | null>(null);
 
-  const currentQuestion: QuizQuestion | undefined = quizQuestions[currentQuestionIndex];
+  const getCurrentQuestionSet = () => {
+    if (quizState === 'in_progress_initial') return initialQuizQuestions;
+    if (quizState === 'in_progress_additional') return additionalQuizQuestions;
+    return [];
+  };
+
+  const currentQuestionSet = getCurrentQuestionSet();
+  const currentQuestion: QuizQuestion | undefined = currentQuestionSet[currentQuestionIndex];
 
   const handleStartQuiz = () => {
     setCurrentQuestionIndex(0);
     setAnswers({});
     setResultStyle(null);
-    setQuizState('in_progress');
+    setQuizState('in_progress_initial');
   };
 
   const handleAnswerSelect = (questionId: string, optionValue: StyleId) => {
     setAnswers(prev => ({ ...prev, [questionId]: optionValue }));
   };
 
+  const calculateAndSetResults = () => {
+    const styleCounts: { [key in StyleId]?: number } = {};
+    Object.values(answers).forEach(styleId => {
+      styleCounts[styleId] = (styleCounts[styleId] || 0) + 1;
+    });
+
+    let dominantStyleId: StyleId = 'analytical'; 
+    let maxCount = 0;
+    for (const styleId in styleCounts) {
+      if ((styleCounts[styleId as StyleId] || 0) > maxCount) {
+        maxCount = styleCounts[styleId as StyleId] || 0;
+        dominantStyleId = styleId as StyleId;
+      }
+    }
+    
+    const determinedStyle = styleOutcomes.find(s => s.id === dominantStyleId);
+    setResultStyle(determinedStyle || styleOutcomes[0]);
+    setQuizState('completed');
+  };
+
   const handleNextQuestion = () => {
-    if (currentQuestionIndex < quizQuestions.length - 1) {
+    if (currentQuestionIndex < currentQuestionSet.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
     } else {
-      // Calculate result
-      const styleCounts: { [key in StyleId]?: number } = {};
-      Object.values(answers).forEach(styleId => {
-        styleCounts[styleId] = (styleCounts[styleId] || 0) + 1;
-      });
-
-      let dominantStyleId: StyleId = 'analytical'; // Default
-      let maxCount = 0;
-      for (const styleId in styleCounts) {
-        if ((styleCounts[styleId as StyleId] || 0) > maxCount) {
-          maxCount = styleCounts[styleId as StyleId] || 0;
-          dominantStyleId = styleId as StyleId;
-        }
+      // End of current question set
+      if (quizState === 'in_progress_initial' && additionalQuizQuestions.length > 0) {
+        setQuizState('asking_for_more');
+      } else {
+        calculateAndSetResults();
       }
-      
-      const determinedStyle = styleOutcomes.find(s => s.id === dominantStyleId);
-      setResultStyle(determinedStyle || styleOutcomes[0]); // Fallback to first style if not found
-      setQuizState('completed');
     }
   };
 
-  const progressPercentage = quizQuestions.length > 0 ? ((currentQuestionIndex + 1) / quizQuestions.length) * 100 : 0;
+  const handleProceedWithAdditionalQuestions = () => {
+    setCurrentQuestionIndex(0); // Reset for the additional questions
+    setQuizState('in_progress_additional');
+  };
+
+  const handleDeclineAdditionalQuestions = () => {
+    calculateAndSetResults();
+  };
+  
+  const totalQuestionsInCurrentSet = currentQuestionSet.length;
+  const overallQuestionNumber = quizState === 'in_progress_initial' 
+    ? currentQuestionIndex + 1
+    : initialQuizQuestions.length + currentQuestionIndex + 1;
+  const overallTotalQuestions = initialQuizQuestions.length + (quizState === 'in_progress_additional' || quizState === 'asking_for_more' ? additionalQuizQuestions.length : 0);
+
+
+  const progressPercentage = totalQuestionsInCurrentSet > 0 
+    ? ((currentQuestionIndex + 1) / totalQuestionsInCurrentSet) * 100 
+    : 0;
+  
+  const getTranslatedText = (textObj: TranslatedText): string => {
+    return textObj[language] || textObj.en;
+  };
+
 
   if (quizState === 'not_started') {
     return (
@@ -131,27 +184,29 @@ export default function PersonalityTestsClient() {
         <Button size="lg" onClick={handleStartQuiz} className="shadow-lg">
           {t.startQuizButton} <ArrowRight className="ml-2 h-5 w-5" />
         </Button>
-         <section className="w-full max-w-2xl mt-12">
-            <Card className="bg-accent/10 border-accent/30 shadow-lg">
+        <section className="w-full max-w-2xl mt-12">
+          <Card className="bg-accent/10 border-accent/30 shadow-lg">
             <CardHeader>
-                <CardTitle className="text-xl font-headline flex items-center">
+              <CardTitle className="text-xl font-headline flex items-center">
                 <CheckCircle className="mr-3 h-6 w-6 text-accent" />
-                {personalityTestsPageTranslations.en.pageTitle} {/* Using EN as key source */}
-                </CardTitle>
+                {t.pageTitle}
+              </CardTitle>
             </CardHeader>
             <CardContent>
-                <p className="text-base text-muted-foreground">{t.pageDescription}</p>
-                 <p className="text-sm text-muted-foreground mt-3">
-                    Note: This is a simplified illustrative quiz. For a comprehensive personality assessment like MBTI (e.g., ENFJ, INTP), further development is planned.
-                </p>
+              <p className="text-base text-muted-foreground">{t.pageDescription}</p>
+              <p className="text-sm text-muted-foreground mt-3">
+                Note: This is a simplified illustrative quiz. For a comprehensive personality assessment like MBTI (e.g., ENFJ, INTP), further development is planned.
+              </p>
             </CardContent>
-            </Card>
-      </section>
+          </Card>
+        </section>
       </div>
     );
   }
 
-  if (quizState === 'in_progress' && currentQuestion) {
+  if (quizState === 'in_progress_initial' || quizState === 'in_progress_additional') {
+    if (!currentQuestion) return <p>Loading question...</p>; // Should not happen if logic is correct
+
     return (
       <div className="max-w-xl mx-auto">
         <Card className="shadow-xl">
@@ -159,11 +214,12 @@ export default function PersonalityTestsClient() {
             <Progress value={progressPercentage} className="w-full h-2 mb-3" />
             <CardTitle className="text-lg font-headline text-center">
               {t.questionProgress
-                .replace('{current}', (currentQuestionIndex + 1).toString())
-                .replace('{total}', quizQuestions.length.toString())}
+                .replace('{current}', overallQuestionNumber.toString())
+                .replace('{total}', (quizState === 'in_progress_initial' ? initialQuizQuestions.length : initialQuizQuestions.length + additionalQuizQuestions.length).toString())
+              }
             </CardTitle>
             <CardDescription className="text-xl text-center text-foreground pt-2 min-h-[60px]">
-              {currentQuestion.text}
+              {getTranslatedText(currentQuestion.text)}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -180,7 +236,7 @@ export default function PersonalityTestsClient() {
                     ${answers[currentQuestion.id] === option.value ? 'bg-primary/10 border-primary ring-2 ring-primary' : 'hover:bg-muted/50'}`}
                 >
                   <RadioGroupItem value={option.value} id={`option-${currentQuestion.id}-${option.value}`} />
-                  <span>{option.text}</span>
+                  <span>{getTranslatedText(option.text)}</span>
                 </Label>
               ))}
             </RadioGroup>
@@ -191,8 +247,34 @@ export default function PersonalityTestsClient() {
               onClick={handleNextQuestion}
               disabled={!answers[currentQuestion.id]}
             >
-              {currentQuestionIndex < quizQuestions.length - 1 ? t.nextButton : t.seeResultsButton}
+              {currentQuestionIndex < totalQuestionsInCurrentSet - 1 ? t.nextButton : 
+                (quizState === 'in_progress_initial' && additionalQuizQuestions.length > 0 ? t.nextButton : t.seeResultsButton)
+              }
               <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
+
+  if (quizState === 'asking_for_more') {
+    return (
+      <div className="max-w-xl mx-auto">
+        <Card className="shadow-xl text-center">
+          <CardHeader>
+            <HelpCircle className="mx-auto h-16 w-16 text-primary mb-3" />
+            <CardTitle className="text-2xl font-headline">{t.askMoreQuestionsTitle}</CardTitle>
+            <CardDescription className="text-lg text-muted-foreground pt-1">
+              {t.askMoreQuestionsDescription.replace('3 more questions', `${additionalQuizQuestions.length} more questions`)}
+            </CardDescription>
+          </CardHeader>
+          <CardFooter className="flex flex-col sm:flex-row gap-3">
+            <Button className="w-full sm:flex-1 text-lg py-3" onClick={handleProceedWithAdditionalQuestions}>
+              {t.askMoreQuestionsConfirm}
+            </Button>
+            <Button className="w-full sm:flex-1 text-lg py-3" variant="outline" onClick={handleDeclineAdditionalQuestions}>
+              {t.askMoreQuestionsDecline}
             </Button>
           </CardFooter>
         </Card>
@@ -202,7 +284,10 @@ export default function PersonalityTestsClient() {
 
   if (quizState === 'completed' && resultStyle) {
     const styleTitle = t.styles[resultStyle.titleKey as keyof typeof t.styles] as string;
-    const styleDescription = t.styles[resultStyle.descriptionKey as keyof typeof t.styles] as string;
+    // @ts-ignore - This is tricky with nested keys in translations, but should work if keys match.
+    const styleDescriptionKey = t.styles[resultStyle.id]?.descriptionKey as keyof typeof t.styles;
+    const styleDescription = styleDescriptionKey ? t.styles[styleDescriptionKey] as string : "Description not found.";
+
 
     return (
       <div className="max-w-xl mx-auto">
@@ -227,5 +312,6 @@ export default function PersonalityTestsClient() {
     );
   }
 
-  return <p>Loading quiz or an unexpected state occurred...</p>; // Fallback
+  return <p>Loading quiz or an unexpected state occurred...</p>;
 }
+
