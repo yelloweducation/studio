@@ -1,5 +1,6 @@
 
 "use client";
+import React, { useState } from 'react';
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import CourseManagement from "@/components/admin/CourseManagement";
 import UserManagement from "@/components/admin/UserManagement";
@@ -8,9 +9,31 @@ import VideoManagement from "@/components/admin/VideoManagement";
 import ImageManagement from "@/components/admin/ImageManagement";
 import CategoryManagement from "@/components/admin/CategoryManagement";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, BarChart3, Settings, Video as VideoIcon, Image as ImageIcon, Shapes, GraduationCap } from "lucide-react";
+import { Users, BarChart3, Settings, Video as VideoIcon, Image as ImageIcon, Shapes, GraduationCap, Menu as MenuIcon } from "lucide-react";
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+const adminTabs = [
+  { value: "courses", label: "Courses", Icon: GraduationCap },
+  { value: "categories", label: "Categories", Icon: Shapes },
+  { value: "videos", label: "Videos", Icon: VideoIcon },
+  { value: "images", label: "Images", Icon: ImageIcon },
+  { value: "users", label: "Users", Icon: Users },
+  { value: "stats", label: "Stats", Icon: BarChart3 },
+];
 
 export default function AdminDashboardPage() {
+  const isMobile = useIsMobile();
+  const [activeTab, setActiveTab] = useState("courses");
+
+  const currentTab = adminTabs.find(tab => tab.value === activeTab) || adminTabs[0];
+
   return (
     <ProtectedRoute allowedRoles={['admin']}>
       <div className="space-y-6 md:space-y-8">
@@ -21,27 +44,45 @@ export default function AdminDashboardPage() {
             <p className="text-sm md:text-base text-muted-foreground">Manage your learning platform.</p>
         </section>
 
-        <Tabs defaultValue="courses" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 mb-6">
-            <TabsTrigger value="courses" className="py-2.5 px-3 text-sm sm:text-base sm:py-3">
-              <GraduationCap className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> Courses
-            </TabsTrigger>
-            <TabsTrigger value="categories" className="py-2.5 px-3 text-sm sm:text-base sm:py-3">
-              <Shapes className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> Categories
-            </TabsTrigger>
-            <TabsTrigger value="videos" className="py-2.5 px-3 text-sm sm:text-base sm:py-3">
-              <VideoIcon className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> Videos
-            </TabsTrigger>
-             <TabsTrigger value="images" className="py-2.5 px-3 text-sm sm:text-base sm:py-3">
-              <ImageIcon className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> Images
-            </TabsTrigger>
-            <TabsTrigger value="users" className="py-2.5 px-3 text-sm sm:text-base sm:py-3">
-              <Users className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> Users
-            </TabsTrigger>
-            <TabsTrigger value="stats" className="py-2.5 px-3 text-sm sm:text-base sm:py-3">
-              <BarChart3 className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> Stats
-            </TabsTrigger>
-          </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          {isMobile ? (
+            <div className="mb-6">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between text-base py-3">
+                    <span>
+                      <currentTab.Icon className="mr-2 h-5 w-5 inline-block" />
+                      {currentTab.label}
+                    </span>
+                    <MenuIcon className="h-5 w-5 text-muted-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-full max-w-[calc(100vw-2rem)] sm:w-72">
+                  {adminTabs.map((tab) => (
+                    <DropdownMenuItem
+                      key={tab.value}
+                      onSelect={() => setActiveTab(tab.value)}
+                      className={`py-2.5 px-3 text-base ${activeTab === tab.value ? 'bg-accent text-accent-foreground' : ''}`}
+                    >
+                      <tab.Icon className="mr-2 h-5 w-5"/> {tab.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          ) : (
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 mb-6">
+              {adminTabs.map((tab) => (
+                <TabsTrigger
+                  key={tab.value}
+                  value={tab.value}
+                  className="py-2.5 px-3 text-sm sm:text-base sm:py-3"
+                >
+                  <tab.Icon className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> {tab.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          )}
 
           <TabsContent value="courses">
             <CourseManagement />
