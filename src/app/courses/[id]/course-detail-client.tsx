@@ -259,7 +259,7 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
     if (currentCourse.price && currentCourse.price > 0) {
         if (!isAuthenticated) {
             return (
-                 <Button asChild size="lg" className="w-full shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150 whitespace-normal h-auto">
+                 <Button asChild size="lg" className="w-full shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150 whitespace-normal h-auto py-3">
                     <Link href={`/login?redirect=/courses/${courseId}`}>
                         <BadgeDollarSign className="mr-2 h-5 w-5" />
                         {t.loginToPurchase.replace('{price}', currentCourse.price.toFixed(2)).replace('{currency}', currentCourse.currency || 'USD')}
@@ -275,7 +275,7 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
                         <p className="font-semibold text-green-700 dark:text-green-300">{t.finishedCourse}</p>
                         <p className="text-sm text-green-600 dark:text-green-400">{t.progressLabel.replace('{progress}', (completionInfo.progress || 0).toString())}</p>
                         {firstLessonPath && (
-                            <Button asChild className="mt-3 whitespace-normal h-auto">
+                            <Button asChild size="lg" className="mt-3 whitespace-normal h-auto py-3">
                             <Link href={firstLessonPath}>{t.reviewCourse}</Link>
                             </Button>
                         )}
@@ -292,7 +292,7 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
                 );
             }
             return (
-                <Button asChild size="lg" className="w-full shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150 whitespace-normal h-auto">
+                <Button asChild size="lg" className="w-full shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150 whitespace-normal h-auto py-3">
                     <Link href={firstLessonPath}>
                     {t.startLearning} <ArrowRight className="ml-2 h-5 w-5" />
                     </Link>
@@ -317,7 +317,7 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
                 );
             }
             return (
-                <Button asChild size="lg" className="w-full shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150 whitespace-normal h-auto">
+                <Button asChild size="lg" className="w-full shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150 whitespace-normal h-auto py-3">
                     <Link href={`/courses/${courseId}/checkout`}>
                         <ShoppingCart className="mr-2 h-5 w-5" />
                         {t.purchaseFor.replace('{price}', currentCourse.price.toFixed(2)).replace('{currency}', currentCourse.currency || 'USD')}
@@ -334,7 +334,7 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
           <p className="font-semibold text-green-700 dark:text-green-300">{t.finishedCourse}</p>
           <p className="text-sm text-green-600 dark:text-green-400">{t.progressLabel.replace('{progress}', (completionInfo.progress || 0).toString())}</p>
           {firstLessonPath && (
-            <Button asChild className="mt-3 whitespace-normal h-auto">
+            <Button asChild size="lg" className="mt-3 whitespace-normal h-auto py-3">
               <Link href={firstLessonPath}>{t.reviewCourse}</Link>
             </Button>
           )}
@@ -353,7 +353,7 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
     }
 
     return (
-      <Button asChild size="lg" className="w-full shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150 whitespace-normal h-auto">
+      <Button asChild size="lg" className="w-full shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150 whitespace-normal h-auto py-3">
         <Link href={firstLessonPath}>
           {t.startLearningFree} <ArrowRight className="ml-2 h-5 w-5" />
         </Link>
