@@ -438,4 +438,3 @@ export const flashcards: Flashcard[] = [
 // Example for fc_cat_maths, fc_cat_marketing, fc_cat_business would follow.
 // For brevity in this prototype, only English and IT have sample data.
 // The system is designed to handle many more cards if populated.
-
