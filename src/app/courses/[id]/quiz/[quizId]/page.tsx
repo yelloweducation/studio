@@ -35,7 +35,9 @@ const quizPageTranslations = {
     quizNotFound: "Quiz Not Found",
     quizNotFoundDesc: "The quiz you are trying to access (ID: {quizId}) for course (ID: {courseId}) could not be found.",
     selectOption: "Please select an option.",
-    startOver: "Start Over"
+    startOver: "Start Over",
+    quizEmptyTitle: "Quiz Empty",
+    quizEmptyDesc: "The quiz \"{quizTitle}\" currently has no questions."
   },
   my: {
     quizTitle: "စာမေးပွဲငယ်: {title}",
@@ -57,7 +59,9 @@ const quizPageTranslations = {
     quizNotFound: "စာမေးပွဲငယ် မတွေ့ပါ",
     quizNotFoundDesc: "သင်ရှာဖွေနေသော စာမေးပွဲငယ် (ID: {quizId})၊ သင်တန်း (ID: {courseId}) ကို ရှာမတွေ့ပါ။",
     selectOption: "ကျေးဇူးပြု၍ အဖြေတစ်ခု ရွေးချယ်ပါ။",
-    startOver: "အစမှပြန်စပါ"
+    startOver: "အစမှပြန်စပါ",
+    quizEmptyTitle: "စာမေးပွဲငယ် ဗလာဖြစ်နေသည်",
+    quizEmptyDesc: "\"{quizTitle}\" အမည်ရှိ စာမေးပွဲငယ်တွင် လက်ရှိမေးခွန်းများ မရှိသေးပါ။"
   }
 };
 
@@ -180,6 +184,35 @@ export default function QuizPage() {
               {courseId && (
                 <Button asChild variant="outline" className="w-full sm:w-auto">
                   <Link href={`/courses/${courseId}`}>{t.backToCourse}</Link>
+                </Button>
+              )}
+              <Button asChild className="w-full sm:w-auto">
+                <Link href="/"><Home className="mr-2 h-4 w-4" /> {t.goToHomepage}</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (currentQuiz.questions.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center py-10">
+        <Card className="w-full max-w-lg shadow-xl">
+          <CardHeader>
+            <CardTitle className="text-2xl sm:text-3xl font-headline text-foreground flex items-center justify-center">
+              <HelpCircle className="mr-3 h-8 w-8 text-primary" /> {t.quizEmptyTitle}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <p className="text-muted-foreground">
+              {t.quizEmptyDesc.replace('{quizTitle}', currentQuiz.title)}
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2 justify-center">
+              {courseId && (
+                <Button asChild variant="outline" className="w-full sm:w-auto">
+                    <Link href={`/courses/${courseId}`}>{t.backToCourse}</Link>
                 </Button>
               )}
               <Button asChild className="w-full sm:w-auto">
