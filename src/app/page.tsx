@@ -69,7 +69,7 @@ export default function Home() {
       <div className="fixed inset-0 bg-background z-50 flex flex-col items-center justify-center p-0 sm:p-4">
         <Card className="w-full max-w-md h-full sm:h-[calc(100vh-4rem)] sm:rounded-lg shadow-2xl flex flex-col">
           <div className="p-3 border-b flex justify-between items-center shrink-0">
-            <h2 className="text-lg font-semibold font-headline">Video Feed</h2>
+            <h2 className="text-lg font-semibold font-headline">For You</h2>
             <Button variant="ghost" size="icon" onClick={handleCloseVideoFeed} aria-label="Close video feed">
               <X className="h-5 w-5" />
             </Button>
@@ -130,7 +130,7 @@ export default function Home() {
             <Button 
               onClick={handleShowVideos} 
               size="lg" 
-              variant="accent" // Changed variant to new "accent" for 3D style
+              variant="accent"
               className="w-full sm:w-auto transition-all duration-150">
                 <VideoIcon className="mr-2 h-5 w-5" /> View Reels
             </Button>
