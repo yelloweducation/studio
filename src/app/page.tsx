@@ -30,8 +30,8 @@ const homePageTranslations = {
     title: "အဝါရောင်တက္ကသိုလ်", // Awar Yaung Tekkatho
     subtitle: "သင့်ရဲ့ဗဟုသုတနှင့် အသက်မွေးဝမ်းကျောင်းဆိုင်ရာ ထိုးထွင်းသိမြင်မှုခရီးစဉ်။",
     searchPlaceholder: "သင်တန်းများရှာပါ၊ ဥပမာ - Web Development",
-    coursesButton: "သင်တန်းများ",
-    reelsButton: "ရီးလ်များ",
+    coursesButton: "သင်တန်း", // Updated from သင်တန်းများ
+    reelsButton: "ဗီဒီယို", // Updated from ရီးလ်များ
     privacyPolicy: "ကိုယ်ရေးအချက်အလက်မူဝါဒ",
     termsOfService: "ဝန်ဆောင်မှုစည်းမျဉ်းများ",
     aboutUs: "ကျွန်ုပ်တို့အကြောင်း",
