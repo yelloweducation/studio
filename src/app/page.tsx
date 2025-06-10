@@ -99,10 +99,10 @@ export default function Home() {
   return (
     <div className="flex flex-col items-center pb-8">
       <section className="w-full max-w-2xl text-center pt-8 mb-10">
-        <div className="flex items-center justify-center space-x-2 sm:space-x-3 text-4xl sm:text-5xl font-bold font-headline text-foreground mb-4">
+        <div className="flex items-center justify-center space-x-2 sm:space-x-3 text-3xl sm:text-4xl font-bold font-headline text-foreground mb-4">
           {/* Responsive Icon Sizes */}
-          <Circle size={40} className="text-primary block sm:hidden" />
-          <Circle size={48} className="text-primary hidden sm:block" />
+          <Circle size={32} className="text-primary block sm:hidden" /> {/* Adjusted icon size for smaller text */}
+          <Circle size={40} className="text-primary hidden sm:block" /> {/* Adjusted icon size for smaller text */}
           <span>Yellow Institute</span>
         </div>
         <p className="text-lg sm:text-xl text-muted-foreground mb-8">
@@ -136,3 +136,4 @@ export default function Home() {
     </div>
   );
 }
+
