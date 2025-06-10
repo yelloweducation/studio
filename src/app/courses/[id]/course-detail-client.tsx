@@ -33,8 +33,8 @@ const courseDetailTranslations = {
     taughtBy: "Taught by {instructor}",
     categoryLabel: "Category: {category}",
     priceLabel: "Price: {price} {currency}",
-    courseAccess: "သင်တန်းကြေးသွင်းရန်",
-    loginToPurchase: "{price} {currency} လော့ဂ်အင်ဝင်ပါ",
+    courseAccess: "Course Information",
+    loginToPurchase: "{price} {currency} Login to Purchase",
     purchaseFor: "{price} {currency}",
     paymentSubmitted: "Payment Submitted",
     paymentSubmittedDesc: "Your payment is currently under review.",
@@ -69,7 +69,7 @@ const courseDetailTranslations = {
     taughtBy: "သင်ကြားသူ: {instructor}",
     categoryLabel: "အမျိုးအစား: {category}",
     priceLabel: "စျေးနှုန်း: {price} {currency}",
-    courseAccess: "သင်တန်းကြေးသွင်းရန်",
+    courseAccess: "သင်တန်းအချက်အလက်",
     loginToPurchase: "{price} {currency} လော့ဂ်အင်ဝင်ပါ",
     purchaseFor: "{price} {currency}",
     paymentSubmitted: "ငွေပေးချေမှု တင်သွင်းပြီးပါပြီ",
@@ -604,3 +604,4 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
     </div>
   );
 }
+
