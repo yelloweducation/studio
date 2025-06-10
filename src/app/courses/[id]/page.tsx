@@ -291,20 +291,35 @@ export default function CourseDetailPage() {
     return (
       <div className="max-w-4xl mx-auto py-8 space-y-6">
         <Skeleton className="h-8 w-1/4" /> 
-        <Skeleton className="h-12 w-3/4" /> 
-        <Skeleton className="h-6 w-1/2 mb-4" /> 
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-3 gap-8 items-start">
           <div className="md:col-span-2 space-y-4">
-            <Skeleton className="w-full h-56" /> 
-            <Skeleton className="h-5 w-full" /> 
-            <Skeleton className="h-5 w-full" /> 
-            <Skeleton className="h-5 w-3/4" /> 
+            <Skeleton className="w-full h-56 rounded-lg" /> 
+            <Card>
+                <CardHeader>
+                    <Skeleton className="h-10 w-3/4 mb-2" /> 
+                    <Skeleton className="h-6 w-1/2" /> 
+                </CardHeader>
+                <CardContent>
+                    <Skeleton className="h-5 w-full mb-2" /> 
+                    <Skeleton className="h-5 w-full mb-2" /> 
+                    <Skeleton className="h-5 w-3/4" /> 
+                </CardContent>
+            </Card>
           </div>
-          <div className="space-y-4">
-            <Skeleton className="h-20 w-full" /> 
-            <Skeleton className="h-10 w-full" /> 
-            <Skeleton className="h-10 w-full" /> 
-            <Skeleton className="h-10 w-full" /> 
+          <div className="md:col-span-1 space-y-6 md:sticky md:top-24">
+            <Card>
+                <CardHeader><Skeleton className="h-8 w-3/4" /> </CardHeader>
+                <CardContent><Skeleton className="h-12 w-full" /></CardContent>
+                 <CardFooter><Skeleton className="h-4 w-1/2 mx-auto" /></CardFooter>
+            </Card>
+            <Card>
+                <CardHeader><Skeleton className="h-8 w-1/2" /></CardHeader>
+                <CardContent className="space-y-3">
+                    <Skeleton className="h-10 w-full" /> 
+                    <Skeleton className="h-10 w-full" /> 
+                    <Skeleton className="h-10 w-full" /> 
+                </CardContent>
+            </Card>
           </div>
         </div>
       </div>
@@ -385,7 +400,7 @@ export default function CourseDetailPage() {
               {renderCTAButton()}
             </CardContent>
             {isAuthenticated && completionInfo && completionInfo.progress > 0 && completionInfo.progress < 100 && (!price || price <=0 || paymentInfo?.status === 'approved') && (
-                 <CardFooter className="text-sm text-muted-foreground pt-0 pb-4">
+                 <CardFooter className="text-sm text-muted-foreground pt-0 pb-4 text-center justify-center">
                     Progress: {completionInfo.progress}% completed
                 </CardFooter>
             )}
@@ -399,9 +414,9 @@ export default function CourseDetailPage() {
             </CardHeader>
             <CardContent>
               {modules && modules.length > 0 ? (
-                <Accordion type="single" collapsible className="w-full">
+                <Accordion type="single" collapsible className="w-full" defaultValue={modules?.[0]?.id}>
                   {modules.map((module: Module, moduleIndex: number) => (
-                    <AccordionItem value={`module-${module.id}`} key={module.id}>
+                    <AccordionItem value={module.id} key={module.id}>
                       <AccordionTrigger className="text-md font-semibold hover:no-underline">
                         {`Module ${moduleIndex + 1}: ${module.title}`}
                       </AccordionTrigger>
