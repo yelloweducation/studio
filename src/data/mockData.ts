@@ -76,6 +76,13 @@ export type PaymentSubmission = {
   adminNotes?: string;
 };
 
+export type PaymentSettings = {
+  bankName?: string;
+  accountNumber?: string;
+  accountHolderName?: string;
+  additionalInstructions?: string;
+};
+
 
 export const courses: Course[] = [
   {
@@ -238,3 +245,10 @@ export const paymentSubmissions: PaymentSubmission[] = [
   //   submittedAt: new Date().toISOString(),
   // },
 ];
+
+export const initialPaymentSettings: PaymentSettings = {
+    bankName: '',
+    accountNumber: '',
+    accountHolderName: '',
+    additionalInstructions: 'Please include your User ID or Course Name in the payment reference.',
+};

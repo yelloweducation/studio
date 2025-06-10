@@ -8,9 +8,10 @@ import EnrollmentStats from "@/components/admin/EnrollmentStats";
 import VideoManagement from "@/components/admin/VideoManagement";
 import ImageManagement from "@/components/admin/ImageManagement";
 import CategoryManagement from "@/components/admin/CategoryManagement";
-import PaymentSubmissions from "@/components/admin/PaymentSubmissions"; // Added
+import PaymentSubmissions from "@/components/admin/PaymentSubmissions";
+import PaymentSettingsManagement from "@/components/admin/PaymentSettingsManagement"; // Added
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, BarChart3, Settings, Video as VideoIcon, Image as ImageIcon, Shapes, GraduationCap, Menu as MenuIcon, CreditCard } from "lucide-react"; // Added CreditCard
+import { Users, BarChart3, Settings as SettingsIcon, Video as VideoIcon, Image as ImageIcon, Shapes, GraduationCap, Menu as MenuIcon, CreditCard } from "lucide-react"; // Renamed Settings to SettingsIcon
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,7 +24,8 @@ import {
 const adminTabs = [
   { value: "courses", label: "Courses", Icon: GraduationCap },
   { value: "categories", label: "Categories", Icon: Shapes },
-  { value: "payments", label: "Payments", Icon: CreditCard }, // Added Payments
+  { value: "payments", label: "Payments", Icon: CreditCard },
+  { value: "paymentSettings", label: "Payment Config", Icon: SettingsIcon }, // Added
   { value: "videos", label: "Videos", Icon: VideoIcon },
   { value: "images", label: "Images", Icon: ImageIcon },
   { value: "users", label: "Users", Icon: Users },
@@ -41,7 +43,7 @@ export default function AdminDashboardPage() {
       <div className="space-y-6 md:space-y-8">
         <section className="pb-4 border-b">
             <h1 className="text-2xl md:text-3xl font-headline font-semibold flex items-center">
-                <Settings className="mr-2 md:mr-3 h-7 w-7 md:h-8 md:w-8 text-primary" /> Admin Dashboard
+                <SettingsIcon className="mr-2 md:mr-3 h-7 w-7 md:h-8 md:w-8 text-primary" /> Admin Dashboard
             </h1>
             <p className="text-sm md:text-base text-muted-foreground">Manage your learning platform.</p>
         </section>
@@ -73,7 +75,7 @@ export default function AdminDashboardPage() {
               </DropdownMenu>
             </div>
           ) : (
-            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 mb-6"> {/* Adjusted grid-cols for new tab */}
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-2 mb-6"> {/* Adjusted grid-cols for new tab */}
               {adminTabs.map((tab) => (
                 <TabsTrigger
                   key={tab.value}
@@ -94,6 +96,9 @@ export default function AdminDashboardPage() {
           </TabsContent>
            <TabsContent value="payments">
             <PaymentSubmissions />
+          </TabsContent>
+          <TabsContent value="paymentSettings">
+            <PaymentSettingsManagement />
           </TabsContent>
           <TabsContent value="videos">
             <VideoManagement />

@@ -4,17 +4,18 @@ import React, { useState, useEffect, type FormEvent } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
-import { courses as defaultMockCourses, users as mockUsers, type Course, type PaymentSubmission, type User } from '@/data/mockData'; // Added User
+import { courses as defaultMockCourses, users as mockUsers, type Course, type PaymentSubmission, type User, initialPaymentSettings, type PaymentSettings } from '@/data/mockData'; // Added User, PaymentSettings
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { ChevronLeft, AlertTriangle, ShoppingCart, UploadCloud, Info, ArrowRight, Home } from 'lucide-react';
+import { ChevronLeft, AlertTriangle, ShoppingCart, UploadCloud, Info, ArrowRight, Home, Banknote, UserCircle as UserCircleIcon, ClipboardList } from 'lucide-react'; // Added Banknote, UserCircleIcon, ClipboardList
 import { Skeleton } from '@/components/ui/skeleton';
 
-const USER_PAYMENT_SUBMISSIONS_KEY = 'adminPaymentSubmissions'; // Using admin key as admin manages them
+const USER_PAYMENT_SUBMISSIONS_KEY = 'adminPaymentSubmissions';
+const PAYMENT_SETTINGS_KEY = 'adminPaymentSettingsData';
 
 export default function CheckoutPage() {
   const params = useParams();
@@ -28,8 +29,26 @@ export default function CheckoutPage() {
   const [currentCourse, setCurrentCourse] = useState<Course | null>(null);
   const [screenshotUrl, setScreenshotUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paymentSettings, setPaymentSettings] = useState<PaymentSettings | null>(null);
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true);
 
   useEffect(() => {
+    // Load payment settings
+    setIsLoadingSettings(true);
+    const storedSettings = localStorage.getItem(PAYMENT_SETTINGS_KEY);
+    if (storedSettings) {
+      try {
+        setPaymentSettings(JSON.parse(storedSettings));
+      } catch (e) {
+        console.error("Failed to parse payment settings from localStorage", e);
+        setPaymentSettings(initialPaymentSettings); // Fallback
+      }
+    } else {
+      setPaymentSettings(initialPaymentSettings); // Use initial if not configured
+    }
+    setIsLoadingSettings(false);
+
+    // Load course details
     setIsLoadingCourse(true);
     let coursesToUse: Course[] = [];
     try {
@@ -96,7 +115,7 @@ export default function CheckoutPage() {
     }
   };
 
-  if (authLoading || isLoadingCourse) {
+  if (authLoading || isLoadingCourse || isLoadingSettings) {
     return (
       <div className="max-w-2xl mx-auto py-8 px-4">
         <Skeleton className="h-8 w-1/4 mb-6" /> {/* Back button */}
@@ -106,8 +125,7 @@ export default function CheckoutPage() {
             <Skeleton className="h-6 w-1/2" /> {/* Description */}
           </CardHeader>
           <CardContent className="space-y-6">
-            <Skeleton className="h-5 w-full" />
-            <Skeleton className="h-5 w-full" />
+            <Skeleton className="h-20 w-full" /> {/* Payment instructions */}
             <div className="space-y-2">
                 <Skeleton className="h-4 w-1/4" /> {/* Label */}
                 <Skeleton className="h-10 w-full" /> {/* Input */}
@@ -196,6 +214,7 @@ export default function CheckoutPage() {
     );
   }
 
+  const hasPaymentDetails = paymentSettings && (paymentSettings.bankName || paymentSettings.accountNumber || paymentSettings.accountHolderName);
 
   return (
     <div className="max-w-2xl mx-auto py-8 px-4">
@@ -218,12 +237,24 @@ export default function CheckoutPage() {
           <CardContent className="space-y-6">
             <div className="bg-accent/10 p-4 rounded-md border border-accent/30">
                 <h4 className="font-semibold text-foreground mb-2 flex items-center"><Info className="h-5 w-5 mr-2 text-accent" /> Payment Instructions</h4>
-                <p className="text-sm text-muted-foreground">
-                    This is a manual payment process. Please make a payment of <strong>{currentCourse.price.toFixed(2)} {currentCourse.currency}</strong> to the designated account (details provided by the institute).
-                </p>
-                <p className="text-sm text-muted-foreground mt-2">
-                    After making the payment, upload a screenshot of your transaction receipt URL below.
-                </p>
+                {hasPaymentDetails ? (
+                  <>
+                    <p className="text-sm text-muted-foreground mb-2">
+                        Please make a payment of <strong>{currentCourse.price.toFixed(2)} {currentCourse.currency}</strong> to the following account:
+                    </p>
+                    {paymentSettings?.bankName && <p className="text-sm text-muted-foreground"><Banknote className="inline-block mr-1.5 h-4 w-4 align-text-bottom"/><strong>Bank:</strong> {paymentSettings.bankName}</p>}
+                    {paymentSettings?.accountNumber && <p className="text-sm text-muted-foreground"><ClipboardList className="inline-block mr-1.5 h-4 w-4 align-text-bottom"/><strong>Account No:</strong> {paymentSettings.accountNumber}</p>}
+                    {paymentSettings?.accountHolderName && <p className="text-sm text-muted-foreground"><UserCircleIcon className="inline-block mr-1.5 h-4 w-4 align-text-bottom"/><strong>Account Name:</strong> {paymentSettings.accountHolderName}</p>}
+                    {paymentSettings?.additionalInstructions && <p className="text-sm text-muted-foreground mt-2"><em>{paymentSettings.additionalInstructions}</em></p>}
+                    <p className="text-sm text-muted-foreground mt-3">
+                        After making the payment, please upload a screenshot of your transaction receipt to an image hosting service (e.g., Imgur, Google Drive) and paste the direct image URL below.
+                    </p>
+                  </>
+                ) : (
+                   <p className="text-sm text-muted-foreground">
+                    Manual payment details have not been configured by the administrator yet. Please check back later or contact support.
+                  </p>
+                )}
             </div>
             
             <div>
@@ -235,17 +266,20 @@ export default function CheckoutPage() {
                     type="url"
                     value={screenshotUrl}
                     onChange={(e) => setScreenshotUrl(e.target.value)}
-                    placeholder="https://example.com/your-screenshot.png"
+                    placeholder="https://your-image-host.com/proof.png"
                     required
                     className="pl-10 shadow-sm"
+                    disabled={!hasPaymentDetails}
                 />
               </div>
-              <p className="text-xs text-muted-foreground mt-1">Please upload your screenshot to an image hosting service (e.g., Imgur) and paste the direct link here.</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Upload your screenshot to an image hosting service (e.g., Imgur, a cloud drive shared publicly) and paste the direct link here. Ensure the link is accessible.
+              </p>
             </div>
 
           </CardContent>
           <CardFooter>
-            <Button type="submit" className="w-full text-lg py-3" disabled={isSubmitting}>
+            <Button type="submit" className="w-full text-lg py-3" disabled={isSubmitting || !hasPaymentDetails}>
               {isSubmitting ? 'Submitting...' : (
                 <>
                   Submit Payment Proof <ArrowRight className="ml-2 h-5 w-5" />
