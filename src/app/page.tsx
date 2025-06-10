@@ -11,7 +11,7 @@ import { videos as mockVideos, type Video } from '@/data/mockData';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
-const CareerAdviceChatbox = lazy(() => import('@/components/ai/CareerAdviceChatbox'));
+// const CareerAdviceChatbox = lazy(() => import('@/components/ai/CareerAdviceChatbox')); // Moved to courses/search
 
 export default function Home() {
   const router = useRouter();
@@ -100,9 +100,8 @@ export default function Home() {
     <div className="flex flex-col items-center pb-8">
       <section className="w-full max-w-2xl text-center pt-8 mb-10">
         <div className="flex items-center justify-center space-x-2 sm:space-x-3 text-3xl sm:text-4xl font-bold font-headline text-foreground mb-4">
-          {/* Responsive Icon Sizes */}
-          <Circle size={32} className="text-primary block sm:hidden" /> {/* Adjusted icon size for smaller text */}
-          <Circle size={40} className="text-primary hidden sm:block" /> {/* Adjusted icon size for smaller text */}
+          <Circle size={32} className="text-primary block sm:hidden" /> 
+          <Circle size={40} className="text-primary hidden sm:block" /> 
           <span>Yellow Institute</span>
         </div>
         <p className="text-lg sm:text-xl text-muted-foreground mb-8">
@@ -123,12 +122,16 @@ export default function Home() {
         </form>
         
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4 w-full max-w-md mx-auto">
-            <Button asChild size="lg" className="w-full sm:w-auto shadow-md hover:shadow-sm active:translate-y-px transition-all duration-150">
+            <Button asChild size="lg" className="w-full sm:w-auto transition-all duration-150">
                 <Link href="/courses/search">
                     <Compass className="mr-2 h-5 w-5" /> Explore
                 </Link>
             </Button>
-            <Button onClick={handleShowVideos} size="lg" variant="outline" className="w-full sm:w-auto shadow-md hover:shadow-sm active:translate-y-px transition-all duration-150 border-accent text-accent hover:bg-accent/10">
+            <Button 
+              onClick={handleShowVideos} 
+              size="lg" 
+              variant="accent" // Changed variant to new "accent" for 3D style
+              className="w-full sm:w-auto transition-all duration-150">
                 <VideoIcon className="mr-2 h-5 w-5" /> View Reels
             </Button>
         </div>

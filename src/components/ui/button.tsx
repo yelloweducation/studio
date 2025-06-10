@@ -13,6 +13,8 @@ const buttonVariants = cva(
           "bg-primary text-primary-foreground hover:bg-primary/90 shadow-3d-primary hover:shadow-3d-primary-hover active:shadow-none active:translate-y-px active:translate-x-px",
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-3d-destructive hover:shadow-3d-destructive-hover active:shadow-none active:translate-y-px active:translate-x-px",
+        accent: // New accent variant for 3D style
+          "bg-accent text-accent-foreground hover:bg-accent/90 shadow-3d-accent hover:shadow-3d-accent-hover active:shadow-none active:translate-y-px active:translate-x-px",
         outline:
           "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
         secondary:
