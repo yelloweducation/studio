@@ -89,7 +89,15 @@ export default function Home() {
         </form>
         
         <div className="mt-8 flex flex-row items-center justify-center gap-4 w-full max-w-md sm:max-w-lg lg:max-w-xl mx-auto">
-            <Button asChild size="lg" variant="default" className="flex-1 sm:flex-none sm:w-auto">
+            <Button 
+              asChild 
+              size="lg" 
+              variant="default" 
+              className={cn(
+                "flex-1 sm:flex-none sm:w-auto",
+                language === 'my' ? 'text-xs sm:text-sm' : 'text-sm'
+              )}
+            >
                 <Link href="/courses/search">
                     <Compass className="mr-2 h-5 w-5" /> {t.coursesButton}
                 </Link>
@@ -98,7 +106,11 @@ export default function Home() {
               asChild 
               size="lg" 
               variant="accent"
-              className="flex-1 sm:flex-none sm:w-auto">
+              className={cn(
+                "flex-1 sm:flex-none sm:w-auto",
+                language === 'my' ? 'text-xs sm:text-sm' : 'text-sm'
+              )}
+            >
                 <Link href="/videos"> 
                     <VideoIcon className="mr-2 h-5 w-5" /> {t.reelsButton}
                 </Link>
