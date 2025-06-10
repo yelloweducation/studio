@@ -14,6 +14,27 @@ export type Module = {
   lessons: Lesson[];
 };
 
+export type Option = {
+  id: string;
+  text: string;
+};
+
+export type Question = {
+  id: string;
+  text: string;
+  options: Option[];
+  correctOptionId: string;
+  points?: number; // Optional points per question
+};
+
+export type Quiz = {
+  id: string;
+  title: string;
+  quizType: 'practice' | 'graded';
+  questions: Question[];
+  passingScore?: number; // For graded quizzes, e.g., 70 for 70%
+};
+
 export type Course = {
   id: string;
   title: string;
@@ -30,6 +51,7 @@ export type Course = {
   targetAudience?: string;
   prerequisites?: string[];
   estimatedTimeToComplete?: string;
+  quizzes?: Quiz[]; // Added quizzes
 };
 
 export type User = {
@@ -147,6 +169,35 @@ export const courses: Course[] = [
         ]
       }
     ],
+    quizzes: [
+      {
+        id: 'quiz1c1',
+        title: 'HTML & CSS Basics Check',
+        quizType: 'practice',
+        questions: [
+          {
+            id: 'q1quiz1c1',
+            text: 'What does HTML stand for?',
+            options: [
+              { id: 'opt1q1', text: 'HyperText Markup Language' },
+              { id: 'opt2q1', text: 'HighTech Modern Language' },
+              { id: 'opt3q1', text: 'HyperTransfer Markup Language' },
+            ],
+            correctOptionId: 'opt1q1'
+          },
+          {
+            id: 'q2quiz1c1',
+            text: 'Which CSS property is used to change the text color of an element?',
+            options: [
+              { id: 'opt1q2', text: 'font-color' },
+              { id: 'opt2q2', text: 'text-color' },
+              { id: 'opt3q2', text: 'color' },
+            ],
+            correctOptionId: 'opt3q2'
+          }
+        ]
+      }
+    ]
   },
   {
     id: 'course2',
@@ -185,6 +236,26 @@ export const courses: Course[] = [
         ]
       },
     ],
+    quizzes: [
+      {
+        id: 'quiz1c2',
+        title: 'ES6+ Knowledge Test',
+        quizType: 'graded',
+        passingScore: 70,
+        questions: [
+          {
+            id: 'q1quiz1c2',
+            text: 'What is the primary benefit of using arrow functions?',
+            options: [
+              { id: 'opt1q1c2', text: 'They have their own `this` binding.' },
+              { id: 'opt2q1c2', text: 'Shorter syntax and lexical `this` binding.' },
+              { id: 'opt3q1c2', text: 'They can be used as constructors.' },
+            ],
+            correctOptionId: 'opt2q1c2'
+          }
+        ]
+      }
+    ]
   },
   {
     id: 'course3',

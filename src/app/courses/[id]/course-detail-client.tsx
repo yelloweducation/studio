@@ -4,13 +4,13 @@ import React, { useState, useEffect, useMemo, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation'; // useParams is removed as courseId is a prop
 import Image from 'next/image';
 import Link from 'next/link';
-import { courses as mockDataCourses, enrollments as initialEnrollments, paymentSubmissions as initialPaymentSubmissions, type Course, type Module, type Lesson, type User, type Enrollment, type PaymentSubmission, type PaymentSubmissionStatus } from '@/data/mockData';
+import { courses as mockDataCourses, enrollments as initialEnrollments, paymentSubmissions as initialPaymentSubmissions, type Course, type Module, type Lesson, type User, type Enrollment, type PaymentSubmission, type PaymentSubmissionStatus, type Quiz } from '@/data/mockData'; // Added Quiz type
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChevronLeft, BookOpenText, PlayCircle, Lock, CheckCircle, AlertTriangle, Clock, ExternalLink, ArrowRight, Home, ShoppingCart, BadgeDollarSign, Hourglass, ListChecks, Users as TargetAudienceIcon, ShieldCheck, Timer } from 'lucide-react';
+import { ChevronLeft, BookOpenText, PlayCircle, Lock, CheckCircle, AlertTriangle, Clock, ExternalLink, ArrowRight, Home, ShoppingCart, BadgeDollarSign, Hourglass, ListChecks, Users as TargetAudienceIcon, ShieldCheck, Timer, FileQuestion, Edit3 as PracticeQuizIcon, CheckSquare as GradedQuizIcon } from 'lucide-react'; // Added quiz icons
 import { getEmbedUrl } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage, type Language } from '@/contexts/LanguageContext';
@@ -63,6 +63,11 @@ const courseDetailTranslations = {
     noTargetAudience: "Information about the target audience will be available soon.",
     noPrerequisites: "No specific prerequisites, or they will be listed soon.",
     noEstimatedTime: "Estimated completion time will be provided soon.",
+    assessmentsTitle: "Assessments & Quizzes",
+    practiceQuiz: "Practice Quiz",
+    gradedQuiz: "Graded Quiz",
+    startQuiz: "Start Quiz",
+    noQuizzesAvailable: "No quizzes available for this course yet."
   },
   my: {
     backToCourses: "အတန်းများသို့ ပြန်သွားရန်",
@@ -99,6 +104,11 @@ const courseDetailTranslations = {
     noTargetAudience: "ဤအတန်းအတွက် ရည်ရွယ်ထားသော ကျောင်းသားများအချက်အလက် မကြာမီ ရရှိပါမည်။",
     noPrerequisites: "သီးခြားကြိုတင်လိုအပ်ချက်များ မရှိပါ သို့မဟုတ် မကြာမီ ဒီမှာ ဖော်ပြပါမည်။",
     noEstimatedTime: "ပြီးဆုံးရန် ခန့်မှန်းအချိန် မကြာမီ ဖော်ပြပါမည်။",
+    assessmentsTitle: "အကဲဖြတ်ချက်များ နှင့် စာမေးပွဲငယ်များ",
+    practiceQuiz: "လေ့ကျင့်ရန် စာမေးပွဲငယ်",
+    gradedQuiz: "အဆင့်သတ်မှတ် စာမေးပွဲငယ်",
+    startQuiz: "စာမေးပွဲငယ် စတင်ရန်",
+    noQuizzesAvailable: "ဤသင်တန်းအတွက် စာမေးပွဲငယ်များ မရှိသေးပါ။"
   }
 };
 
@@ -110,8 +120,8 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
   const router = useRouter();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const { toast } = useToast();
-  const { language } = useLanguage(); 
-  const t = courseDetailTranslations[language]; 
+  const { language } = useLanguage();
+  const t = courseDetailTranslations[language];
 
   const [allAppCourses, setAllAppCourses] = useState<Course[]>([]);
   const [areAppCoursesLoaded, setAreAppCoursesLoaded] = useState(false);
@@ -256,6 +266,9 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
   const renderCTAButton = () => {
     if (!currentCourse) return null;
 
+    // Check if user is enrolled and payment is approved OR if the course is free
+    const canAccessContent = (paymentInfo?.status === 'approved') || (!currentCourse.price || currentCourse.price <= 0);
+
     if (currentCourse.price && currentCourse.price > 0) {
         if (!isAuthenticated) {
             return (
@@ -327,6 +340,7 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
         }
     }
 
+    // Free course logic
     if (completionInfo?.isCompleted) {
       return (
         <div className="flex flex-col items-center text-center p-4 bg-green-100 dark:bg-green-900/50 rounded-lg shadow">
@@ -380,14 +394,14 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
                     <Skeleton className="h-5 w-3/4" />
                 </CardContent>
             </Card>
-            {/* Skeletons for new sections */}
             <Card><CardContent className="pt-6"><Skeleton className="h-20 w-full" /></CardContent></Card>
             <Card><CardContent className="pt-6"><Skeleton className="h-16 w-full" /></CardContent></Card>
+            <Card><CardContent className="pt-6"><Skeleton className="h-16 w-full" /></CardContent></Card> {/* Skeleton for Quizzes */}
           </div>
           <div className="md:col-span-1 space-y-6 md:sticky md:top-24">
             <Card>
                 <CardHeader><Skeleton className="h-8 w-3/4" /> </CardHeader>
-                <CardContent><Skeleton className="h-12 w-full" /></CardContent>
+                <CardContent><Skeleton className="h-12 w-full py-3" /></CardContent> {/* Adjusted skeleton height */}
                  <CardFooter><Skeleton className="h-4 w-1/2 mx-auto" /></CardFooter>
             </Card>
             <Card>
@@ -429,7 +443,9 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
     );
   }
 
-  const { title, description, category, instructor, modules, imageUrl, dataAiHint, price, currency, learningObjectives, targetAudience, prerequisites, estimatedTimeToComplete } = currentCourse;
+  const { title, description, category, instructor, modules, imageUrl, dataAiHint, price, currency, learningObjectives, targetAudience, prerequisites, estimatedTimeToComplete, quizzes } = currentCourse;
+  const canAccessContent = (paymentInfo?.status === 'approved') || (!price || price <= 0);
+
 
   return (
     <div className="max-w-4xl mx-auto py-2 md:py-8">
@@ -448,7 +464,7 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
                   layout="fill"
                   objectFit="cover"
                   data-ai-hint={dataAiHint || 'course education'}
-                  priority 
+                  priority
                 />
               </div>
             )}
@@ -467,7 +483,7 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
               <p className="text-foreground/90 whitespace-pre-line">{description}</p>
             </CardContent>
           </Card>
-          
+
           {/* Learning Objectives */}
           <Card className="shadow-lg">
             <CardHeader>
@@ -513,8 +529,7 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
               )}
             </CardContent>
           </Card>
-          
-          {/* Estimated Time */}
+
            {estimatedTimeToComplete && (
             <Card className="shadow-lg">
                 <CardHeader>
@@ -526,6 +541,50 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
             </Card>
           )}
 
+           {/* Quizzes Section */}
+          {quizzes && quizzes.length > 0 && (
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle className="text-xl font-headline flex items-center">
+                  <FileQuestion className="mr-2 h-6 w-6 text-primary" /> {t.assessmentsTitle}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-3">
+                  {quizzes.map((quiz: Quiz) => {
+                    const QuizIcon = quiz.quizType === 'graded' ? GradedQuizIcon : PracticeQuizIcon;
+                    const quizLabel = quiz.quizType === 'graded' ? t.gradedQuiz : t.practiceQuiz;
+                    return (
+                      <li key={quiz.id} className="p-3 border rounded-lg bg-card hover:shadow-sm transition-shadow">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h4 className="font-semibold text-md flex items-center">
+                              <QuizIcon className="mr-2 h-5 w-5 text-accent shrink-0" />
+                              {quiz.title}
+                            </h4>
+                            <p className="text-xs text-muted-foreground ml-7">{quizLabel}</p>
+                          </div>
+                          {canAccessContent ? (
+                            <Button asChild variant="outline" size="sm">
+                              <Link href={`/courses/${courseId}/quiz/${quiz.id}`}>
+                                {t.startQuiz} <ArrowRight className="ml-1.5 h-4 w-4" />
+                              </Link>
+                            </Button>
+                          ) : (
+                            <Button variant="outline" size="sm" disabled>
+                              <Lock className="mr-1.5 h-4 w-4" /> {t.startQuiz}
+                            </Button>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
+
+
         </div>
 
         <div className="md:col-span-1 space-y-6 md:sticky md:top-24">
@@ -536,7 +595,7 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
             <CardContent>
               {renderCTAButton()}
             </CardContent>
-            {isAuthenticated && completionInfo && completionInfo.progress > 0 && completionInfo.progress < 100 && (!price || price <=0 || paymentInfo?.status === 'approved') && (
+            {isAuthenticated && completionInfo && completionInfo.progress > 0 && completionInfo.progress < 100 && canAccessContent && (
                  <CardFooter className="text-sm text-muted-foreground pt-0 pb-4 text-center justify-center">
                     {t.progressCompleted.replace('{progress}', (completionInfo.progress || 0).toString())}
                 </CardFooter>
@@ -562,11 +621,9 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
                           <ul className="space-y-2 pl-2 border-l-2 border-primary/20 ml-2">
                             {module.lessons.map((lesson: Lesson, lessonIndex: number) => {
                               const lessonPath = `/courses/${courseId}/learn/${module.id}/${lesson.id}`;
-                              const isLessonAccessible = (!price || price <= 0) || (isAuthenticated && paymentInfo?.status === 'approved');
-
                               return (
                                 <li key={lesson.id}>
-                                  {isLessonAccessible ? (
+                                  {canAccessContent ? (
                                     <Link href={lessonPath} className="group flex items-center justify-between text-sm py-1.5 px-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors">
                                       <span className="flex items-center flex-grow min-w-0 mr-2">
                                         <PlayCircle className="mr-2 h-4 w-4 text-primary group-hover:text-accent-foreground transition-colors flex-shrink-0" />
@@ -604,4 +661,3 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
     </div>
   );
 }
-

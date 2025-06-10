@@ -2,12 +2,12 @@
 "use client";
 import { useState, useEffect, type FormEvent, type ChangeEvent } from 'react';
 import Image from 'next/image';
-import { courses as initialCoursesData, type Course, type Module, type Lesson } from '@/data/mockData';
+import { courses as initialCoursesData, type Course, type Module, type Lesson, type Quiz } from '@/data/mockData'; // Added Quiz
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Edit3, Trash2, GraduationCap, BookOpen, Clock, Link as LinkIcon, Image as ImageIcon, Info, Tag, DollarSign, Filter, Star, ListChecks, UsersIcon as TargetAudienceIcon, ShieldCheck, Timer } from 'lucide-react';
+import { PlusCircle, Edit3, Trash2, GraduationCap, BookOpen, Clock, Link as LinkIcon, Image as ImageIcon, Info, Tag, DollarSign, Filter, Star, ListChecks, UsersIcon as TargetAudienceIcon, ShieldCheck, Timer, FileQuestion, CheckSquare, XSquare } from 'lucide-react'; // Added FileQuestion
 import {
   Dialog,
   DialogContent,
@@ -23,6 +23,8 @@ import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '../ui/label';
 import { Checkbox } from '../ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Added Select
+
 
 const LessonForm = ({
   lesson,
@@ -46,11 +48,11 @@ const LessonForm = ({
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    onSave({ 
-      id: lesson?.id || `l${Date.now()}`, 
-      title, 
-      duration, 
-      description, 
+    onSave({
+      id: lesson?.id || `l${Date.now()}`,
+      title,
+      duration,
+      description,
       embedUrl,
       imageUrl
     }, moduleIndex, lessonIndex);
@@ -105,6 +107,7 @@ const CourseForm = ({
   const [currency, setCurrency] = useState(course?.currency || 'USD');
   const [isFeatured, setIsFeatured] = useState(course?.isFeatured || false);
   const [modules, setModules] = useState<Module[]>(course?.modules || []);
+  const [quizzes, setQuizzes] = useState<Quiz[]>(course?.quizzes || []); // Added quizzes state
 
   const [learningObjectives, setLearningObjectives] = useState(course?.learningObjectives?.join('\n') || '');
   const [targetAudience, setTargetAudience] = useState(course?.targetAudience || '');
@@ -113,6 +116,10 @@ const CourseForm = ({
 
 
   const [editingLesson, setEditingLesson] = useState<{ moduleIndex: number, lessonIndex?: number, lesson?: Partial<Lesson> } | null>(null);
+
+  // Quiz management states
+  const [newQuizTitle, setNewQuizTitle] = useState('');
+  const [newQuizType, setNewQuizType] = useState<'practice' | 'graded'>('practice');
 
 
   const handleModuleChange = (index: number, field: keyof Module, value: string) => {
@@ -128,12 +135,12 @@ const CourseForm = ({
   const removeModule = (index: number) => {
     setModules(modules.filter((_, i) => i !== index));
   };
-  
+
   const saveLesson = (lessonData: Lesson, moduleIndex: number, lessonIndex?: number) => {
     const newModules = [...modules];
-    if (lessonIndex !== undefined) { 
+    if (lessonIndex !== undefined) {
       newModules[moduleIndex].lessons[lessonIndex] = lessonData;
-    } else { 
+    } else {
       newModules[moduleIndex].lessons.push(lessonData);
     }
     setModules(newModules);
@@ -146,6 +153,28 @@ const CourseForm = ({
     setModules(newModules);
   };
 
+  // Quiz Management Functions
+  const addQuiz = () => {
+    if (!newQuizTitle.trim()) {
+      alert("Quiz title cannot be empty."); // Simple validation
+      return;
+    }
+    const newQuiz: Quiz = {
+      id: `quiz${Date.now()}`,
+      title: newQuizTitle,
+      quizType: newQuizType,
+      questions: [], // Questions will be empty initially
+    };
+    setQuizzes([...quizzes, newQuiz]);
+    setNewQuizTitle(''); // Reset form
+    setNewQuizType('practice');
+  };
+
+  const removeQuiz = (quizId: string) => {
+    setQuizzes(quizzes.filter(q => q.id !== quizId));
+  };
+
+
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     const courseData: Course = {
@@ -156,7 +185,7 @@ const CourseForm = ({
       instructor,
       imageUrl,
       dataAiHint,
-      price: Number(price) || 0, 
+      price: Number(price) || 0,
       currency,
       isFeatured,
       learningObjectives: learningObjectives.split('\n').filter(s => s.trim() !== ''),
@@ -164,6 +193,7 @@ const CourseForm = ({
       prerequisites: prerequisites.split('\n').filter(s => s.trim() !== ''),
       estimatedTimeToComplete,
       modules,
+      quizzes, // Include quizzes
     };
     onSubmit(courseData);
   };
@@ -255,7 +285,7 @@ const CourseForm = ({
             </div>
           </div>
 
-          {/* New Fields for Course Details */}
+          {/* Additional Course Information Fields */}
           <div className="pt-4 border-t">
             <h3 className="text-lg font-semibold mb-3">Additional Course Information</h3>
             <div className="space-y-4">
@@ -278,7 +308,7 @@ const CourseForm = ({
             </div>
           </div>
 
-
+          {/* Modules Section */}
           <div className="space-y-4 pt-4 border-t">
             <h3 className="text-lg font-semibold flex items-center"><BookOpen className="mr-2 h-5 w-5 text-primary"/> Modules</h3>
             <Accordion type="multiple" className="w-full" defaultValue={modules.map(m => m.id)}>
@@ -290,7 +320,7 @@ const CourseForm = ({
                       onChange={e => handleModuleChange(moduleIndex, 'title', e.target.value)}
                       placeholder={`Module ${moduleIndex + 1} Title`}
                       className="text-md font-medium flex-grow mr-2"
-                      onClick={(e) => e.stopPropagation()} 
+                      onClick={(e) => e.stopPropagation()}
                     />
                   </AccordionTrigger>
                   <AccordionContent className="pl-2">
@@ -334,6 +364,57 @@ const CourseForm = ({
               <PlusCircle className="mr-2 h-4 w-4" /> Add Module
             </Button>
           </div>
+
+          {/* Quizzes Section */}
+          <div className="space-y-4 pt-4 border-t">
+            <h3 className="text-lg font-semibold flex items-center"><FileQuestion className="mr-2 h-5 w-5 text-primary"/> Quizzes</h3>
+            <div className="space-y-2 p-3 border rounded-md bg-card">
+              <Label htmlFor="newQuizTitle">New Quiz Title</Label>
+              <Input
+                id="newQuizTitle"
+                value={newQuizTitle}
+                onChange={(e) => setNewQuizTitle(e.target.value)}
+                placeholder="e.g., Mid-term Assessment"
+              />
+              <Label htmlFor="newQuizType">Quiz Type</Label>
+              <Select value={newQuizType} onValueChange={(value: 'practice' | 'graded') => setNewQuizType(value)}>
+                <SelectTrigger id="newQuizType">
+                  <SelectValue placeholder="Select quiz type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="practice">Practice Quiz</SelectItem>
+                  <SelectItem value="graded">Graded Quiz</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button type="button" onClick={addQuiz} size="sm" className="mt-2">
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Quiz
+              </Button>
+            </div>
+
+            {quizzes.length > 0 && (
+              <div className="mt-4 space-y-3">
+                <h4 className="font-medium text-md">Existing Quizzes:</h4>
+                {quizzes.map((quiz, index) => (
+                  <Card key={quiz.id} className="p-3 bg-muted/30">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="font-medium text-sm">{quiz.title}</p>
+                        <p className="text-xs text-muted-foreground capitalize">{quiz.quizType} Quiz</p>
+                      </div>
+                      <Button type="button" variant="ghost" size="icon_sm" onClick={() => removeQuiz(quiz.id)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                    {/* Placeholder for future question editing UI for this quiz */}
+                    <p className="text-xs text-muted-foreground mt-1 italic">
+                      ({quiz.questions.length} questions - full question editing UI coming soon)
+                    </p>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+
         </div>
       </ScrollArea>
       <DialogFooter className="pt-6 border-t">
@@ -363,10 +444,10 @@ export default function CourseManagement() {
         setCourses(parsedCourses);
       } catch (e) {
         console.error("Failed to parse courses from localStorage", e);
-        setCourses(initialCoursesData); 
+        setCourses(initialCoursesData);
       }
     } else {
-      setCourses(initialCoursesData); 
+      setCourses(initialCoursesData);
     }
     setIsDataLoaded(true);
   }, []);
@@ -379,7 +460,7 @@ export default function CourseManagement() {
 
 
   const handleAddCourse = (data: Course) => {
-    setCourses(prev => [{ ...data, id: data.id || `course${Date.now()}` }, ...prev]); 
+    setCourses(prev => [{ ...data, id: data.id || `course${Date.now()}` }, ...prev]);
     setIsFormOpen(false);
     setEditingCourse(undefined);
     toast({ title: "Course Added", description: `${data.title} has been successfully added.` });
@@ -399,7 +480,7 @@ export default function CourseManagement() {
   };
 
   const openForm = (course?: Course) => {
-    setEditingCourse(course ? JSON.parse(JSON.stringify(course)) : undefined); 
+    setEditingCourse(course ? JSON.parse(JSON.stringify(course)) : undefined);
     setIsFormOpen(true);
   };
 
@@ -414,7 +495,7 @@ export default function CourseManagement() {
         <CardTitle className="flex items-center text-xl md:text-2xl font-headline">
           <GraduationCap className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Course Management
         </CardTitle>
-        <CardDescription>Add, edit, or delete courses, modules, lessons, set prices, and mark featured courses.</CardDescription>
+        <CardDescription>Add, edit, or delete courses, modules, lessons, quizzes, set prices, and mark featured courses.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="mb-6 text-right">
@@ -424,7 +505,7 @@ export default function CourseManagement() {
                 <PlusCircle className="mr-2 h-5 w-5" /> Add New Course
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-2xl md:max-w-3xl"> 
+            <DialogContent className="sm:max-w-2xl md:max-w-3xl">
               <DialogHeader className="pb-4">
                 <DialogTitle className="font-headline text-xl md:text-2xl">{editingCourse ? 'Edit Course' : 'Add New Course'}</DialogTitle>
                 <DialogDescription>
@@ -459,7 +540,7 @@ export default function CourseManagement() {
                     <span>Category: {course.category}</span> | <span>Instructor: {course.instructor}</span>
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    Modules: {course.modules?.length || 0} | Price: {course.price && course.price > 0 ? `${course.price} ${course.currency}` : 'Free'}
+                    Modules: {course.modules?.length || 0} | Quizzes: {course.quizzes?.length || 0} | Price: {course.price && course.price > 0 ? `${course.price} ${course.currency}` : 'Free'}
                   </div>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:space-x-2 gap-2 sm:gap-0 w-full sm:w-auto sm:items-center mt-2 sm:mt-0 shrink-0 self-start sm:self-center">
