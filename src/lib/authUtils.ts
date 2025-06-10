@@ -11,7 +11,7 @@ export interface AuthState {
   role: 'student' | 'admin' | null;
 }
 
-const getUsersFromStorage = (): User[] => {
+export const getUsersFromStorage = (): User[] => {
   if (typeof window === 'undefined') {
     return [...initialMockUsers]; // Return a copy for server-side
   }
@@ -101,7 +101,7 @@ export const registerUser = (name: string, email: string, password_raw: string):
     name,
     email,
     role: 'student', // Default role
-    passwordHash: password_raw, 
+    passwordHash: password_raw,
   };
   allUsers.push(newUser);
   saveUsersToStorage(allUsers);
