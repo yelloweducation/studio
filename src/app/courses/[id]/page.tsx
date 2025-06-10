@@ -184,7 +184,7 @@ export default function CourseDetailPage() {
     if (currentCourse.price && currentCourse.price > 0) {
         if (!isAuthenticated) {
             return (
-                 <Button asChild size="lg" className="w-full shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150">
+                 <Button asChild size="lg" className="w-full shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150 whitespace-normal h-auto">
                     <Link href={`/login?redirect=/courses/${courseId}`}>
                         <BadgeDollarSign className="mr-2 h-5 w-5" /> Login to Purchase for {currentCourse.price.toFixed(2)} {currentCourse.currency}
                     </Link>
@@ -200,7 +200,7 @@ export default function CourseDetailPage() {
                         <p className="font-semibold text-green-700 dark:text-green-300">You finished this course!</p>
                         <p className="text-sm text-green-600 dark:text-green-400">Progress: {completionInfo.progress}%</p>
                         {firstLessonPath && (
-                            <Button asChild className="mt-3">
+                            <Button asChild className="mt-3 whitespace-normal h-auto">
                             <Link href={firstLessonPath}>Review Course</Link>
                             </Button>
                         )}
@@ -217,7 +217,7 @@ export default function CourseDetailPage() {
                 );
             }
             return ( // Approved, not yet completed
-                <Button asChild size="lg" className="w-full shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150">
+                <Button asChild size="lg" className="w-full shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150 whitespace-normal h-auto">
                     <Link href={firstLessonPath}>
                     Start Learning <ArrowRight className="ml-2 h-5 w-5" />
                     </Link>
@@ -242,7 +242,7 @@ export default function CourseDetailPage() {
                 );
             }
             return ( // Needs purchase
-                <Button asChild size="lg" className="w-full shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150">
+                <Button asChild size="lg" className="w-full shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150 whitespace-normal h-auto">
                     <Link href={`/courses/${courseId}/checkout`}>
                         <ShoppingCart className="mr-2 h-5 w-5" /> Purchase for {currentCourse.price.toFixed(2)} {currentCourse.currency}
                     </Link>
@@ -259,7 +259,7 @@ export default function CourseDetailPage() {
           <p className="font-semibold text-green-700 dark:text-green-300">You finished this course!</p>
           <p className="text-sm text-green-600 dark:text-green-400">Progress: {completionInfo.progress}%</p>
           {firstLessonPath && (
-            <Button asChild className="mt-3">
+            <Button asChild className="mt-3 whitespace-normal h-auto">
               <Link href={firstLessonPath}>Review Course</Link>
             </Button>
           )}
@@ -278,7 +278,7 @@ export default function CourseDetailPage() {
     }
 
     return (
-      <Button asChild size="lg" className="w-full shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150">
+      <Button asChild size="lg" className="w-full shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150 whitespace-normal h-auto">
         <Link href={firstLessonPath}>
           Start Learning (Free) <ArrowRight className="ml-2 h-5 w-5" />
         </Link>
@@ -432,19 +432,19 @@ export default function CourseDetailPage() {
                                 <li key={lesson.id}>
                                   {isLessonAccessible ? (
                                     <Link href={lessonPath} className="group flex items-center justify-between text-sm py-1.5 px-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors">
-                                      <span className="flex items-center">
-                                        <PlayCircle className="mr-2 h-4 w-4 text-primary group-hover:text-accent-foreground transition-colors" />
-                                        {`${lessonIndex + 1}. ${lesson.title}`}
+                                      <span className="flex items-center flex-grow min-w-0 mr-2">
+                                        <PlayCircle className="mr-2 h-4 w-4 text-primary group-hover:text-accent-foreground transition-colors flex-shrink-0" />
+                                        <span className="whitespace-normal">{`${lessonIndex + 1}. ${lesson.title}`}</span>
                                       </span>
-                                      <span className="text-xs text-muted-foreground group-hover:text-accent-foreground transition-colors">{lesson.duration}</span>
+                                      <span className="text-xs text-muted-foreground group-hover:text-accent-foreground transition-colors flex-shrink-0">{lesson.duration}</span>
                                     </Link>
                                   ) : (
                                     <div className="group flex items-center justify-between text-sm py-1.5 px-2 rounded-md text-muted-foreground cursor-not-allowed">
-                                      <span className="flex items-center">
-                                        <Lock className="mr-2 h-4 w-4" />
-                                        {`${lessonIndex + 1}. ${lesson.title}`}
+                                      <span className="flex items-center flex-grow min-w-0 mr-2">
+                                        <Lock className="mr-2 h-4 w-4 flex-shrink-0" />
+                                        <span className="whitespace-normal">{`${lessonIndex + 1}. ${lesson.title}`}</span>
                                       </span>
-                                      <span className="text-xs">{lesson.duration}</span>
+                                      <span className="text-xs flex-shrink-0">{lesson.duration}</span>
                                     </div>
                                   )}
                                 </li>
