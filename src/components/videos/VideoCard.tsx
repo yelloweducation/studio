@@ -11,9 +11,13 @@ interface VideoCardProps {
 const VideoCard = ({ video }: VideoCardProps) => {
   const embeddableUrl = getEmbedUrl(video.embedUrl);
 
+  // Common classes for the main container.
+  // Added max-w-md and mx-auto for responsiveness on larger screens.
+  const containerClasses = "bg-black rounded-lg shadow-xl overflow-hidden w-full max-w-md mx-auto h-full flex flex-col items-center justify-center relative";
+
   if (embeddableUrl) {
     return (
-      <div className="bg-black rounded-lg shadow-xl overflow-hidden w-full h-full flex flex-col items-center justify-center relative">
+      <div className={containerClasses}>
         <iframe
           src={embeddableUrl}
           title={video.title}
@@ -27,7 +31,7 @@ const VideoCard = ({ video }: VideoCardProps) => {
 
   // Fallback to thumbnail display if no valid embedUrl
   return (
-    <div className="bg-black rounded-lg shadow-xl overflow-hidden w-full h-full flex flex-col items-center justify-center relative text-white">
+    <div className={`${containerClasses} text-white`}> {/* Added text-white here for the fallback content */}
       {video.thumbnailUrl && (
         <Image
             src={video.thumbnailUrl}
