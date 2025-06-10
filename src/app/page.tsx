@@ -133,7 +133,7 @@ export default function Home() {
               size="lg" 
               variant="accent"
               className="flex-1 sm:flex-none sm:w-auto">
-                <VideoIcon className="mr-2 h-5 w-5" /> View Reels
+                <VideoIcon className="mr-2 h-5 w-5" /> Reels
             </Button>
         </div>
       </section>
