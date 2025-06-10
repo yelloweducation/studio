@@ -378,7 +378,7 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
 
   if (isLoadingPage || authLoading) {
     return (
-      <div className="max-w-4xl mx-auto py-8 space-y-6">
+      <div className="max-w-4xl mx-auto py-4 md:py-8 space-y-6">
         <Skeleton className="h-8 w-1/4" />
         <div className="grid md:grid-cols-3 gap-8 items-start">
           <div className="md:col-span-2 space-y-4">
@@ -448,7 +448,7 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
 
 
   return (
-    <div className="max-w-4xl mx-auto py-2 md:py-8">
+    <div className="max-w-4xl mx-auto py-4 md:py-8">
       <Button variant="outline" onClick={() => router.back()} className="mb-4 md:mb-6 text-sm">
         <ChevronLeft className="mr-2 h-4 w-4" /> {t.backToCourses}
       </Button>
@@ -556,25 +556,29 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
                     const quizLabel = quiz.quizType === 'graded' ? t.gradedQuiz : t.practiceQuiz;
                     return (
                       <li key={quiz.id} className="p-3 border rounded-lg bg-card hover:shadow-sm transition-shadow">
-                        <div className="flex items-center justify-between">
-                          <div>
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="flex-grow">
                             <h4 className="font-semibold text-md flex items-center">
                               <QuizIcon className="mr-2 h-5 w-5 text-accent shrink-0" />
                               {quiz.title}
                             </h4>
-                            <p className="text-xs text-muted-foreground ml-7">{quizLabel}</p>
+                            <p className="text-xs text-muted-foreground sm:ml-7">
+                              {quizLabel}
+                            </p>
                           </div>
-                          {canAccessContent ? (
-                            <Button asChild variant="outline" size="sm">
-                              <Link href={`/courses/${courseId}/quiz/${quiz.id}`}>
-                                {t.startQuiz} <ArrowRight className="ml-1.5 h-4 w-4" />
-                              </Link>
-                            </Button>
-                          ) : (
-                            <Button variant="outline" size="sm" disabled>
-                              <Lock className="mr-1.5 h-4 w-4" /> {t.startQuiz}
-                            </Button>
-                          )}
+                          <div className="w-full sm:w-auto shrink-0">
+                            {canAccessContent ? (
+                              <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
+                                <Link href={`/courses/${courseId}/quiz/${quiz.id}`}>
+                                  {t.startQuiz} <ArrowRight className="ml-1.5 h-4 w-4" />
+                                </Link>
+                              </Button>
+                            ) : (
+                              <Button variant="outline" size="sm" disabled className="w-full sm:w-auto">
+                                <Lock className="mr-1.5 h-4 w-4" /> {t.startQuiz}
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </li>
                     );
@@ -661,3 +665,4 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
     </div>
   );
 }
+
