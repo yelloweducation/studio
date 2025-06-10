@@ -103,6 +103,16 @@
   body {
     @apply bg-background text-foreground;
   }
+  .blinking-cursor-text::after {
+    content: '|';
+    animation: blink-caret 0.75s step-end infinite;
+    @apply ml-1 text-primary; /* Use primary color for cursor */
+  }
+
+  @keyframes blink-caret {
+    from, to { opacity: 1; }
+    50% { opacity: 0; }
+  }
 }
 
 @layer utilities {

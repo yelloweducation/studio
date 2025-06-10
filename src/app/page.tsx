@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Video as VideoIcon, Search, Compass, Circle } from 'lucide-react'; 
+import { Video as VideoIcon, Search, Compass, Circle, Brain } from 'lucide-react'; 
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext'; // Added
 import { cn } from "@/lib/utils"; // Added for conditional classnames
@@ -18,6 +18,7 @@ const homePageTranslations = {
     searchPlaceholder: "Search courses, e.g., Web Development",
     coursesButton: "Courses",
     reelsButton: "Reels",
+    personalityTestLink: "Discover Your Strengths",
     privacyPolicy: "Privacy Policy",
     termsOfService: "Terms of Service",
     aboutUs: "About Us",
@@ -32,6 +33,7 @@ const homePageTranslations = {
     searchPlaceholder: "အတန်းများရှာပါ၊ ဥပမာ - Web Development",
     coursesButton: "အတန်း", // Updated from သင်တန်းများ to သင်တန်း, then to အတန်း
     reelsButton: "ဗီဒီယို", // Updated from ရီးလ်များ
+    personalityTestLink: "သင်၏ အားသာချက်များကို ရှာဖွေပါ",
     privacyPolicy: "ကိုယ်ရေးအချက်အလက်မူဝါဒ",
     termsOfService: "ဝန်ဆောင်မှုစည်းမျဉ်းများ",
     aboutUs: "ကျွန်ုပ်တို့အကြောင်း",
@@ -115,6 +117,17 @@ export default function Home() {
                     <VideoIcon className="mr-2 h-5 w-5" /> {t.reelsButton}
                 </Link>
             </Button>
+        </div>
+
+        {/* Personality Test Link Section */}
+        <div className="mt-6 text-center">
+          <Link href="/personality-tests" className={cn(
+            "inline-flex items-center text-sm font-medium text-foreground hover:text-primary transition-colors blinking-cursor-text py-2 group",
+            language === 'my' ? 'text-xs sm:text-sm' : 'text-sm'
+          )}>
+            <Brain className="mr-2 h-4 w-4 text-primary/80 group-hover:text-primary transition-colors" />
+            {t.personalityTestLink}
+          </Link>
         </div>
       </section>
 
