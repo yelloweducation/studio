@@ -17,7 +17,8 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Separator } from '@/components/ui/separator';
-import React from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import { cn } from "@/lib/utils";
 
 const Header = () => {
   const { isAuthenticated, user, role, logout, loading } = useAuth();
@@ -27,10 +28,42 @@ const Header = () => {
   const isMobile = useIsMobile();
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
 
+  const [headerVisible, setHeaderVisible] = useState(true);
+  const lastScrollY = useRef(0);
+  const headerScrollThreshold = 100; // Pixels to scroll before header reacts
+
+  useEffect(() => {
+    const controlHeader = () => {
+      if (pathname === '/courses/search') {
+        const currentScrollY = window.scrollY;
+        if (currentScrollY > headerScrollThreshold && currentScrollY > lastScrollY.current) {
+          // Scrolling Down on search page
+          setHeaderVisible(false);
+        } else {
+          // Scrolling Up or at top on search page
+          setHeaderVisible(true);
+        }
+        lastScrollY.current = currentScrollY;
+      } else {
+        // Not on search page, always show header
+        setHeaderVisible(true);
+      }
+    };
+
+    window.addEventListener('scroll', controlHeader);
+    // Call once to set initial state based on pathname
+    controlHeader(); 
+
+    return () => {
+      window.removeEventListener('scroll', controlHeader);
+    };
+  }, [pathname]);
+
+
   const handleLogout = () => {
     logout();
     router.push('/');
-    setIsSheetOpen(false); 
+    setIsSheetOpen(false);
   };
 
   const getDashboardPath = () => {
@@ -41,12 +74,21 @@ const Header = () => {
 
   const isCourseSearchPage = pathname === '/courses/search';
   const isMobileHomepage = isMobile && pathname === '/';
+  const isMobileCourseSearchPage = isMobile && isCourseSearchPage;
 
   const commonNavButtonClasses = "w-full justify-start py-3 px-2 text-base";
   const commonIconClasses = "mr-2 h-5 w-5";
 
+  const headerBaseClasses = 'sticky top-0 z-50 transition-transform duration-300 ease-in-out';
+  const headerBackgroundClasses = (isMobileHomepage || isMobileCourseSearchPage) ? '' : 'bg-background/80 backdrop-blur-md border-b';
+
+
   return (
-    <header className={`sticky top-0 z-50 ${(isMobileHomepage || (isMobile && isCourseSearchPage)) ? '' : 'bg-background/80 backdrop-blur-md border-b'}`}> 
+    <header className={cn(
+        headerBaseClasses, 
+        headerBackgroundClasses,
+        {'-translate-y-full': !headerVisible && isCourseSearchPage} // Apply transform only for search page logic
+      )}>
       <nav className="container mx-auto px-4 py-3 flex justify-between items-center min-h-[57px]">
         {/* === LEFT SECTION === */}
         <div className="flex items-center">
