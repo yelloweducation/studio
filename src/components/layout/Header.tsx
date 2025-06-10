@@ -30,28 +30,29 @@ const Header = () => {
 
   const [headerVisible, setHeaderVisible] = useState(true);
   const lastScrollY = useRef(0);
-  const headerScrollThreshold = 100; // Pixels to scroll before header reacts
+  const headerScrollThreshold = 100;
+
+  // If it's the dedicated video page, don't render the header at all.
+  if (pathname === '/videos') {
+    return null;
+  }
 
   useEffect(() => {
     const controlHeader = () => {
       if (pathname === '/courses/search') {
         const currentScrollY = window.scrollY;
         if (currentScrollY > headerScrollThreshold && currentScrollY > lastScrollY.current) {
-          // Scrolling Down on search page
           setHeaderVisible(false);
         } else {
-          // Scrolling Up or at top on search page
           setHeaderVisible(true);
         }
         lastScrollY.current = currentScrollY;
       } else {
-        // Not on search page, always show header
         setHeaderVisible(true);
       }
     };
 
     window.addEventListener('scroll', controlHeader);
-    // Call once to set initial state based on pathname
     controlHeader(); 
 
     return () => {
@@ -87,7 +88,7 @@ const Header = () => {
     <header className={cn(
         headerBaseClasses, 
         headerBackgroundClasses,
-        {'!-translate-y-full': !headerVisible && isCourseSearchPage} // Apply transform only for search page logic
+        {'!-translate-y-full': !headerVisible && isCourseSearchPage}
       )}>
       <nav className="container mx-auto px-4 py-3 flex justify-between items-center min-h-[57px]">
         {/* === LEFT SECTION === */}
@@ -109,7 +110,7 @@ const Header = () => {
               )}
             </div>
           ) : (
-            isCourseSearchPage ? (
+            isCourseSearchPage && isMobile ? ( // Only show title for mobile course search
               <h1 className="text-xl font-bold font-headline text-foreground flex items-center">
                 <Search className="mr-2 h-5 w-5 text-primary"/> Explore Learning
               </h1>

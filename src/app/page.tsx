@@ -5,25 +5,15 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Video as VideoIcon, Tv, Loader2, X, Search, LayoutGrid, Circle, Compass } from 'lucide-react'; 
-import VideoCard from '@/components/videos/VideoCard';
-import { videos as mockVideos, type Video } from '@/data/mockData'; 
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useTheme } from '@/contexts/ThemeContext'; // Added for theme status
+import { Video as VideoIcon, Search, Compass, Circle } from 'lucide-react'; 
+// Removed Tv, Loader2, X from lucide-react as they are no longer used directly here
+// Removed VideoCard and mockVideos as video feed is now on /videos page
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function Home() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
-  
-  const [showVideoFeed, setShowVideoFeed] = useState(false);
-  const [allFeedVideos, setAllFeedVideos] = useState<Video[]>([]);
-  const [isLoadingFeedVideos, setIsLoadingFeedVideos] = useState(false);
-  const { theme } = useTheme(); // Get theme status
-
-  useEffect(() => {
-    // Initial data loading for videos (if any were to be displayed directly, now only for feed)
-  }, []);
+  const { theme } = useTheme();
 
   const handleSearchSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -32,73 +22,6 @@ export default function Home() {
     }
   };
   
-  const loadAllFeedVideos = () => {
-    if (allFeedVideos.length > 0 && !showVideoFeed) return; 
-
-    setIsLoadingFeedVideos(true);
-    let videosToUse: Video[] = [];
-    try {
-        const storedVideosString = localStorage.getItem('adminVideos');
-        if (storedVideosString) {
-            const parsed = JSON.parse(storedVideosString);
-            videosToUse = Array.isArray(parsed) ? parsed : mockVideos;
-        } else {
-            videosToUse = mockVideos;
-        }
-    } catch (error) {
-        console.error("Error loading videos from localStorage for feed:", error);
-        videosToUse = mockVideos;
-    }
-    setAllFeedVideos(videosToUse); 
-    setIsLoadingFeedVideos(false);
-  };
-
-  const handleShowVideos = () => {
-    if (allFeedVideos.length === 0) {
-      loadAllFeedVideos();
-    }
-    setShowVideoFeed(true);
-  };
-
-  const handleCloseVideoFeed = () => {
-    setShowVideoFeed(false);
-  };
-
-  if (showVideoFeed) {
-    return (
-      <div className="fixed inset-0 bg-background z-50 flex flex-col items-center justify-center p-0 sm:p-4">
-        <Card className="w-full max-w-md h-full sm:h-[calc(100vh-4rem)] sm:rounded-lg shadow-2xl flex flex-col">
-          <div className="p-3 border-b flex justify-between items-center shrink-0">
-            <h2 className="text-lg font-semibold font-headline flex items-center">
-              For You
-              <Circle className="ml-2 h-4 w-4 text-primary fill-current" />
-            </h2>
-            <Button variant="ghost" size="icon" onClick={handleCloseVideoFeed} aria-label="Close video feed">
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
-          {isLoadingFeedVideos ? (
-            <div className="flex-grow flex items-center justify-center">
-              <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            </div>
-          ) : allFeedVideos.length > 0 ? (
-            <div className="flex-grow overflow-y-auto snap-y snap-mandatory scrollbar-hide">
-              {allFeedVideos.map(video => (
-                <div key={video.id} className="h-full w-full snap-center shrink-0 relative">
-                  <VideoCard video={video} />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="flex-grow flex items-center justify-center text-center px-4">
-              <p className="text-muted-foreground">No videos available at the moment.</p>
-            </div>
-          )}
-        </Card>
-      </div>
-    );
-  };
-
   return (
     <div className="flex flex-col items-center pb-8">
       <section className="w-full max-w-2xl md:max-w-3xl lg:max-w-4xl text-center pt-8 mb-10">
@@ -131,11 +54,13 @@ export default function Home() {
                 </Link>
             </Button>
             <Button 
-              onClick={handleShowVideos} 
+              asChild // Changed to asChild to navigate with Link
               size="lg" 
               variant="accent"
               className="flex-1 sm:flex-none sm:w-auto">
-                <VideoIcon className="mr-2 h-5 w-5" /> Reels
+                <Link href="/videos"> {/* Navigate to /videos */}
+                    <VideoIcon className="mr-2 h-5 w-5" /> Reels
+                </Link>
             </Button>
         </div>
       </section>
