@@ -2,7 +2,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { type User } from '@/data/mockData';
-import { getUsersFromStorage, saveUsersToStorage } from '@/lib/authUtils';
+import { getAllUsersFromFirestore, updateUserRoleInFirestore, findUserByEmail } from '@/lib/authUtils';
 import { useAuth } from '@/hooks/useAuth';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,31 +22,55 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-const SUPER_ADMIN_EMAIL = 'admin@example.com';
+const SUPER_ADMIN_EMAIL = 'admin@example.com'; // This should ideally be configurable
 
 export default function UserManagement() {
   const [managedUsers, setManagedUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { user: currentAdminUser, loading: authLoading } = useAuth();
   const { toast } = useToast();
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   useEffect(() => {
-    setIsLoading(true);
-    const users = getUsersFromStorage();
-    setManagedUsers(users);
-    setIsLoading(false);
+    const fetchUsers = async () => {
+      setIsLoading(true);
+      const usersFromDb = await getAllUsersFromFirestore();
+      setManagedUsers(usersFromDb);
+      setIsLoading(false);
+    };
+    fetchUsers();
   }, []);
 
-  const handleRoleChange = (targetUserId: string, newRole: 'admin' | 'student') => {
-    const updatedUsers = managedUsers.map(u =>
-      u.id === targetUserId ? { ...u, role: newRole } : u
-    );
-    setManagedUsers(updatedUsers);
-    saveUsersToStorage(updatedUsers);
-    toast({
-      title: "User Role Updated",
-      description: `User ${updatedUsers.find(u=>u.id === targetUserId)?.name}'s role changed to ${newRole}.`,
-    });
+  useEffect(() => {
+    // Determine if the current admin is the super admin
+    if (currentAdminUser) {
+        // A more robust check might involve fetching the current admin's details from Firestore
+        // if `currentAdminUser` from `useAuth` doesn't reliably indicate super admin status.
+        // For now, we rely on email.
+        setIsSuperAdmin(currentAdminUser.email === SUPER_ADMIN_EMAIL);
+    }
+  }, [currentAdminUser]);
+
+
+  const handleRoleChange = async (targetUserId: string, newRole: 'admin' | 'student') => {
+    try {
+      await updateUserRoleInFirestore(targetUserId, newRole);
+      const updatedUsers = managedUsers.map(u =>
+        u.id === targetUserId ? { ...u, role: newRole } : u
+      );
+      setManagedUsers(updatedUsers);
+      toast({
+        title: "User Role Updated",
+        description: `User ${updatedUsers.find(u=>u.id === targetUserId)?.name}'s role changed to ${newRole}.`,
+      });
+    } catch (error) {
+      console.error("Failed to update user role:", error);
+      toast({
+        variant: "destructive",
+        title: "Update Failed",
+        description: "Could not update user role. Please try again.",
+      });
+    }
   };
 
   if (isLoading || authLoading) {
@@ -67,7 +91,6 @@ export default function UserManagement() {
     );
   }
 
-  const isSuperAdmin = currentAdminUser?.email === SUPER_ADMIN_EMAIL;
 
   return (
     <Card className="shadow-lg">
@@ -150,7 +173,7 @@ export default function UserManagement() {
                       ) : user.email === SUPER_ADMIN_EMAIL ? (
                         <span className="text-xs text-muted-foreground italic">Unchangeable</span>
                       ) : (
-                        <span className="text-xs text-muted-foreground italic">N/A (Not Super Admin)</span>
+                        <span className="text-xs text-muted-foreground italic">N/A</span>
                       )}
                     </TableCell>
                   </TableRow>
