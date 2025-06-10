@@ -93,9 +93,6 @@ export default function CourseDetailPage() {
 
   // Effect 3: Load user-specific data (completion) and manage final isLoadingPage state
   useEffect(() => {
-    // This effect relies on currentCourse being set by Effect 2.
-    // It also depends on areAppCoursesLoaded to ensure Effect 1 & 2 have had a chance to run.
-    
     setIsLoadingPage(true); 
     setCompletionInfo(null); 
 
@@ -108,7 +105,6 @@ export default function CourseDetailPage() {
       return;
     }
         
-    // If Effect 2 determined course is not found, currentCourse will be null.
     if (courseId && !currentCourse && areAppCoursesLoaded) { 
       setIsLoadingPage(false); 
       return;
@@ -120,17 +116,22 @@ export default function CourseDetailPage() {
             try {
                 const storedEnrollments = localStorage.getItem(USER_ENROLLMENTS_KEY);
                 if (storedEnrollments) {
-                    userEnrollments = JSON.parse(storedEnrollments) as Enrollment[];
-                    if(!Array.isArray(userEnrollments)){
-                        userEnrollments = JSON.parse(JSON.stringify(initialEnrollments));
+                    const parsedEnrollments = JSON.parse(storedEnrollments); // Parse once
+                    if(Array.isArray(parsedEnrollments)){
+                        userEnrollments = parsedEnrollments as Enrollment[];
+                    } else { // Malformed, not an array
+                        console.warn(`${USER_ENROLLMENTS_KEY} in localStorage was not an array. Falling back and re-initializing.`);
+                        localStorage.setItem(USER_ENROLLMENTS_KEY, JSON.stringify(initialEnrollments)); // Re-initialize localStorage
+                        userEnrollments = JSON.parse(JSON.stringify(initialEnrollments)); // Use a deep copy
                     }
-                } else {
-                    userEnrollments = JSON.parse(JSON.stringify(initialEnrollments));
-                    localStorage.setItem(USER_ENROLLMENTS_KEY, JSON.stringify(userEnrollments)); // Initialize if not present
+                } else { // Not in localStorage
+                    localStorage.setItem(USER_ENROLLMENTS_KEY, JSON.stringify(initialEnrollments)); // Initialize localStorage
+                    userEnrollments = JSON.parse(JSON.stringify(initialEnrollments)); // Use a deep copy
                 }
-            } catch (error) {
-                console.error("Error handling enrollments in localStorage:", error);
-                userEnrollments = JSON.parse(JSON.stringify(initialEnrollments));
+            } catch (error) { // JSON.parse failed for storedEnrollments
+                console.error(`Error parsing ${USER_ENROLLMENTS_KEY} from localStorage:`, error);
+                localStorage.setItem(USER_ENROLLMENTS_KEY, JSON.stringify(initialEnrollments)); // Re-initialize localStorage on error
+                userEnrollments = JSON.parse(JSON.stringify(initialEnrollments)); // Use a deep copy
             }
 
             const enrollment = userEnrollments.find(e => e.userId === user.id && e.courseId === currentCourse.id);
@@ -140,7 +141,6 @@ export default function CourseDetailPage() {
                 setCompletionInfo({ isCompleted: false, progress: 0 });
             }
         } else {
-            // User not authenticated, no specific completion info.
              setCompletionInfo({ isCompleted: false, progress: 0 });
         }
     }
