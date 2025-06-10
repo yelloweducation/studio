@@ -2,7 +2,7 @@
 "use client";
 import { useState, useEffect, type FormEvent, type ChangeEvent } from 'react';
 import Image from 'next/image';
-import { courses as initialCoursesData, type Course, type Module, type Lesson, type Quiz, type Question, type Option } from '@/data/mockData';
+import { courses_DEPRECATED_USE_FIRESTORE as initialCoursesData, type Course, type Module, type Lesson, type Quiz, type Question, type Option } from '@/data/mockData';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';

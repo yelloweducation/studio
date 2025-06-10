@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import CourseCard from '@/components/courses/CourseCard';
 import CategoryCard from '@/components/categories/CategoryCard';
-import { courses as defaultMockCourses, type Course, categories as defaultMockCategories, type Category, type LearningPath, initialLearningPaths } from '@/data/mockData';
+import { courses as defaultMockCourses, type Course, initialCategoriesData as defaultMockCategories, type Category, type LearningPath, initialLearningPaths } from '@/data/mockData';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { Search, X, LayoutGrid, GraduationCap, Lightbulb, Star, Milestone, Send, Loader2, AlertTriangle, ListFilter } from 'lucide-react';

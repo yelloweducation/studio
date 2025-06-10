@@ -9,18 +9,18 @@ import { ImageIcon, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { courses as initialCourses, type Course } from '@/data/mockData';
 import { videos as initialVideos, type Video } from '@/data/mockData';
-import { categories as initialCategoriesData, type Category } from '@/data/mockData'; // Added
+import { initialCategoriesData, type Category } from '@/data/mockData'; // Corrected import
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
 
 export default function ImageManagement() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [videos, setVideos] = useState<Video[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]); // Added for categories
+  const [categories, setCategories] = useState<Category[]>([]);
 
   const [isCoursesLoaded, setIsCoursesLoaded] = useState(false);
   const [isVideosLoaded, setIsVideosLoaded] = useState(false);
-  const [isCategoriesLoaded, setIsCategoriesLoaded] = useState(false); // Added for categories
+  const [isCategoriesLoaded, setIsCategoriesLoaded] = useState(false);
 
   const { toast } = useToast();
 
@@ -174,9 +174,9 @@ export default function ImageManagement() {
                             </div>
                             <div className="w-full sm:w-2/3 space-y-4">
                                 <div>
-                                    <Label htmlFor={`courseImageUrl-${course.id}`}>Image URL</Label>
+                                    <Label htmlFor={`courseImageUrlInput-${course.id}`}>Image URL</Label>
                                     <Input 
-                                        id={`courseImageUrl-${course.id}`} 
+                                        id={`courseImageUrlInput-${course.id}`} 
                                         value={course.imageUrl || ''} 
                                         onChange={e => handleCourseImageChange(course.id, 'imageUrl', e.target.value)} 
                                     />
@@ -230,9 +230,9 @@ export default function ImageManagement() {
                             </div>
                              <div className="w-full sm:w-2/3 space-y-4">
                                 <div>
-                                    <Label htmlFor={`videoThumbnailUrl-${video.id}`}>Thumbnail URL</Label>
+                                    <Label htmlFor={`videoThumbnailUrlInput-${video.id}`}>Thumbnail URL</Label>
                                     <Input 
-                                        id={`videoThumbnailUrl-${video.id}`} 
+                                        id={`videoThumbnailUrlInput-${video.id}`} 
                                         value={video.thumbnailUrl || ''} 
                                         onChange={e => handleVideoThumbnailChange(video.id, 'thumbnailUrl', e.target.value)}
                                     />
@@ -295,9 +295,9 @@ export default function ImageManagement() {
                                 />
                               </div>
                               <div>
-                                <Label htmlFor={`categoryAiHint-${category.id}`}>AI Hint</Label>
+                                <Label htmlFor={`categoryAiHintInput-${category.id}`}>AI Hint</Label>
                                 <Input
-                                  id={`categoryAiHint-${category.id}`}
+                                  id={`categoryAiHintInput-${category.id}`}
                                   value={category.dataAiHint || ''}
                                   onChange={e => handleCategoryImageChange(category.id, 'dataAiHint', e.target.value)}
                                   placeholder="e.g. technology abstract"
