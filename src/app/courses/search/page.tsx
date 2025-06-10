@@ -65,7 +65,7 @@ const searchPageTranslations = {
     getSuggestion: "အကြံပြုချက်ရယူပါ", // Get Suggestion
     quickRecsIdeas: "ဤတွင် အကြံဉာဏ်အချို့ရှိပါသည်:", // Here are some ideas:
     noQuickRecsFound: "\"{query}\" အတွက် သီးခြားအကြံပြုချက်များ မတွေ့ပါ။ ကျယ်ပြန့်သော စကားလုံးကို စမ်းကြည့်ပါ သို့မဟုတ် အောက်တွင် ရှာဖွေပါ။", // No specific recommendations found for "{query}". Try a broader term or browse below!
-    popularTopics: "တက်ရောက်မှုများသောသင်တန်းများ", // Popular Topics -> Courses with high attendance
+    popularTopics: "ရှာဖွေမှုများသောသင်တန်းများ", // Popular Topics -> Courses with high attendance (updated)
     browseCategories: "အမျိုးအစားများ ကြည့်ရှုရန်", // Browse Categories
     noCategoriesAvailable: "အမျိုးအစားများ မရှိသေးပါ", // No Categories Available
     noCategoriesDesc: "အမျိုးအစားများ ထည့်သွင်းပြီးနောက် ဤနေရာတွင် ပေါ်လာပါမည်။", // Categories will appear here once added.
