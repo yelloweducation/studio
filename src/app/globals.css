@@ -3,13 +3,8 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: 'PT Sans', sans-serif; /* Default body font */
-}
-
-h1, h2, h3, h4, h5, h6 {
-  font-family: 'Poppins', sans-serif; /* Default headline font */
-}
+/* Removed direct font-family declarations for body and h1-h6 */
+/* These are now handled by next/font and Tailwind's theme configuration */
 
 @layer base {
   :root {
