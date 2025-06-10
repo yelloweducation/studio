@@ -1,7 +1,6 @@
 
 "use client";
 import React, { useState, useEffect } from 'react';
-import { flashcards as allFlashcards, flashcardCategories, type Flashcard, type FlashcardCategory } from '@/data/mockData';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, RefreshCw, Layers, Zap, Milestone } from 'lucide-react';
@@ -10,6 +9,14 @@ import { Progress } from '@/components/ui/progress';
 import { useLanguage } from '@/contexts/LanguageContext';
 import * as LucideIcons from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+// Import the new JSON data
+import type { Flashcard, FlashcardCategory } from '@/data/mockData'; // Types still useful
+import flashcardCategoriesData from '@/data/flashcards/categories.json';
+import englishFlashcards from '@/data/flashcards/english.json';
+import itFlashcards from '@/data/flashcards/it.json';
+import businessFlashcards from '@/data/flashcards/business.json';
+import digitalMarketingFlashcards from '@/data/flashcards/digital_marketing.json';
 
 const flashCardsPageTranslations = {
   en: {
@@ -50,6 +57,14 @@ const isValidLucideIcon = (iconName: string | undefined): iconName is keyof type
   return typeof iconName === 'string' && iconName in LucideIcons;
 };
 
+// Helper to map category IDs to their respective flashcard data arrays
+const flashcardDataMap: Record<string, Flashcard[]> = {
+  'fc_cat_english': englishFlashcards,
+  'fc_cat_it': itFlashcards,
+  'fc_cat_business': businessFlashcards,
+  'fc_cat_digital_marketing': digitalMarketingFlashcards,
+};
+
 export default function FlashCardsClient() {
   const { language } = useLanguage();
   const t = flashCardsPageTranslations[language];
@@ -58,13 +73,22 @@ export default function FlashCardsClient() {
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [cardsForCategory, setCardsForCategory] = useState<Flashcard[]>([]);
+  const [availableCategories, setAvailableCategories] = useState<FlashcardCategory[]>([]);
 
   useEffect(() => {
+    // Set categories from imported JSON
+    setAvailableCategories(flashcardCategoriesData as FlashcardCategory[]);
+  }, []);
+
+  useEffect(() => {
+    let activeCards: Flashcard[] = [];
     if (selectedCategoryId === 'all') {
-      setCardsForCategory(allFlashcards);
-    } else {
-      setCardsForCategory(allFlashcards.filter(card => card.categoryId === selectedCategoryId));
+      // Combine all flashcards from the map
+      activeCards = Object.values(flashcardDataMap).flat();
+    } else if (flashcardDataMap[selectedCategoryId]) {
+      activeCards = flashcardDataMap[selectedCategoryId];
     }
+    setCardsForCategory(activeCards);
     setCurrentCardIndex(0);
     setIsFlipped(false);
   }, [selectedCategoryId]);
@@ -100,7 +124,7 @@ export default function FlashCardsClient() {
         <p className="text-sm md:text-base text-muted-foreground">{t.pageDescription}</p>
       </section>
 
-      {flashcardCategories.length > 0 ? (
+      {availableCategories.length > 0 ? (
         <Card className="w-full max-w-md md:max-w-lg shadow-xl">
           <CardHeader>
             <Select value={selectedCategoryId} onValueChange={handleCategoryChange}>
@@ -109,7 +133,7 @@ export default function FlashCardsClient() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t.allCategories}</SelectItem>
-                {flashcardCategories.map(category => {
+                {availableCategories.map(category => {
                   const IconComponent = isValidLucideIcon(category.iconName) ? LucideIcons[category.iconName] : Layers;
                   return (
                     <SelectItem key={category.id} value={category.id}>
@@ -195,7 +219,7 @@ export default function FlashCardsClient() {
             <CardContent className="text-center py-10">
                 <Layers className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-3" />
                 <p className="text-muted-foreground">{t.noCategories}</p>
-                <p className="text-xs text-muted-foreground mt-1">Please add categories and flashcards via the admin panel.</p>
+                <p className="text-xs text-muted-foreground mt-1">Flashcard categories will appear here once configured.</p>
             </CardContent>
         </Card>
       )}

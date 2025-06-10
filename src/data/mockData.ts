@@ -121,7 +121,7 @@ export type LearningPath = {
   dataAiHint?: string;
 };
 
-// New types for Flash Cards
+// New types for Flash Cards - Definitions moved to separate JSON files
 export type FlashcardCategory = {
   id: string;
   name: string;
@@ -411,73 +411,8 @@ export const initialLearningPaths: LearningPath[] = [
   },
 ];
 
-// Flash Card Data
-export const flashcardCategories: FlashcardCategory[] = [
-  { id: 'fc_cat_english', name: 'English Vocabulary', description: 'Common and advanced English words.', iconName: 'SpellCheck' },
-  { id: 'fc_cat_it', name: 'IT & Programming', description: 'Core concepts in IT and programming.', iconName: 'Laptop' },
-  { id: 'fc_cat_business', name: 'Business Acumen', description: 'Fundamental business terms and ideas.', iconName: 'Briefcase' },
-  { id: 'fc_cat_digital_marketing', name: 'Digital Marketing', description: 'Key terms in online marketing.', iconName: 'Megaphone' },
-];
-
-export const flashcards: Flashcard[] = [
-  // English Vocabulary (Expanded)
-  { id: 'fc_en_1', categoryId: 'fc_cat_english', term: 'Ephemeral', definition: 'Lasting for a very short time.', example: 'The beauty of the cherry blossoms is ephemeral.', pronunciation: '/ɪˈfem.ər.əl/' },
-  { id: 'fc_en_2', categoryId: 'fc_cat_english', term: 'Ubiquitous', definition: 'Present, appearing, or found everywhere.', example: 'Smartphones have become ubiquitous in modern society.', pronunciation: '/juːˈbɪk.wɪ.təs/' },
-  { id: 'fc_en_3', categoryId: 'fc_cat_english', term: 'Serendipity', definition: 'The occurrence and development of events by chance in a happy or beneficial way.', example: 'Discovering the old bookstore was pure serendipity.', pronunciation: '/ˌser.ənˈdɪp.ə.ti/' },
-  { id: 'fc_en_4', categoryId: 'fc_cat_english', term: 'Alacrity', definition: 'Brisk and cheerful readiness.', example: 'She accepted the invitation with alacrity.', pronunciation: '/əˈlæk.rə.ti/' },
-  { id: 'fc_en_5', categoryId: 'fc_cat_english', term: 'Mellifluous', definition: 'Pleasant and musical to hear.', example: 'The singer had a mellifluous voice.', pronunciation: '/məˈlɪf.lu.əs/' },
-  { id: 'fc_en_6', categoryId: 'fc_cat_english', term: 'Esoteric', definition: 'Intended for or likely to be understood by only a small number of people with a specialized knowledge or interest.', example: "The professor's lecture was full of esoteric references to ancient philosophy.", pronunciation: '/ˌes.əˈter.ɪk/' },
-  { id: 'fc_en_7', categoryId: 'fc_cat_english', term: 'Juxtapose', definition: 'Place or deal with close together for contrasting effect.', example: "The exhibition juxtaposes contemporary art with classical masterpieces.", pronunciation: '/ˈdʒʌk.stə.poʊz/' },
-  { id: 'fc_en_8', categoryId: 'fc_cat_english', term: 'Quintessential', definition: 'Representing the most perfect or typical example of a quality or class.', example: "He was the quintessential tough guy—strong, silent, and self-contained.", pronunciation: '/ˌkwɪn.tɪˈsen.ʃəl/' },
-  { id: 'fc_en_9', categoryId: 'fc_cat_english', term: 'Surreptitious', definition: 'Kept secret, especially because it would not be approved of.', example: "She had a surreptitious look at her watch.", pronunciation: '/ˌsʌr.əpˈtɪʃ.əs/' },
-  { id: 'fc_en_10', categoryId: 'fc_cat_english', term: 'Verbose', definition: 'Using or expressed in more words than are needed.', example: "His verbose explanation was difficult to follow.", pronunciation: '/vɜːrˈboʊs/' },
-  { id: 'fc_en_11', categoryId: 'fc_cat_english', term: 'Anachronism', definition: 'A thing belonging or appropriate to a period other than that in which it exists, especially a thing that is conspicuously old-fashioned.', example: "The sword in the modern-day film was an anachronism.", pronunciation: '/əˈnæk.rə.nɪ.zəm/' },
-  { id: 'fc_en_12', categoryId: 'fc_cat_english', term: 'Benevolent', definition: 'Well meaning and kindly.', example: "A benevolent smile.", pronunciation: '/bəˈnev.əl.ənt/' },
-
-  // IT & Programming (Expanded)
-  { id: 'fc_it_1', categoryId: 'fc_cat_it', term: 'API', definition: 'Application Programming Interface. A set of rules and protocols for building and interacting with software applications.', example: 'We used the Twitter API to fetch recent tweets.' },
-  { id: 'fc_it_2', categoryId: 'fc_cat_it', term: 'Cloud Computing', definition: 'The delivery of computing services—including servers, storage, databases, networking, software, analytics, and intelligence—over the Internet ("the cloud").', example: 'AWS and Azure are major cloud computing providers.' },
-  { id: 'fc_it_3', categoryId: 'fc_cat_it', term: 'Algorithm', definition: 'A process or set of rules to be followed in calculations or other problem-solving operations, especially by a computer.', example: 'Sorting algorithms are used to arrange data in a specific order.' },
-  { id: 'fc_it_4', categoryId: 'fc_cat_it', term: 'Firewall', definition: 'A network security system that monitors and controls incoming and outgoing network traffic based on predetermined security rules.', example: 'The company firewall blocked access to certain websites.' },
-  { id: 'fc_it_5', categoryId: 'fc_cat_it', term: 'SDK', definition: 'Software Development Kit. A collection of software development tools in one installable package.', example: 'The Android SDK provides tools to build Android applications.' },
-  { id: 'fc_it_6', categoryId: 'fc_cat_it', term: 'Debugging', definition: 'The process of finding and resolving defects or problems within a computer program.', example: "Debugging the code took several hours." },
-  { id: 'fc_it_7', categoryId: 'fc_cat_it', term: 'Compiler', definition: 'A program that converts instructions into a machine-code or lower-level form so that they can be read and executed by a computer.', example: "The C++ code was processed by the compiler." },
-  { id: 'fc_it_8', categoryId: 'fc_cat_it', term: 'Interpreter', definition: 'A program that directly executes instructions written in a programming or scripting language, without previously compiling them into machine code.', example: "Python often uses an interpreter." },
-  { id: 'fc_it_9', categoryId: 'fc_cat_it', term: 'API Gateway', definition: 'A management tool that sits in front of an API or group of APIs and acts as a single point of entry for all clients.', example: "The API Gateway handles request routing and authentication." },
-  { id: 'fc_it_10', categoryId: 'fc_cat_it', term: 'Load Balancer', definition: 'A device that distributes network or application traffic across a number of servers.', example: "Load balancers are used to increase capacity and reliability of applications." },
-  { id: 'fc_it_11', categoryId: 'fc_cat_it', term: 'DevOps', definition: 'A set of practices that combines software development (Dev) and IT operations (Ops).', example: "DevOps aims to shorten the systems development life cycle." },
-  { id: 'fc_it_12', categoryId: 'fc_cat_it', term: 'Version Control', definition: 'A system that records changes to a file or set of files over time so that you can recall specific versions later.', example: "Git is a popular version control system." },
-
-  // Business Acumen (Expanded)
-  { id: 'fc_biz_1', categoryId: 'fc_cat_business', term: 'ROI', definition: 'Return on Investment. A performance measure used to evaluate the efficiency of an investment.', example: 'The marketing campaign had a high ROI.' },
-  { id: 'fc_biz_2', categoryId: 'fc_cat_business', term: 'B2B', definition: 'Business-to-Business. Transactions or business conducted between companies, rather than between a company and individual consumers.', example: 'Their primary sales model is B2B.' },
-  { id: 'fc_biz_3', categoryId: 'fc_cat_business', term: 'KPI', definition: 'Key Performance Indicator. A measurable value that demonstrates how effectively a company is achieving key business objectives.', example: 'Customer satisfaction is a key KPI for our support team.' },
-  { id: 'fc_biz_4', categoryId: 'fc_cat_business', term: 'B2C', definition: 'Business-to-Consumer. Transactions or business conducted between a company and individual consumers.', example: "Amazon's primary model is B2C." },
-  { id: 'fc_biz_5', categoryId: 'fc_cat_business', term: 'SWOT Analysis', definition: 'A strategic planning technique used to help an organization identify strengths, weaknesses, opportunities, and threats.', example: "We conducted a SWOT analysis before launching the new product." },
-  { id: 'fc_biz_6', categoryId: 'fc_cat_business', term: 'Venture Capital', definition: 'Financing that investors provide to startup companies and small businesses that are believed to have long-term growth potential.', example: "The startup secured venture capital funding." },
-  { id: 'fc_biz_7', categoryId: 'fc_cat_business', term: 'Stakeholder', definition: 'Any group or individual who can affect or is affected by the achievement of the organization\'s objectives.', example: "Employees, customers, and investors are all stakeholders." },
-  { id: 'fc_biz_8', categoryId: 'fc_cat_business', term: 'Overhead', definition: 'Ongoing business expenses not directly attributed to creating a product or service.', example: "Rent and utilities are part of the company's overhead." },
-  { id: 'fc_biz_9', categoryId: 'fc_cat_business', term: 'Supply Chain', definition: 'The sequence of processes involved in the production and distribution of a commodity.', example: "Disruptions in the supply chain can affect product availability." },
-  { id: 'fc_biz_10', categoryId: 'fc_cat_business', term: 'Market Share', definition: 'The portion of a market controlled by a particular company or product.', example: "They aim to increase their market share in the coming year." },
-  { id: 'fc_biz_11', categoryId: 'fc_cat_business', term: 'Due Diligence', definition: 'Reasonable steps taken by a person in order to satisfy a legal requirement, especially in buying or selling something.', example: "The investors performed due diligence before acquiring the company." },
-  { id: 'fc_biz_12', categoryId: 'fc_cat_business', term: 'Equity', definition: 'The value of the shares issued by a company.', example: "Founders often retain a significant amount of equity in their startups." },
-
-  // Digital Marketing (Expanded)
-  { id: 'fc_dm_1', categoryId: 'fc_cat_digital_marketing', term: 'SEO', definition: 'Search Engine Optimization. The process of improving the quality and quantity of website traffic to a website or a web page from search engines.', example: 'Good SEO is crucial for organic growth.' },
-  { id: 'fc_dm_2', categoryId: 'fc_cat_digital_marketing', term: 'CTR', definition: 'Click-Through Rate. The ratio of users who click on a specific link to the number of total users who view a page, email, or advertisement.', example: 'The ad campaign had a low CTR.' },
-  { id: 'fc_dm_3', categoryId: 'fc_cat_digital_marketing', term: 'PPC', definition: 'Pay-Per-Click. An internet advertising model used to drive traffic to websites, in which an advertiser pays a publisher when the ad is clicked.', example: 'They invested heavily in PPC advertising.' },
-  { id: 'fc_dm_4', categoryId: 'fc_cat_digital_marketing', term: 'Content Marketing', definition: 'A marketing strategy focused on creating and distributing valuable, relevant, and consistent content to attract and retain a clearly defined audience.', example: "Blogging is a common form of content marketing." },
-  { id: 'fc_dm_5', categoryId: 'fc_cat_digital_marketing', term: 'A/B Testing', definition: 'A method of comparing two versions of a webpage or app against each other to determine which one performs better.', example: "We're A/B testing two different call-to-action buttons." },
-  { id: 'fc_dm_6', categoryId: 'fc_cat_digital_marketing', term: 'Conversion Rate', definition: 'The percentage of users who take a desired action (e.g., making a purchase, signing up for a newsletter).', example: "Improving the landing page design increased the conversion rate." },
-  { id: 'fc_dm_7', categoryId: 'fc_cat_digital_marketing', term: 'SERP', definition: 'Search Engine Results Page. The page displayed by a search engine in response to a query by a searcher.', example: "Our goal is to rank on the first SERP for relevant keywords." },
-  { id: 'fc_dm_8', categoryId: 'fc_cat_digital_marketing', term: 'Backlink', definition: 'An incoming hyperlink from one web page to another website.', example: "High-quality backlinks can improve SEO." },
-  { id: 'fc_dm_9', categoryId: 'fc_cat_digital_marketing', term: 'Affiliate Marketing', definition: 'A marketing arrangement by which an online retailer pays commission to an external website for traffic or sales generated from its referrals.', example: "She earns income through affiliate marketing on her blog." },
-  { id: 'fc_dm_10', categoryId: 'fc_cat_digital_marketing', term: 'Email Automation', definition: 'The process of sending targeted, triggered emails to subscribers at specific times or after specific actions.', example: "Welcome emails are part of our email automation strategy." },
-  { id: 'fc_dm_11', categoryId: 'fc_cat_digital_marketing', term: 'Funnel (Marketing)', definition: 'A visual representation of the customer journey, from initial awareness to conversion or purchase.', example: "We're optimizing each stage of our marketing funnel." },
-  { id: 'fc_dm_12', categoryId: 'fc_cat_digital_marketing', term: 'Influencer', definition: 'An individual who has the power to affect purchase decisions of others because of their authority, knowledge, position, or relationship with their audience.', example: "Partnering with an influencer can expand brand reach." },
-];
-// To add 1000 words per category, you would continue this pattern for each categoryId.
-// The system is designed to handle many more cards if populated.
-
-
-    
+// Flash Card Categories and Flashcards are now managed in separate JSON files
+// in src/data/flashcards/
+// This file (mockData.ts) will no longer directly contain them.
+// The FlashcardCategory and Flashcard types are kept for reference if needed elsewhere,
+// or can be moved to a dedicated types file.

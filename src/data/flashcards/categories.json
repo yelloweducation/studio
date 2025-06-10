@@ -1,0 +1,27 @@
+
+[
+  {
+    "id": "fc_cat_english",
+    "name": "English Vocabulary",
+    "description": "Common and advanced English words for everyday and professional use.",
+    "iconName": "SpellCheck"
+  },
+  {
+    "id": "fc_cat_it",
+    "name": "IT & Programming",
+    "description": "Key terms and concepts in Information Technology and software development.",
+    "iconName": "Laptop"
+  },
+  {
+    "id": "fc_cat_business",
+    "name": "Business Acumen",
+    "description": "Fundamental business terms, strategies, and concepts.",
+    "iconName": "Briefcase"
+  },
+  {
+    "id": "fc_cat_digital_marketing",
+    "name": "Digital Marketing",
+    "description": "Essential terminology for online marketing, advertising, and analytics.",
+    "iconName": "Megaphone"
+  }
+]
