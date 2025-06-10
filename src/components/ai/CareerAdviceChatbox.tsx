@@ -66,7 +66,7 @@ export default function CareerAdviceChatbox() {
   };
 
   return (
-    <Card className="w-full max-w-2xl mx-auto shadow-xl">
+    <Card className="w-full shadow-xl">
       <CardHeader className="pb-4">
         <CardTitle className="text-xl font-headline flex items-center">
           <MessageSquare className="mr-2 h-6 w-6 text-primary" />

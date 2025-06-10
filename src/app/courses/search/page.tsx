@@ -252,7 +252,7 @@ function SearchCoursesClientLogic() {
 
       <section className="w-full mt-12 mb-8">
         <Suspense fallback={
-            <Card className="w-full max-w-2xl mx-auto shadow-xl">
+            <Card className="w-full shadow-xl">
                 <CardHeader className="pb-4">
                     <Skeleton className="h-7 w-1/2" />
                 </CardHeader>
@@ -325,7 +325,7 @@ function SearchPageInitialSkeleton() {
         ))}
       </section>
       <section className="w-full mt-12 mb-8">
-        <Card className="w-full max-w-2xl mx-auto shadow-xl">
+        <Card className="w-full shadow-xl">
           <CardHeader className="pb-4">
             <Skeleton className="h-7 w-1/2" />
           </CardHeader>
