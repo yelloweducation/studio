@@ -87,14 +87,19 @@ const Header = () => {
     <header className={cn(
         headerBaseClasses, 
         headerBackgroundClasses,
-        {'-translate-y-full': !headerVisible && isCourseSearchPage} // Apply transform only for search page logic
+        {'!-translate-y-full': !headerVisible && isCourseSearchPage} // Apply transform only for search page logic
       )}>
       <nav className="container mx-auto px-4 py-3 flex justify-between items-center min-h-[57px]">
         {/* === LEFT SECTION === */}
         <div className="flex items-center">
           {isMobileHomepage ? (
             <div className="flex items-center space-x-1">
-              <Button variant="ghost" size="sm" asChild className="text-foreground hover:bg-transparent hover:text-foreground/70 px-2 font-medium">
+              <Button variant="ghost" size="sm" asChild 
+                className={cn(
+                  "text-foreground hover:bg-transparent hover:text-foreground/70 px-2 font-medium",
+                  pathname === '/' && "underline underline-offset-4 decoration-primary decoration-2"
+                )}
+              >
                 <Link href="/">ALL</Link>
               </Button>
               {!loading && isAuthenticated && (
@@ -212,11 +217,11 @@ const Header = () => {
           ) : (
             // Desktop navigation
             <>
-              <Button variant="ghost" size="sm" asChild className="hover:bg-accent/20">
+              <Button variant="ghost" size="sm" asChild className={cn("hover:bg-accent/20", pathname === '/' && "bg-accent/10")}>
                 <Link href="/"><Home className="mr-1 h-4 w-4" /> Home</Link>
               </Button>
               {!isCourseSearchPage && (
-                  <Button variant="ghost" size="sm" asChild className="hover:bg-accent/20">
+                  <Button variant="ghost" size="sm" asChild className={cn("hover:bg-accent/20", pathname === '/courses/search' && "bg-accent/10")}>
                       <Link href="/courses/search"><Search className="mr-1 h-4 w-4" /> Explore</Link>
                   </Button>
               )}
@@ -225,7 +230,7 @@ const Header = () => {
               ) : isAuthenticated ? (
                 <>
                   <span className="text-sm text-muted-foreground hidden sm:inline">Welcome, {user?.name}!</span>
-                  <Button variant="ghost" size="sm" asChild className="hover:bg-accent/20">
+                  <Button variant="ghost" size="sm" asChild className={cn("hover:bg-accent/20", (pathname === '/dashboard/admin' || pathname === '/dashboard/student') && "bg-accent/10")}>
                     <Link href={getDashboardPath()}><LayoutDashboard className="mr-1 h-4 w-4" /> Dashboard</Link>
                   </Button>
                   <Button 
@@ -239,7 +244,7 @@ const Header = () => {
                 </>
               ) : (
                 <>
-                  <Button variant="ghost" size="sm" asChild className="hover:bg-accent/20">
+                  <Button variant="ghost" size="sm" asChild className={cn("hover:bg-accent/20", pathname === '/login' && "bg-accent/10")}>
                     <Link href="/login"><LogIn className="mr-1 h-4 w-4" /> Login</Link>
                   </Button>
                   <Button variant="default" size="sm" asChild className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md hover:shadow-sm active:translate-y-px transition-all duration-150">
