@@ -69,7 +69,7 @@ const searchPageTranslations = {
     browseCategories: "အမျိုးအစားများ ကြည့်ရှုရန်", // Browse Categories
     noCategoriesAvailable: "အမျိုးအစားများ မရှိသေးပါ", // No Categories Available
     noCategoriesDesc: "အမျိုးအစားများ ထည့်သွင်းပြီးနောက် ဤနေရာတွင် ပေါ်လာပါမည်။", // Categories will appear here once added.
-    availableCourses: "ရရှိနိုင်သော သင်တန်းများ", // Available Courses
+    availableCourses: "တက်ရောက်နိုင်သောအတန်းများ", // Available Courses
     noCoursesFound: "သင်တန်းများ မတွေ့ပါ", // No Courses Found
     noCoursesDesc: "သင်၏ ရှာဖွေရေး စကားလုံးများ သို့မဟုတ် အမျိုးအစား စစ်ထုတ်မှုများကို ချိန်ညှိကြည့်ပါ။", // Try adjusting your search terms or category filters.
     exploreLearningPaths: "ပညာရေးလမ်းကြောင်းများ", // Explore Learning Paths
