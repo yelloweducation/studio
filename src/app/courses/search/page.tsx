@@ -1,5 +1,4 @@
 
-
 // This directive applies to the module, making SearchCoursesClientLogic a client component.
 "use client"; 
 
@@ -203,7 +202,7 @@ function SearchCoursesClientLogic() {
   return (
     <div className="space-y-4 md:space-y-6 pt-0">
       <section className="pb-4 md:pb-6 border-b">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-4 items-end">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-1 md:gap-4 items-end">
           <div className="md:col-span-2">
             <label htmlFor="search-input" className="block text-sm font-medium text-muted-foreground mb-1">
               Search by keyword
@@ -240,7 +239,7 @@ function SearchCoursesClientLogic() {
           </div>
         </div>
         {(searchTerm || selectedCategory !== 'all') && (
-          <div className="mt-2 md:mt-3">
+          <div className="mt-1 md:mt-3">
             <Button variant="ghost" onClick={handleClearFilters} className="text-sm text-muted-foreground hover:text-foreground h-auto py-1 px-2">
               <X className="mr-1.5 h-4 w-4" /> Clear Filters
             </Button>
@@ -300,9 +299,12 @@ function SearchCoursesClientLogic() {
                 <h4 className="text-sm font-medium text-muted-foreground">Here are some ideas:</h4>
                 {quickRecs.map(rec => (
                   <Link key={rec.id} href={`/courses/${rec.id}`} passHref>
-                    <Button variant="outline" className="w-full justify-start text-left h-auto py-2.5 shadow-sm hover:border-primary">
-                        <GraduationCap className="mr-2 h-4 w-4 text-primary/80"/>
-                        <div>
+                    <Button 
+                      variant="outline" 
+                      className="w-full justify-start items-start text-left h-auto py-2.5 shadow-sm hover:border-primary whitespace-normal"
+                    >
+                        <GraduationCap className="mt-1 h-4 w-4 text-primary/80 flex-shrink-0"/>
+                        <div className="flex-1 min-w-0"> 
                             <span className="font-semibold">{rec.title}</span>
                             {rec.reason && <p className="text-xs text-muted-foreground">{rec.reason}</p>}
                         </div>
