@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Progress } from '@/components/ui/progress';
 import { useLanguage } from '@/contexts/LanguageContext';
 import * as LucideIcons from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const flashCardsPageTranslations = {
   en: {
@@ -92,8 +93,8 @@ export default function FlashCardsClient() {
   const progress = cardsForCategory.length > 0 ? ((currentCardIndex + 1) / cardsForCategory.length) * 100 : 0;
 
   return (
-    <div className="space-y-8 flex flex-col items-center pb-12">
-      <section className="text-center max-w-2xl">
+    <div className="space-y-8 flex flex-col items-center pb-12 px-4">
+      <section className="text-center max-w-2xl pt-4 md:pt-0">
         <Milestone className="mx-auto h-10 w-10 md:h-12 md:w-12 text-primary mb-2 md:mb-3" />
         <h1 className="text-xl md:text-2xl font-bold font-headline mb-1 md:mb-2">{t.pageTitle}</h1>
         <p className="text-sm md:text-base text-muted-foreground">{t.pageDescription}</p>
@@ -127,50 +128,64 @@ export default function FlashCardsClient() {
             <>
               <CardContent>
                 <div
-                  className="aspect-[3/2] w-full border rounded-lg p-6 flex flex-col items-center justify-center text-center cursor-pointer bg-card hover:bg-muted/50 transition-colors select-none shadow-inner"
+                  className="aspect-[3/2] w-full border rounded-lg p-4 md:p-6 flex flex-col items-center justify-center text-center cursor-pointer bg-card hover:bg-muted/50 transition-colors select-none shadow-inner"
                   onClick={handleFlipCard}
                   role="button"
                   tabIndex={0}
                   onKeyDown={(e) => (e.key === ' ' || e.key === 'Enter') && handleFlipCard()}
                 >
                   {isFlipped ? (
-                    <div className="space-y-2">
-                      <p className="text-sm text-muted-foreground">{t.definition}</p>
-                      <h2 className="text-lg md:text-xl font-semibold">{currentCard.definition}</h2>
+                    <div className="space-y-1 md:space-y-2">
+                      <p className="text-xs md:text-sm text-muted-foreground">{t.definition}</p>
+                      <h2 className="text-md md:text-xl font-semibold">{currentCard.definition}</h2>
                       {currentCard.example && <p className="text-xs md:text-sm italic mt-1"><span className="font-medium">{t.example}</span> {currentCard.example}</p>}
                       {currentCard.pronunciation && <p className="text-xs md:text-sm text-accent mt-1"><span className="font-medium">{t.pronunciation}</span> {currentCard.pronunciation}</p>}
                     </div>
                   ) : (
-                    <div className="space-y-2">
-                       <p className="text-sm text-muted-foreground">{t.term}</p>
-                       <h1 className="text-2xl md:text-3xl font-bold font-headline">{currentCard.term}</h1>
+                    <div className="space-y-1 md:space-y-2">
+                       <p className="text-xs md:text-sm text-muted-foreground">{t.term}</p>
+                       <h1 className="text-xl md:text-3xl font-bold font-headline">{currentCard.term}</h1>
                     </div>
                   )}
                 </div>
                  {cardsForCategory.length > 0 && (
-                  <div className="mt-4 text-center">
-                    <Progress value={progress} className="w-full h-1.5" />
-                    <p className="text-xs text-muted-foreground mt-1.5">
+                  <div className="mt-3 md:mt-4 text-center">
+                    <Progress value={progress} className="w-full h-1 md:h-1.5" />
+                    <p className="text-xs text-muted-foreground mt-1 md:mt-1.5">
                         {t.cardProgress.replace('{current}', (currentCardIndex + 1).toString()).replace('{total}', cardsForCategory.length.toString())}
                     </p>
                   </div>
                 )}
               </CardContent>
-              <CardFooter className="flex justify-between items-center">
-                <Button variant="outline" onClick={handlePrevCard} disabled={cardsForCategory.length <= 1}>
-                  <ChevronLeft className="mr-1 h-4 w-4" /> {t.prevCard}
+              <CardFooter className="flex justify-between items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={handlePrevCard} 
+                  disabled={cardsForCategory.length <= 1}
+                  className="whitespace-normal h-auto py-1.5 px-3 text-sm"
+                >
+                  <ChevronLeft className="mr-1 h-4 w-4 shrink-0" /> {t.prevCard}
                 </Button>
-                <Button variant="secondary" onClick={handleFlipCard}>
-                  <RefreshCw className="mr-2 h-4 w-4" /> {t.flipCard}
+                <Button 
+                  variant="secondary" 
+                  onClick={handleFlipCard}
+                  className="whitespace-normal h-auto py-1.5 px-3 text-sm"
+                >
+                  <RefreshCw className="mr-2 h-4 w-4 shrink-0" /> {t.flipCard}
                 </Button>
-                <Button variant="outline" onClick={handleNextCard} disabled={cardsForCategory.length <= 1}>
-                  {t.nextCard} <ChevronRight className="ml-1 h-4 w-4" />
+                <Button 
+                  variant="outline" 
+                  onClick={handleNextCard} 
+                  disabled={cardsForCategory.length <= 1}
+                  className="whitespace-normal h-auto py-1.5 px-3 text-sm"
+                >
+                  {t.nextCard} <ChevronRight className="ml-1 h-4 w-4 shrink-0" />
                 </Button>
               </CardFooter>
             </>
           ) : (
             <CardContent className="text-center py-10">
-              <Zap className="mx-auto h-12 w-12 text-muted-foreground mb-3" />
+              <Zap className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-3" />
               <p className="text-muted-foreground">{t.noCardsInCategory}</p>
             </CardContent>
           )}
@@ -178,7 +193,7 @@ export default function FlashCardsClient() {
       ) : (
         <Card className="w-full max-w-md md:max-w-lg shadow-xl">
             <CardContent className="text-center py-10">
-                <Layers className="mx-auto h-12 w-12 text-muted-foreground mb-3" />
+                <Layers className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-3" />
                 <p className="text-muted-foreground">{t.noCategories}</p>
                 <p className="text-xs text-muted-foreground mt-1">Please add categories and flashcards via the admin panel.</p>
             </CardContent>
