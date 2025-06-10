@@ -248,5 +248,3 @@ export type PersonalityTestsTranslations = {
 };
 // Note: The actual translation dictionary is in personality-tests-client.tsx
 // This just defines the expected structure for type safety.
-
-```
