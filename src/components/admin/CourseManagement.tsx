@@ -2,12 +2,12 @@
 "use client";
 import { useState, useEffect, type FormEvent, type ChangeEvent } from 'react';
 import Image from 'next/image';
-import { courses as initialCoursesData, type Course, type Module, type Lesson, type Quiz } from '@/data/mockData'; // Added Quiz
+import { courses as initialCoursesData, type Course, type Module, type Lesson, type Quiz, type Question, type Option } from '@/data/mockData';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Edit3, Trash2, GraduationCap, BookOpen, Clock, Link as LinkIcon, Image as ImageIcon, Info, Tag, DollarSign, Filter, Star, ListChecks, UsersIcon as TargetAudienceIcon, ShieldCheck, Timer, FileQuestion, CheckSquare, XSquare } from 'lucide-react'; // Added FileQuestion
+import { PlusCircle, Edit3, Trash2, GraduationCap, BookOpen, Clock, Link as LinkIcon, Image as ImageIcon, Info, Tag, DollarSign, Filter, Star, ListChecks, UsersIcon as TargetAudienceIcon, ShieldCheck, Timer, FileQuestion, CheckSquare, XSquare, Settings2, Eye } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -23,8 +23,12 @@ import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '../ui/label';
 import { Checkbox } from '../ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Added Select
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
+
+const generateQuestionId = () => `q-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+const generateOptionId = () => `opt-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
 const LessonForm = ({
   lesson,
@@ -88,6 +92,219 @@ const LessonForm = ({
   );
 };
 
+
+const QuestionEditDialog = ({
+  questionToEdit,
+  onSaveQuestion,
+  onCancel,
+}: {
+  questionToEdit: Partial<Question>; // Can be a new question template
+  onSaveQuestion: (question: Question) => void;
+  onCancel: () => void;
+}) => {
+  const [questionText, setQuestionText] = useState(questionToEdit.text || '');
+  const [options, setOptions] = useState<Option[]>(questionToEdit.options || []);
+  const [correctOptionId, setCorrectOptionId] = useState<string | undefined>(questionToEdit.correctOptionId);
+  const [newOptionText, setNewOptionText] = useState('');
+  // const [points, setPoints] = useState<number | undefined>(questionToEdit.points);
+
+  const handleAddOption = () => {
+    if (newOptionText.trim() === '') return;
+    const newOption: Option = { id: generateOptionId(), text: newOptionText.trim() };
+    setOptions([...options, newOption]);
+    setNewOptionText('');
+  };
+
+  const handleDeleteOption = (optionId: string) => {
+    setOptions(options.filter(opt => opt.id !== optionId));
+    if (correctOptionId === optionId) {
+      setCorrectOptionId(undefined);
+    }
+  };
+
+  const handleSave = () => {
+    if (!questionText.trim()) {
+      alert("Question text cannot be empty.");
+      return;
+    }
+    if (options.length < 2) {
+      alert("A question must have at least two options.");
+      return;
+    }
+    if (!correctOptionId) {
+      alert("Please select a correct option.");
+      return;
+    }
+    onSaveQuestion({
+      id: questionToEdit.id || generateQuestionId(),
+      text: questionText,
+      options,
+      correctOptionId,
+      // points,
+    });
+  };
+
+  return (
+    <Dialog open={true} onOpenChange={(isOpen) => { if (!isOpen) onCancel(); }}>
+      <DialogContent className="sm:max-w-lg md:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>{questionToEdit.id ? 'Edit Question' : 'Add New Question'}</DialogTitle>
+          <DialogDescription>Define the question, its options, and mark the correct answer.</DialogDescription>
+        </DialogHeader>
+        <ScrollArea className="h-[60vh] pr-3">
+          <div className="space-y-4 py-2">
+            <div>
+              <Label htmlFor="questionText">Question Text</Label>
+              <Textarea id="questionText" value={questionText} onChange={e => setQuestionText(e.target.value)} rows={3} />
+            </div>
+
+            <div>
+              <Label>Options</Label>
+              <RadioGroup value={correctOptionId} onValueChange={setCorrectOptionId}>
+                {options.map((opt, index) => (
+                  <Card key={opt.id} className="p-2.5 flex items-center justify-between bg-muted/30">
+                    <div className="flex items-center space-x-2 flex-grow mr-2">
+                      <RadioGroupItem value={opt.id} id={`opt-${opt.id}`} />
+                      <Label htmlFor={`opt-${opt.id}`} className="font-normal flex-grow cursor-pointer">{opt.text}</Label>
+                    </div>
+                    <Button type="button" variant="ghost" size="icon_sm" onClick={() => handleDeleteOption(opt.id)}>
+                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                    </Button>
+                  </Card>
+                ))}
+              </RadioGroup>
+              {options.length === 0 && <p className="text-xs text-muted-foreground text-center py-2">No options added yet.</p>}
+            </div>
+
+            <div className="space-y-1.5 pt-2 border-t">
+              <Label htmlFor="newOptionText">Add New Option</Label>
+              <div className="flex gap-2">
+                <Input id="newOptionText" value={newOptionText} onChange={e => setNewOptionText(e.target.value)} placeholder="Option text" />
+                <Button type="button" variant="outline" size="sm" onClick={handleAddOption} disabled={!newOptionText.trim()}>Add</Button>
+              </div>
+            </div>
+            {/* 
+            <div>
+              <Label htmlFor="questionPoints">Points (optional)</Label>
+              <Input id="questionPoints" type="number" value={points || ''} onChange={e => setPoints(Number(e.target.value))} />
+            </div>
+            */}
+          </div>
+        </ScrollArea>
+        <DialogFooter className="pt-4 border-t">
+          <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+          <Button type="button" onClick={handleSave}>Save Question</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+
+const QuizQuestionsDialog = ({
+  quiz,
+  onSaveQuiz,
+  onCancel,
+}: {
+  quiz: Quiz;
+  onSaveQuiz: (updatedQuiz: Quiz) => void;
+  onCancel: () => void;
+}) => {
+  const [currentQuiz, setCurrentQuiz] = useState<Quiz>(JSON.parse(JSON.stringify(quiz))); // Deep copy
+  const [editingQuestion, setEditingQuestion] = useState<Partial<Question> | null>(null); // For new or existing question
+
+  const handleAddNewQuestion = () => {
+    setEditingQuestion({}); // Empty object for new question
+  };
+
+  const handleEditQuestion = (question: Question) => {
+    setEditingQuestion(JSON.parse(JSON.stringify(question))); // Deep copy
+  };
+
+  const handleDeleteQuestion = (questionId: string) => {
+    setCurrentQuiz(prev => ({
+      ...prev,
+      questions: prev.questions.filter(q => q.id !== questionId),
+    }));
+  };
+
+  const handleSaveQuestion = (questionData: Question) => {
+    setCurrentQuiz(prev => {
+      const existingIndex = prev.questions.findIndex(q => q.id === questionData.id);
+      let newQuestions;
+      if (existingIndex > -1) {
+        newQuestions = [...prev.questions];
+        newQuestions[existingIndex] = questionData;
+      } else {
+        newQuestions = [...prev.questions, questionData];
+      }
+      return { ...prev, questions: newQuestions };
+    });
+    setEditingQuestion(null); // Close question edit dialog
+  };
+  
+  const handleSaveAndClose = () => {
+      onSaveQuiz(currentQuiz);
+  }
+
+  return (
+    <>
+      <Dialog open={true} onOpenChange={(isOpen) => { if (!isOpen) onCancel(); }}>
+        <DialogContent className="sm:max-w-xl md:max-w-2xl lg:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="font-headline text-xl">Manage Questions for: {currentQuiz.title}</DialogTitle>
+            <DialogDescription>Add, edit, or delete questions for this quiz.</DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="h-[65vh] pr-3">
+            <div className="space-y-3 py-2">
+              {currentQuiz.questions.length > 0 ? (
+                currentQuiz.questions.map((q, index) => (
+                  <Card key={q.id || index} className="p-3">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-grow pr-2">
+                        <p className="font-medium text-sm">{index + 1}. {q.text}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Options: {q.options?.length || 0} | Correct: {q.options?.find(opt => opt.id === q.correctOptionId)?.text || 'N/A'}
+                        </p>
+                      </div>
+                      <div className="flex space-x-1 shrink-0">
+                        <Button type="button" variant="ghost" size="icon_sm" onClick={() => handleEditQuestion(q)}>
+                          <Edit3 className="h-4 w-4" />
+                        </Button>
+                        <Button type="button" variant="ghost" size="icon_sm" onClick={() => handleDeleteQuestion(q.id)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                ))
+              ) : (
+                <p className="text-center text-muted-foreground py-4">No questions in this quiz yet.</p>
+              )}
+               <Button type="button" variant="outline" onClick={handleAddNewQuestion} className="mt-4 w-full">
+                <PlusCircle className="mr-2 h-4 w-4" /> Add New Question
+              </Button>
+            </div>
+          </ScrollArea>
+          <DialogFooter className="pt-4 border-t">
+            <Button type="button" variant="outline" onClick={onCancel}>Cancel Changes</Button>
+            <Button type="button" onClick={handleSaveAndClose}>Done & Save Quiz</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {editingQuestion && (
+        <QuestionEditDialog
+          questionToEdit={editingQuestion}
+          onSaveQuestion={handleSaveQuestion}
+          onCancel={() => setEditingQuestion(null)}
+        />
+      )}
+    </>
+  );
+};
+
+
 const CourseForm = ({
   course,
   onSubmit,
@@ -107,7 +324,11 @@ const CourseForm = ({
   const [currency, setCurrency] = useState(course?.currency || 'USD');
   const [isFeatured, setIsFeatured] = useState(course?.isFeatured || false);
   const [modules, setModules] = useState<Module[]>(course?.modules || []);
-  const [quizzes, setQuizzes] = useState<Quiz[]>(course?.quizzes || []); // Added quizzes state
+  
+  // Quiz state in CourseForm
+  const [quizzes, setQuizzes] = useState<Quiz[]>(course?.quizzes || []);
+  const [editingQuizForQuestions, setEditingQuizForQuestions] = useState<Quiz | null>(null);
+
 
   const [learningObjectives, setLearningObjectives] = useState(course?.learningObjectives?.join('\n') || '');
   const [targetAudience, setTargetAudience] = useState(course?.targetAudience || '');
@@ -117,7 +338,6 @@ const CourseForm = ({
 
   const [editingLesson, setEditingLesson] = useState<{ moduleIndex: number, lessonIndex?: number, lesson?: Partial<Lesson> } | null>(null);
 
-  // Quiz management states
   const [newQuizTitle, setNewQuizTitle] = useState('');
   const [newQuizType, setNewQuizType] = useState<'practice' | 'graded'>('practice');
 
@@ -153,25 +373,29 @@ const CourseForm = ({
     setModules(newModules);
   };
 
-  // Quiz Management Functions
   const addQuiz = () => {
     if (!newQuizTitle.trim()) {
-      alert("Quiz title cannot be empty."); // Simple validation
+      alert("Quiz title cannot be empty."); 
       return;
     }
     const newQuiz: Quiz = {
-      id: `quiz${Date.now()}`,
+      id: `quiz-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       title: newQuizTitle,
       quizType: newQuizType,
-      questions: [], // Questions will be empty initially
+      questions: [], 
     };
-    setQuizzes([...quizzes, newQuiz]);
-    setNewQuizTitle(''); // Reset form
+    setQuizzes(prev => [...prev, newQuiz]);
+    setNewQuizTitle(''); 
     setNewQuizType('practice');
   };
 
   const removeQuiz = (quizId: string) => {
-    setQuizzes(quizzes.filter(q => q.id !== quizId));
+    setQuizzes(prev => prev.filter(q => q.id !== quizId));
+  };
+
+  const handleSaveQuizWithUpdatedQuestions = (updatedQuiz: Quiz) => {
+    setQuizzes(prevQuizzes => prevQuizzes.map(q => q.id === updatedQuiz.id ? updatedQuiz : q));
+    setEditingQuizForQuestions(null); // Close the questions management dialog
   };
 
 
@@ -193,7 +417,7 @@ const CourseForm = ({
       prerequisites: prerequisites.split('\n').filter(s => s.trim() !== ''),
       estimatedTimeToComplete,
       modules,
-      quizzes, // Include quizzes
+      quizzes,
     };
     onSubmit(courseData);
   };
@@ -222,6 +446,7 @@ const CourseForm = ({
 
 
   return (
+    <>
     <form onSubmit={handleSubmit} className="space-y-6">
       <ScrollArea className="h-[65vh] sm:h-[70vh] pr-4">
         <div className="space-y-4">
@@ -285,7 +510,6 @@ const CourseForm = ({
             </div>
           </div>
 
-          {/* Additional Course Information Fields */}
           <div className="pt-4 border-t">
             <h3 className="text-lg font-semibold mb-3">Additional Course Information</h3>
             <div className="space-y-4">
@@ -308,7 +532,6 @@ const CourseForm = ({
             </div>
           </div>
 
-          {/* Modules Section */}
           <div className="space-y-4 pt-4 border-t">
             <h3 className="text-lg font-semibold flex items-center"><BookOpen className="mr-2 h-5 w-5 text-primary"/> Modules</h3>
             <Accordion type="multiple" className="w-full" defaultValue={modules.map(m => m.id)}>
@@ -365,7 +588,6 @@ const CourseForm = ({
             </Button>
           </div>
 
-          {/* Quizzes Section */}
           <div className="space-y-4 pt-4 border-t">
             <h3 className="text-lg font-semibold flex items-center"><FileQuestion className="mr-2 h-5 w-5 text-primary"/> Quizzes</h3>
             <div className="space-y-2 p-3 border rounded-md bg-card">
@@ -394,33 +616,21 @@ const CourseForm = ({
             {quizzes.length > 0 && (
               <div className="mt-4 space-y-3">
                 <h4 className="font-medium text-md">Existing Quizzes:</h4>
-                {quizzes.map((quiz) => (
-                  <Card key={quiz.id} className="p-3 bg-muted/30">
+                {quizzes.map((quizItem, quizIndex) => (
+                  <Card key={quizItem.id} className="p-3 bg-muted/30">
                     <div className="flex justify-between items-start">
                       <div className="flex-grow">
-                        <p className="font-medium text-sm">{quiz.title}</p>
-                        <p className="text-xs text-muted-foreground capitalize">{quiz.quizType} Quiz</p>
-                        
-                        {quiz.questions && quiz.questions.length > 0 && (
-                          <div className="mt-2 pl-3 border-l-2 border-accent/50">
-                            <p className="text-xs font-semibold text-muted-foreground mb-1">Questions ({quiz.questions.length}):</p>
-                            <ul className="list-disc list-inside space-y-0.5 pl-2">
-                              {quiz.questions.map((q, qIdx) => (
-                                <li key={q.id || qIdx} className="text-xs text-foreground/80 truncate max-w-xs sm:max-w-sm md:max-w-md" title={q.text}>
-                                  {q.text.length > 60 ? `${q.text.substring(0, 57)}...` : q.text}
-                                  <span className="text-muted-foreground/80"> ({q.options?.length || 0} opts)</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                        <p className="text-xs text-primary/80 mt-2 italic">
-                          (Full question & option editing UI coming in a future update.)
-                        </p>
+                        <p className="font-medium text-sm">{quizItem.title}</p>
+                        <p className="text-xs text-muted-foreground capitalize">{quizItem.quizType} Quiz ({quizItem.questions?.length || 0} questions)</p>
                       </div>
-                      <Button type="button" variant="ghost" size="icon_sm" onClick={() => removeQuiz(quiz.id)} className="shrink-0">
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                      <div className="flex space-x-1 shrink-0">
+                         <Button type="button" variant="ghost" size="icon_sm" title="Manage Questions" onClick={() => setEditingQuizForQuestions(quizItem)}>
+                            <Settings2 className="h-4 w-4" />
+                          </Button>
+                        <Button type="button" variant="ghost" size="icon_sm" title="Delete Quiz" onClick={() => removeQuiz(quizItem.id)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
                     </div>
                   </Card>
                 ))}
@@ -439,6 +649,14 @@ const CourseForm = ({
         </Button>
       </DialogFooter>
     </form>
+    {editingQuizForQuestions && (
+        <QuizQuestionsDialog
+          quiz={editingQuizForQuestions}
+          onSaveQuiz={handleSaveQuizWithUpdatedQuestions}
+          onCancel={() => setEditingQuizForQuestions(null)}
+        />
+    )}
+    </>
   );
 };
 
@@ -508,7 +726,7 @@ export default function CourseManagement() {
         <CardTitle className="flex items-center text-xl md:text-2xl font-headline">
           <GraduationCap className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Course Management
         </CardTitle>
-        <CardDescription>Add, edit, or delete courses, modules, lessons, quizzes, set prices, and mark featured courses.</CardDescription>
+        <CardDescription>Add, edit, or delete courses, modules, lessons, quizzes (with questions & options), set prices, and mark featured courses.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="mb-6 text-right">
@@ -518,7 +736,7 @@ export default function CourseManagement() {
                 <PlusCircle className="mr-2 h-5 w-5" /> Add New Course
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-2xl md:max-w-3xl">
+            <DialogContent className="sm:max-w-2xl md:max-w-3xl lg:max-w-4xl">
               <DialogHeader className="pb-4">
                 <DialogTitle className="font-headline text-xl md:text-2xl">{editingCourse ? 'Edit Course' : 'Add New Course'}</DialogTitle>
                 <DialogDescription>
@@ -594,3 +812,6 @@ export default function CourseManagement() {
     </Card>
   );
 }
+
+
+    
