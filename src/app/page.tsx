@@ -4,17 +4,21 @@ import React, { useState, type FormEvent, useEffect, Suspense, lazy } from 'reac
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Video as VideoIcon, Tv, Loader2, X } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Video as VideoIcon, Tv, Loader2, X, Search, LayoutGrid } from 'lucide-react';
 import VideoCard from '@/components/videos/VideoCard';
-import { videos as mockVideos, type Video } from '@/data/mockData';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'; 
+import { videos as mockVideos, type Video, categories as mockCategories, type Category } from '@/data/mockData';
+import CategoryCard from '@/components/categories/CategoryCard';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const CareerAdviceChatbox = lazy(() => import('@/components/ai/CareerAdviceChatbox'));
 
-
 export default function Home() {
   const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   
   const [trendingVideos, setTrendingVideos] = useState<Video[]>([]);
   const [isLoadingTrendingVideos, setIsLoadingTrendingVideos] = useState(true);
@@ -23,19 +27,28 @@ export default function Home() {
   const [allFeedVideos, setAllFeedVideos] = useState<Video[]>([]);
   const [isLoadingFeedVideos, setIsLoadingFeedVideos] = useState(false);
 
-
   useEffect(() => {
-    // Load trending videos directly from mock data
+    setIsLoadingCategories(true);
+    // For stability, student-facing views use mock data directly
+    setCategories(mockCategories.slice(0, 6)); // Show a limited number of categories
+    setIsLoadingCategories(false);
+
     setIsLoadingTrendingVideos(true);
     setTrendingVideos(mockVideos.slice(0, 3));
     setIsLoadingTrendingVideos(false);
   }, []);
 
+  const handleSearchSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/courses/search?query=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
+  
   const loadAllFeedVideos = () => {
     if (allFeedVideos.length > 0 && !showVideoFeed) return; 
 
     setIsLoadingFeedVideos(true);
-    // Load all videos directly from mock data for the feed
     setAllFeedVideos(mockVideos);
     setIsLoadingFeedVideos(false);
   };
@@ -92,6 +105,19 @@ export default function Home() {
         <p className="text-lg sm:text-xl text-muted-foreground mb-8">
           Your journey to knowledge and career insights.
         </p>
+        <form onSubmit={handleSearchSubmit} className="flex w-full max-w-lg mx-auto">
+          <Input
+            type="search"
+            placeholder="Search courses, e.g., Web Development"
+            className="flex-grow rounded-r-none focus:z-10 shadow-sm"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <Button type="submit" className="rounded-l-none shadow-md">
+            <Search className="h-5 w-5" />
+            <span className="sr-only">Search</span>
+          </Button>
+        </form>
       </section>
 
       <section className="w-full max-w-2xl mb-12">
@@ -111,8 +137,43 @@ export default function Home() {
           <CareerAdviceChatbox />
         </Suspense>
       </section>
-
+      
       <section className="w-full mt-12">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl sm:text-3xl font-headline font-semibold flex items-center">
+            <LayoutGrid className="mr-2 h-7 w-7 text-primary" /> Explore Categories
+          </h2>
+          <Button variant="outline" asChild>
+            <Link href="/courses/search">View All Courses</Link>
+          </Button>
+        </div>
+        {isLoadingCategories ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="bg-card rounded-lg shadow-md">
+                <Skeleton className="w-full h-24 sm:h-32 rounded-t-lg" />
+                <div className="p-3 pt-4">
+                  <Skeleton className="h-5 w-3/4 mx-auto" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : categories.length > 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {categories.map(category => (
+              <CategoryCard key={category.id} category={category} />
+            ))}
+          </div>
+        ) : (
+          <Card className="w-full mt-8">
+            <CardContent className="pt-6">
+              <p className="text-center text-muted-foreground">No categories available right now.</p>
+            </CardContent>
+          </Card>
+        )}
+      </section>
+
+      <section className="w-full mt-16">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl sm:text-3xl font-headline font-semibold flex items-center">
             <Tv className="mr-2 h-7 w-7 text-primary" /> Trending Videos
