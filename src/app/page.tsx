@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Video as VideoIcon, Search, Compass, Circle, Brain } from 'lucide-react'; 
+import { Video as VideoIcon, Search, Compass, Circle, Brain, Layers } from 'lucide-react'; 
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext'; // Added
 import { cn } from "@/lib/utils"; // Added for conditional classnames
@@ -18,6 +18,7 @@ const homePageTranslations = {
     searchPlaceholder: "Search courses, e.g., Web Development",
     coursesButton: "Courses",
     reelsButton: "Reels",
+    flashCardsButton: "Flash Cards", // Added
     personalityTestLink: "Discover Your Strengths",
     privacyPolicy: "Privacy Policy",
     termsOfService: "Terms of Service",
@@ -33,6 +34,7 @@ const homePageTranslations = {
     searchPlaceholder: "အတန်းများရှာပါ၊ ဥပမာ - Web Development",
     coursesButton: "အတန်း", // Updated from သင်တန်းများ to သင်တန်း, then to အတန်း
     reelsButton: "ဗီဒီယို", // Updated from ရီးလ်များ
+    flashCardsButton: "ကတ်ပြား", // Added (Katt Pyar - Card)
     personalityTestLink: "သင်၏ အားသာချက်များကို ရှာဖွေပါ",
     privacyPolicy: "ကိုယ်ရေးအချက်အလက်မူဝါဒ",
     termsOfService: "ဝန်ဆောင်မှုစည်းမျဉ်းများ",
@@ -90,13 +92,13 @@ export default function Home() {
           </Button>
         </form>
         
-        <div className="mt-8 flex flex-row items-center justify-center gap-4 w-full max-w-md sm:max-w-lg lg:max-w-xl mx-auto">
+        <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 items-center justify-center gap-3 sm:gap-4 w-full max-w-xs sm:max-w-lg lg:max-w-xl mx-auto">
             <Button 
               asChild 
               size="lg" 
               variant="default" 
               className={cn(
-                "flex-1 sm:flex-none sm:w-auto",
+                "w-full", // Changed from flex-1 for grid layout
                 language === 'my' ? 'text-xs sm:text-sm' : 'text-sm'
               )}
             >
@@ -109,12 +111,25 @@ export default function Home() {
               size="lg" 
               variant="accent"
               className={cn(
-                "flex-1 sm:flex-none sm:w-auto",
+                "w-full", // Changed from flex-1 for grid layout
                 language === 'my' ? 'text-xs sm:text-sm' : 'text-sm'
               )}
             >
                 <Link href="/videos"> 
                     <VideoIcon className="mr-2 h-5 w-5" /> {t.reelsButton}
+                </Link>
+            </Button>
+            <Button 
+              asChild 
+              size="lg" 
+              variant="secondary" // Or another variant if preferred
+              className={cn(
+                "w-full col-span-2 sm:col-span-1", // Span full width on smallest, then normal
+                language === 'my' ? 'text-xs sm:text-sm' : 'text-sm'
+              )}
+            >
+                <Link href="/flash-cards"> 
+                    <Layers className="mr-2 h-5 w-5" /> {t.flashCardsButton}
                 </Link>
             </Button>
         </div>
@@ -173,3 +188,4 @@ export default function Home() {
     </div>
   );
 }
+
