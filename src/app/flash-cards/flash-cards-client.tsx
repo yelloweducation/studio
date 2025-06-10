@@ -157,19 +157,19 @@ export default function FlashCardsClient() {
                   </div>
                 )}
               </CardContent>
-              <CardFooter className="flex justify-between items-center gap-2">
+              <CardFooter className="flex flex-col sm:flex-row justify-between items-center gap-2">
                 <Button 
                   variant="outline" 
                   onClick={handlePrevCard} 
                   disabled={cardsForCategory.length <= 1}
-                  className="whitespace-normal h-auto py-1.5 px-3 text-sm"
+                  className="w-full sm:w-auto whitespace-normal h-auto py-1.5 px-3 text-sm"
                 >
                   <ChevronLeft className="mr-1 h-4 w-4 shrink-0" /> {t.prevCard}
                 </Button>
                 <Button 
                   variant="secondary" 
                   onClick={handleFlipCard}
-                  className="whitespace-normal h-auto py-1.5 px-3 text-sm"
+                  className="w-full sm:w-auto whitespace-normal h-auto py-1.5 px-3 text-sm"
                 >
                   <RefreshCw className="mr-2 h-4 w-4 shrink-0" /> {t.flipCard}
                 </Button>
@@ -177,7 +177,7 @@ export default function FlashCardsClient() {
                   variant="outline" 
                   onClick={handleNextCard} 
                   disabled={cardsForCategory.length <= 1}
-                  className="whitespace-normal h-auto py-1.5 px-3 text-sm"
+                  className="w-full sm:w-auto whitespace-normal h-auto py-1.5 px-3 text-sm"
                 >
                   {t.nextCard} <ChevronRight className="ml-1 h-4 w-4 shrink-0" />
                 </Button>
@@ -202,5 +202,3 @@ export default function FlashCardsClient() {
     </div>
   );
 }
-
-    
