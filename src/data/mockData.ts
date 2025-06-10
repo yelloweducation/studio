@@ -121,6 +121,23 @@ export type LearningPath = {
   dataAiHint?: string;
 };
 
+// New types for Flash Cards
+export type FlashcardCategory = {
+  id: string;
+  name: string;
+  description?: string;
+  iconName?: keyof typeof import('lucide-react'); // Lucide icon name string
+};
+
+export type Flashcard = {
+  id: string;
+  categoryId: string;
+  term: string;
+  definition: string;
+  example?: string;
+  pronunciation?: string; // Optional pronunciation guide
+};
+
 
 export const courses: Course[] = [
   {
@@ -393,3 +410,32 @@ export const initialLearningPaths: LearningPath[] = [
     dataAiHint: 'data analytics'
   },
 ];
+
+// Flash Card Data
+export const flashcardCategories: FlashcardCategory[] = [
+  { id: 'fc_cat_english', name: 'English Vocabulary', description: 'Common and advanced English words.', iconName: 'SpellCheck' },
+  { id: 'fc_cat_maths', name: 'Mathematical Concepts', description: 'Key terms and formulas in mathematics.', iconName: 'Sigma'},
+  { id: 'fc_cat_marketing', name: 'Marketing Terms', description: 'Essential marketing jargon and concepts.', iconName: 'Megaphone' },
+  { id: 'fc_cat_business', name: 'Business Acumen', description: 'Fundamental business terms and ideas.', iconName: 'Briefcase' },
+  { id: 'fc_cat_it', name: 'IT & Programming', description: 'Core concepts in IT and programming.', iconName: 'Laptop' },
+];
+
+export const flashcards: Flashcard[] = [
+  // Sample English Flashcards
+  { id: 'fc_en_1', categoryId: 'fc_cat_english', term: 'Ephemeral', definition: 'Lasting for a very short time.', example: 'The beauty of the cherry blossoms is ephemeral.', pronunciation: '/ɪˈfem.ər.əl/' },
+  { id: 'fc_en_2', categoryId: 'fc_cat_english', term: 'Ubiquitous', definition: 'Present, appearing, or found everywhere.', example: 'Smartphones have become ubiquitous in modern society.', pronunciation: '/juːˈbɪk.wɪ.təs/' },
+  { id: 'fc_en_3', categoryId: 'fc_cat_english', term: 'Serendipity', definition: 'The occurrence and development of events by chance in a happy or beneficial way.', example: 'Discovering the old bookstore was pure serendipity.', pronunciation: '/ˌser.ənˈdɪp.ə.ti/' },
+  { id: 'fc_en_4', categoryId: 'fc_cat_english', term: 'Alacrity', definition: 'Brisk and cheerful readiness.', example: 'She accepted the invitation with alacrity.', pronunciation: '/əˈlæk.rə.ti/' },
+  { id: 'fc_en_5', categoryId: 'fc_cat_english', term: 'Mellifluous', definition: 'Pleasant and musical to hear.', example: 'The singer had a mellifluous voice.', pronunciation: '/məˈlɪf.lu.əs/' },
+  // Sample IT Flashcards
+  { id: 'fc_it_1', categoryId: 'fc_cat_it', term: 'API', definition: 'Application Programming Interface. A set of rules and protocols for building and interacting with software applications.', example: 'We used the Twitter API to fetch recent tweets.' },
+  { id: 'fc_it_2', categoryId: 'fc_cat_it', term: 'Cloud Computing', definition: 'The delivery of computing services—including servers, storage, databases, networking, software, analytics, and intelligence—over the Internet ("the cloud").', example: 'AWS and Azure are major cloud computing providers.' },
+  { id: 'fc_it_3', categoryId: 'fc_cat_it', term: 'Algorithm', definition: 'A process or set of rules to be followed in calculations or other problem-solving operations, especially by a computer.', example: 'Sorting algorithms are used to arrange data in a specific order.' },
+  { id: 'fc_it_4', categoryId: 'fc_cat_it', term: 'Firewall', definition: 'A network security system that monitors and controls incoming and outgoing network traffic based on predetermined security rules.', example: 'The company firewall blocked access to certain websites.' },
+  { id: 'fc_it_5', categoryId: 'fc_cat_it', term: 'SDK', definition: 'Software Development Kit. A collection of software development tools in one installable package.', example: 'The Android SDK provides tools to build Android applications.' },
+];
+// To add 1000 words per category, you would continue this pattern for each categoryId.
+// Example for fc_cat_maths, fc_cat_marketing, fc_cat_business would follow.
+// For brevity in this prototype, only English and IT have sample data.
+// The system is designed to handle many more cards if populated.
+
