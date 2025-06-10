@@ -11,8 +11,6 @@ import { videos as mockVideos, type Video } from '@/data/mockData';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// const CareerAdviceChatbox = lazy(() => import('@/components/ai/CareerAdviceChatbox')); // Moved to courses/search
-
 export default function Home() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
@@ -101,31 +99,31 @@ export default function Home() {
 
   return (
     <div className="flex flex-col items-center pb-8">
-      <section className="w-full max-w-2xl text-center pt-8 mb-10">
-        <div className="flex items-center justify-center space-x-2 sm:space-x-3 text-3xl sm:text-4xl font-bold font-headline text-foreground mb-4">
-          <Circle size={32} className="text-primary block sm:hidden" /> 
-          <Circle size={40} className="text-primary hidden sm:block" /> 
+      <section className="w-full max-w-2xl md:max-w-3xl lg:max-w-4xl text-center pt-8 mb-10">
+        <div className="flex items-center justify-center space-x-2 lg:space-x-3 text-3xl sm:text-4xl lg:text-5xl font-bold font-headline text-foreground mb-4">
+          <Circle size={32} className="text-primary block lg:hidden" /> 
+          <Circle size={40} className="text-primary hidden lg:block" /> 
           <span>Yellow Institute</span>
         </div>
-        <p className="text-lg sm:text-xl text-muted-foreground mb-8">
+        <p className="text-lg sm:text-xl lg:text-2xl text-muted-foreground mb-8">
           Your journey to knowledge and career insights.
         </p>
-        <form onSubmit={handleSearchSubmit} className="flex w-full max-w-lg mx-auto">
+        <form onSubmit={handleSearchSubmit} className="flex w-full max-w-lg sm:max-w-xl lg:max-w-2xl mx-auto">
           <Input
             type="search"
             placeholder="Search courses, e.g., Web Development"
-            className="flex-grow rounded-r-none focus:z-10 shadow-sm"
+            className="flex-grow rounded-r-none focus:z-10 shadow-sm text-sm sm:text-base"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-          <Button type="submit" className="rounded-l-none shadow-md">
+          <Button type="submit" className="rounded-l-none">
             <Search className="h-5 w-5" />
             <span className="sr-only">Search</span>
           </Button>
         </form>
         
-        <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4 w-full max-w-md mx-auto">
-            <Button asChild size="lg" className="w-full sm:w-auto">
+        <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4 w-full max-w-md sm:max-w-lg lg:max-w-xl mx-auto">
+            <Button asChild size="lg" variant="default" className="w-full sm:w-auto">
                 <Link href="/courses/search">
                     <Compass className="mr-2 h-5 w-5" /> Explore
                 </Link>
@@ -142,4 +140,3 @@ export default function Home() {
     </div>
   );
 }
-
