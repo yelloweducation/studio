@@ -39,7 +39,7 @@ const VideoCard = ({ video }: VideoCardProps) => {
             layout="fill"
             objectFit="cover"
             className="opacity-70"
-            data-ai-hint={video.dataAiHint || 'video content placeholder'} // Updated hint
+            data-ai-hint={video.dataAiHint || 'video placeholder'}
         />
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/10"></div>

@@ -134,7 +134,7 @@ export default function LearningPathDetailClient({ pathId }: LearningPathDetailC
                 alt={learningPath.title}
                 layout="fill"
                 objectFit="cover"
-                data-ai-hint={learningPath.dataAiHint || 'learning journey concept'}
+                data-ai-hint={learningPath.dataAiHint || 'learning journey'}
                 priority
                 />
             </div>

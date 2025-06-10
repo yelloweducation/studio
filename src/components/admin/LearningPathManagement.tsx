@@ -47,7 +47,7 @@ const LearningPathForm = ({
   const [icon, setIcon] = useState(path?.icon || 'Milestone');
   const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>(path?.courseIds || []);
   const [imageUrl, setImageUrl] = useState(path?.imageUrl || 'https://placehold.co/300x200.png');
-  const [dataAiHint, setDataAiHint] = useState(path?.dataAiHint || 'learning path abstract');
+  const [dataAiHint, setDataAiHint] = useState(path?.dataAiHint || 'learning path');
 
   const handleCourseSelection = (courseId: string, checked: boolean) => {
     setSelectedCourseIds(prev =>
@@ -256,7 +256,7 @@ export default function LearningPathManagement() {
                 <li key={path.id} className="p-3 sm:p-4 border rounded-lg bg-card flex flex-col sm:flex-row sm:items-start shadow-sm hover:shadow-md transition-shadow">
                   {path.imageUrl && (
                     <div className="relative w-full sm:w-24 h-24 sm:h-auto sm:aspect-square border rounded overflow-hidden shrink-0 bg-muted mb-2 sm:mb-0">
-                      <Image src={path.imageUrl} alt={path.title} layout="fill" objectFit="cover" data-ai-hint={path.dataAiHint || 'learning path image'}/>
+                      <Image src={path.imageUrl} alt={path.title} layout="fill" objectFit="cover" data-ai-hint={path.dataAiHint || 'path image'}/>
                     </div>
                   )}
                   <div className="flex-grow sm:ml-4">

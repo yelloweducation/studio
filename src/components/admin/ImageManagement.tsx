@@ -280,7 +280,7 @@ export default function ImageManagement() {
                               <Label htmlFor={`categoryImageUrl-${category.id}`}>Current Image</Label>
                               <div className="mt-1 aspect-[4/3] w-full relative border rounded-md overflow-hidden bg-muted">
                                 {(category.imageUrl || 'https://placehold.co/200x150.png') && (
-                                  <Image src={category.imageUrl || 'https://placehold.co/200x150.png'} alt={category.name} layout="fill" objectFit="cover" key={category.imageUrl} data-ai-hint={category.dataAiHint || 'category image placeholder'} />
+                                  <Image src={category.imageUrl || 'https://placehold.co/200x150.png'} alt={category.name} layout="fill" objectFit="cover" key={category.imageUrl} data-ai-hint={category.dataAiHint || 'category placeholder'} />
                                 )}
                               </div>
                             </div>
