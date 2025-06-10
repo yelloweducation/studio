@@ -17,16 +17,13 @@ const VideoPageHeader = () => {
   const t = videoPageHeaderTranslations[language];
 
   return (
-    <header 
+    <header
       className={cn(
-        "fixed top-0 left-0 right-0 z-40 flex h-14 items-center justify-center bg-black/70 px-4 text-white shadow-md backdrop-blur-sm"
-        // Removed pt-[env(safe-area-inset-top)] 
+        "fixed top-0 left-0 right-0 z-40 flex h-14 items-center px-4 bg-white shadow-md"
       )}
     >
-      {/* The inner div's height will be h-14 effectively, content centered within it */}
-      <div className="flex items-center justify-center h-full">
-        <h1 className="text-lg font-semibold">{t.forYou}</h1>
-      </div>
+      {/* Title is now directly inside the header and will be left-aligned due to flex context */}
+      <h1 className="text-lg font-semibold text-gray-800">{t.forYou}</h1>
     </header>
   );
 };
