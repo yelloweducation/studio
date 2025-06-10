@@ -25,6 +25,7 @@ export type Course = {
   dataAiHint?: string;
   price?: number;
   currency?: string;
+  isFeatured?: boolean; // Added for featured courses
 };
 
 export type User = {
@@ -83,6 +84,17 @@ export type PaymentSettings = {
   additionalInstructions?: string;
 };
 
+// New type for Learning Paths
+export type LearningPath = {
+  id: string;
+  title: string;
+  description: string;
+  icon?: string; // Lucide icon name
+  courseIds: string[];
+  imageUrl?: string; // Optional image for the path itself
+  dataAiHint?: string;
+};
+
 
 export const courses: Course[] = [
   {
@@ -95,6 +107,7 @@ export const courses: Course[] = [
     dataAiHint: 'programming code',
     price: 0, // Free course
     currency: 'USD',
+    isFeatured: true, // Mark as featured
     modules: [
       {
         id: 'm1c1',
@@ -132,6 +145,7 @@ export const courses: Course[] = [
     dataAiHint: 'abstract javascript',
     price: 49.99,
     currency: 'USD',
+    isFeatured: false,
     modules: [
       {
         id: 'm1c2',
@@ -160,6 +174,7 @@ export const courses: Course[] = [
     dataAiHint: 'python data',
     price: 99.00,
     currency: 'USD',
+    isFeatured: true, // Mark as featured
     modules: [
       {
         id: 'm1c3',
@@ -185,6 +200,7 @@ export const courses: Course[] = [
     instructor: 'The Future',
     imageUrl: 'https://placehold.co/600x400.png',
     dataAiHint: 'coming soon abstract',
+    isFeatured: false,
     modules: [],
   },
   {
@@ -197,6 +213,7 @@ export const courses: Course[] = [
     dataAiHint: 'planning document',
     price: 19.99,
     currency: 'USD',
+    isFeatured: false,
     modules: [
       { id: 'm1c5', title: 'Module A - Concepts', lessons: [] },
       { id: 'm2c5', title: 'Module B - Drafts', lessons: [] },
@@ -252,3 +269,25 @@ export const initialPaymentSettings: PaymentSettings = {
     accountHolderName: '',
     additionalInstructions: 'Please include your User ID or Course Name in the payment reference.',
 };
+
+// Initial Learning Paths Data
+export const initialLearningPaths: LearningPath[] = [
+  {
+    id: 'lp1',
+    title: 'Full-Stack Web Developer Path',
+    description: 'Master front-end and back-end technologies to build complete web applications.',
+    icon: 'Milestone',
+    courseIds: ['course1', 'course2'], // Example: Links Intro Web Dev and Adv JS
+    imageUrl: 'https://placehold.co/300x200.png',
+    dataAiHint: 'web development journey'
+  },
+  {
+    id: 'lp2',
+    title: 'Data Analyst Fundamentals',
+    description: 'Learn Python and essential data science tools to kickstart your analytics career.',
+    icon: 'TrendingUp',
+    courseIds: ['course3'], // Example: Links Data Science with Python
+    imageUrl: 'https://placehold.co/300x200.png',
+    dataAiHint: 'data analytics career'
+  },
+];

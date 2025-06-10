@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Edit3, Trash2, GraduationCap, BookOpen, Clock, Link as LinkIcon, Image as ImageIcon, Info, Tag, DollarSign, Filter } from 'lucide-react';
+import { PlusCircle, Edit3, Trash2, GraduationCap, BookOpen, Clock, Link as LinkIcon, Image as ImageIcon, Info, Tag, DollarSign, Filter, Star } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -22,6 +22,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '../ui/label';
+import { Checkbox } from '../ui/checkbox'; // Added for isFeatured
 
 const LessonForm = ({
   lesson,
@@ -102,6 +103,7 @@ const CourseForm = ({
   const [dataAiHint, setDataAiHint] = useState(course?.dataAiHint || 'education learning');
   const [price, setPrice] = useState<number | string>(course?.price ?? '');
   const [currency, setCurrency] = useState(course?.currency || 'USD');
+  const [isFeatured, setIsFeatured] = useState(course?.isFeatured || false); // Added for featured
   const [modules, setModules] = useState<Module[]>(course?.modules || []);
 
   const [editingLesson, setEditingLesson] = useState<{ moduleIndex: number, lessonIndex?: number, lesson?: Partial<Lesson> } | null>(null);
@@ -148,8 +150,9 @@ const CourseForm = ({
       instructor,
       imageUrl,
       dataAiHint,
-      price: Number(price) || 0, // Ensure price is a number, default to 0 if empty or invalid
+      price: Number(price) || 0, 
       currency,
+      isFeatured, // Added
       modules,
     };
     onSubmit(courseData);
@@ -215,6 +218,12 @@ const CourseForm = ({
                 <Input id="currency" value={currency} onChange={e => setCurrency(e.target.value)} placeholder="e.g., USD" className="pl-8" />
               </div>
             </div>
+          </div>
+           <div className="flex items-center space-x-2 pt-2">
+            <Checkbox id="isFeatured" checked={isFeatured} onCheckedChange={(checked) => setIsFeatured(checked as boolean)} />
+            <Label htmlFor="isFeatured" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+              Mark as Featured Course
+            </Label>
           </div>
           <div>
             <Label htmlFor="imageUrl">Course Image URL</Label>
@@ -371,7 +380,7 @@ export default function CourseManagement() {
         <CardTitle className="flex items-center text-xl md:text-2xl font-headline">
           <GraduationCap className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Course Management
         </CardTitle>
-        <CardDescription>Add, edit, or delete courses, modules, lessons, and set prices.</CardDescription>
+        <CardDescription>Add, edit, or delete courses, modules, lessons, set prices, and mark featured courses.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="mb-6 text-right">
@@ -407,7 +416,10 @@ export default function CourseManagement() {
                   </div>
                 )}
                 <div className="flex-grow sm:ml-4">
-                  <h3 className="font-semibold font-headline text-md md:text-lg">{course.title}</h3>
+                  <h3 className="font-semibold font-headline text-md md:text-lg flex items-center">
+                    {course.title}
+                    {course.isFeatured && <Star className="ml-2 h-4 w-4 text-yellow-500 fill-yellow-400" />}
+                  </h3>
                   <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{course.description}</p>
                   <div className="text-xs text-muted-foreground mt-1">
                     <span>Category: {course.category}</span> | <span>Instructor: {course.instructor}</span>

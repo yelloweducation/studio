@@ -9,9 +9,10 @@ import VideoManagement from "@/components/admin/VideoManagement";
 import ImageManagement from "@/components/admin/ImageManagement";
 import CategoryManagement from "@/components/admin/CategoryManagement";
 import PaymentSubmissions from "@/components/admin/PaymentSubmissions";
-import PaymentSettingsManagement from "@/components/admin/PaymentSettingsManagement"; // Added
+import PaymentSettingsManagement from "@/components/admin/PaymentSettingsManagement";
+import LearningPathManagement from "@/components/admin/LearningPathManagement"; // Added
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, BarChart3, Settings as SettingsIcon, Video as VideoIcon, Image as ImageIcon, Shapes, GraduationCap, Menu as MenuIcon, CreditCard } from "lucide-react"; // Renamed Settings to SettingsIcon
+import { Users, BarChart3, Settings as SettingsIcon, Video as VideoIcon, Image as ImageIcon, Shapes, GraduationCap, Menu as MenuIcon, CreditCard, BookOpenCheck } from "lucide-react"; // Added BookOpenCheck
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,8 +25,9 @@ import {
 const adminTabs = [
   { value: "courses", label: "Courses", Icon: GraduationCap },
   { value: "categories", label: "Categories", Icon: Shapes },
+  { value: "learningPaths", label: "Paths", Icon: BookOpenCheck }, // Added
   { value: "payments", label: "Payments", Icon: CreditCard },
-  { value: "paymentSettings", label: "Payment Config", Icon: SettingsIcon }, // Added
+  { value: "paymentSettings", label: "Payment Config", Icon: SettingsIcon },
   { value: "videos", label: "Videos", Icon: VideoIcon },
   { value: "images", label: "Images", Icon: ImageIcon },
   { value: "users", label: "Users", Icon: Users },
@@ -75,7 +77,7 @@ export default function AdminDashboardPage() {
               </DropdownMenu>
             </div>
           ) : (
-            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-2 mb-6"> {/* Adjusted grid-cols for new tab */}
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-2 mb-6"> {/* Adjusted grid-cols for new tab */}
               {adminTabs.map((tab) => (
                 <TabsTrigger
                   key={tab.value}
@@ -93,6 +95,9 @@ export default function AdminDashboardPage() {
           </TabsContent>
           <TabsContent value="categories">
             <CategoryManagement />
+          </TabsContent>
+          <TabsContent value="learningPaths">
+            <LearningPathManagement />
           </TabsContent>
            <TabsContent value="payments">
             <PaymentSubmissions />
