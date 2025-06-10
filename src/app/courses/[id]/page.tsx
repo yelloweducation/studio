@@ -32,98 +32,96 @@ export default function CourseDetailPage() {
   const [currentCourse, setCurrentCourse] = useState<Course | null>(null);
   const [firstLessonPath, setFirstLessonPath] = useState<string | null>(null);
   const [completionInfo, setCompletionInfo] = useState<CompletionInfo | null>(null);
-  const [isLoadingPage, setIsLoadingPage] = useState(true);
+  const [isLoadingPage, setIsLoadingPage] = useState(true); // Start in loading state
 
   // Effect 1: Load allAppCourses (prioritizing localStorage)
   useEffect(() => {
-    setIsLoadingPage(true); // Start loading immediately
     let coursesToUse: Course[] = [];
     try {
       const storedCoursesString = localStorage.getItem('adminCourses');
       if (storedCoursesString) {
         const parsedCourses = JSON.parse(storedCoursesString) as Course[];
         if (Array.isArray(parsedCourses)) {
-          coursesToUse = parsedCourses; // Use admin-managed courses if valid
+          coursesToUse = parsedCourses; 
         } else {
           console.warn("adminCourses in localStorage was not an array, using default mock courses.");
           coursesToUse = mockDataCourses;
         }
       } else {
-        coursesToUse = mockDataCourses; // Fallback if not in localStorage
+        coursesToUse = mockDataCourses; 
       }
     } catch (error) {
       console.error("Error loading courses from localStorage:", error);
-      coursesToUse = mockDataCourses; // Fallback on error
+      coursesToUse = mockDataCourses; 
     }
     setAllAppCourses(coursesToUse);
     setAreAppCoursesLoaded(true);
-    // setIsLoadingPage(false) will be handled by Effect 3
   }, []);
 
   // Effect 2: Determine currentCourse and firstLessonPath
+  // This effect runs when allAppCourses are loaded or courseId changes.
   useEffect(() => {
     if (!areAppCoursesLoaded) {
       setCurrentCourse(null); // Ensure reset if courses aren't loaded yet
       setFirstLessonPath(null);
-      return;
+      return; // Wait for allAppCourses to be loaded
     }
 
     if (!courseId) {
       setCurrentCourse(null);
       setFirstLessonPath(null);
-      setIsLoadingPage(false); // No course ID, so stop loading
-      return;
+      return; // No course ID, so nothing to find
     }
     
-    // Ensure isLoadingPage is true while searching for the course
-    // This prevents premature rendering of "not found" if allAppCourses is still being set by Effect 1
-    if(!currentCourse && courseId) { // Only set true if we are actively looking for a course
-        setIsLoadingPage(true);
-    }
-
-
     const foundCourse = allAppCourses.find(c => c.id === courseId);
     setCurrentCourse(foundCourse || null);
 
     if (foundCourse && foundCourse.modules && foundCourse.modules.length > 0 &&
         foundCourse.modules[0].lessons && foundCourse.modules[0].lessons.length > 0) {
-      setFirstLessonPath(`/courses/${foundCourse.id}/learn/${foundCourse.id}/${foundCourse.modules[0].id}/${foundCourse.modules[0].lessons[0].id}`);
+      setFirstLessonPath(`/courses/${foundCourse.id}/learn/${foundCourse.modules[0].id}/${foundCourse.modules[0].lessons[0].id}`);
     } else {
       setFirstLessonPath(null);
     }
-    // setIsLoadingPage(false) will be handled by Effect 3
   }, [courseId, allAppCourses, areAppCoursesLoaded]);
 
 
-  // Effect 3: Load user-specific data (completion) and manage final loading state
+  // Effect 3: Load user-specific data (completion) and manage final isLoadingPage state
   useEffect(() => {
-    // Start loading if not already, or if dependencies change that require re-evaluation
-    if(!isLoadingPage && (currentCourse || courseId)) setIsLoadingPage(true);
-    setCompletionInfo(null);
+    setIsLoadingPage(true); // Always start this effect by setting loading to true
+    setCompletionInfo(null); // Reset completion info
 
     if (!areAppCoursesLoaded) {
-      // Still waiting for all courses to load, keep isLoadingPage true.
+      // Still waiting for allAppCourses to load. isLoadingPage remains true.
+      return;
+    }
+
+    // At this point, areAppCoursesLoaded is true.
+    // Effect 2 should have attempted to set currentCourse based on allAppCourses and courseId.
+
+    if (!courseId) {
+      // No course ID in URL, so not loading a specific course.
+      setIsLoadingPage(false);
       return;
     }
     
-    // If no courseId, or if courseId is present but no currentCourse was found after Effect 2 finished
-    if (!courseId || (courseId && !currentCourse)) {
-      setIsLoadingPage(false); // Stop loading if no course or course not found
+    // If courseId is present, but currentCourse is null (meaning Effect 2 determined it's not found)
+    if (courseId && !currentCourse) { 
+      setIsLoadingPage(false); // Course not found after checking allAppCourses
       return;
     }
     
-    // At this point, currentCourse should be set (or null if not found after trying)
-    // and areAppCoursesLoaded is true.
-    
-    if (isAuthenticated && user && currentCourse) {
-      const enrollment = mockDataEnrollments.find(e => e.userId === user.id && e.courseId === currentCourse.id);
-      if (enrollment) {
-        setCompletionInfo({ isCompleted: enrollment.progress === 100, progress: enrollment.progress });
-      } else {
-        setCompletionInfo({ isCompleted: false, progress: 0 });
-      }
+    // If we reach here, currentCourse is valid and set by Effect 2.
+    if (currentCourse) { // Redundant check as the one above handles null, but good for clarity
+        if (isAuthenticated && user) {
+        const enrollment = mockDataEnrollments.find(e => e.userId === user.id && e.courseId === currentCourse.id);
+        if (enrollment) {
+            setCompletionInfo({ isCompleted: enrollment.progress === 100, progress: enrollment.progress });
+        } else {
+            setCompletionInfo({ isCompleted: false, progress: 0 });
+        }
+        }
     }
-    // If user not authenticated, or no course, or no enrollment, completion is null or default
+    // If user not authenticated, or no currentCourse somehow, completionInfo remains null or default.
     
     setIsLoadingPage(false); // All data fetching/determination for this stage is complete
 
@@ -131,7 +129,7 @@ export default function CourseDetailPage() {
 
 
   const renderCTAButton = () => {
-    if (!currentCourse) return null; // Handled by the main not found message
+    if (!currentCourse) return null; 
 
     if (completionInfo?.isCompleted) {
       return (
@@ -158,7 +156,6 @@ export default function CourseDetailPage() {
         );
     }
 
-    // Default: Start Learning (since it's free in this reverted state)
     return (
       <Button asChild size="lg" className="w-full shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150">
         <Link href={firstLessonPath}>
@@ -207,7 +204,7 @@ export default function CourseDetailPage() {
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground mb-6">
-              Sorry, we couldn&apos;t find the course you were looking for (ID: {courseId}). It might have been moved or removed, or it&apos;s still being prepared.
+              Sorry, we couldn&apos;t find the course you were looking for (ID: {courseId}). It might have been moved or removed.
             </p>
             <Button asChild>
               <Link href="/courses/search">Explore Other Courses</Link>
@@ -288,8 +285,12 @@ export default function CourseDetailPage() {
                         {module.lessons && module.lessons.length > 0 ? (
                           <ul className="space-y-2 pl-2 border-l-2 border-primary/20 ml-2">
                             {module.lessons.map((lesson: Lesson, lessonIndex: number) => {
+                              // const lessonPath = `/courses/${courseId}/learn/${module.id}/${lesson.id}`;
+                              // In the non-payment version, all lessons are accessible if a firstLessonPath exists for the course.
+                              // The actual firstLessonPath is calculated based on the first module and lesson.
+                              // Here, we need to ensure the links are correct for each lesson individually.
                               const lessonPath = `/courses/${courseId}/learn/${module.id}/${lesson.id}`;
-                              const isLessonAccessible = true; // All lessons accessible in free model
+                              const isLessonAccessible = true; 
 
                               return (
                                 <li key={lesson.id}>
@@ -331,3 +332,5 @@ export default function CourseDetailPage() {
     </div>
   );
 }
+
+    
