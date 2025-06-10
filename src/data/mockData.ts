@@ -414,10 +414,11 @@ export const initialLearningPaths: LearningPath[] = [
 // Flash Card Data
 export const flashcardCategories: FlashcardCategory[] = [
   { id: 'fc_cat_english', name: 'English Vocabulary', description: 'Common and advanced English words.', iconName: 'SpellCheck' },
-  { id: 'fc_cat_maths', name: 'Mathematical Concepts', description: 'Key terms and formulas in mathematics.', iconName: 'Sigma'},
-  { id: 'fc_cat_marketing', name: 'Marketing Terms', description: 'Essential marketing jargon and concepts.', iconName: 'Megaphone' },
-  { id: 'fc_cat_business', name: 'Business Acumen', description: 'Fundamental business terms and ideas.', iconName: 'Briefcase' },
   { id: 'fc_cat_it', name: 'IT & Programming', description: 'Core concepts in IT and programming.', iconName: 'Laptop' },
+  { id: 'fc_cat_business', name: 'Business Acumen', description: 'Fundamental business terms and ideas.', iconName: 'Briefcase' },
+  { id: 'fc_cat_digital_marketing', name: 'Digital Marketing', description: 'Key terms in online marketing.', iconName: 'Megaphone' },
+  // Removed Maths for now to match the 4 requested categories
+  // { id: 'fc_cat_maths', name: 'Mathematical Concepts', description: 'Key terms and formulas in mathematics.', iconName: 'Sigma'},
 ];
 
 export const flashcards: Flashcard[] = [
@@ -427,14 +428,25 @@ export const flashcards: Flashcard[] = [
   { id: 'fc_en_3', categoryId: 'fc_cat_english', term: 'Serendipity', definition: 'The occurrence and development of events by chance in a happy or beneficial way.', example: 'Discovering the old bookstore was pure serendipity.', pronunciation: '/ˌser.ənˈdɪp.ə.ti/' },
   { id: 'fc_en_4', categoryId: 'fc_cat_english', term: 'Alacrity', definition: 'Brisk and cheerful readiness.', example: 'She accepted the invitation with alacrity.', pronunciation: '/əˈlæk.rə.ti/' },
   { id: 'fc_en_5', categoryId: 'fc_cat_english', term: 'Mellifluous', definition: 'Pleasant and musical to hear.', example: 'The singer had a mellifluous voice.', pronunciation: '/məˈlɪf.lu.əs/' },
+  
   // Sample IT Flashcards
   { id: 'fc_it_1', categoryId: 'fc_cat_it', term: 'API', definition: 'Application Programming Interface. A set of rules and protocols for building and interacting with software applications.', example: 'We used the Twitter API to fetch recent tweets.' },
   { id: 'fc_it_2', categoryId: 'fc_cat_it', term: 'Cloud Computing', definition: 'The delivery of computing services—including servers, storage, databases, networking, software, analytics, and intelligence—over the Internet ("the cloud").', example: 'AWS and Azure are major cloud computing providers.' },
   { id: 'fc_it_3', categoryId: 'fc_cat_it', term: 'Algorithm', definition: 'A process or set of rules to be followed in calculations or other problem-solving operations, especially by a computer.', example: 'Sorting algorithms are used to arrange data in a specific order.' },
   { id: 'fc_it_4', categoryId: 'fc_cat_it', term: 'Firewall', definition: 'A network security system that monitors and controls incoming and outgoing network traffic based on predetermined security rules.', example: 'The company firewall blocked access to certain websites.' },
   { id: 'fc_it_5', categoryId: 'fc_cat_it', term: 'SDK', definition: 'Software Development Kit. A collection of software development tools in one installable package.', example: 'The Android SDK provides tools to build Android applications.' },
+
+  // Sample Business Flashcards (add 1000 if needed)
+  { id: 'fc_biz_1', categoryId: 'fc_cat_business', term: 'ROI', definition: 'Return on Investment. A performance measure used to evaluate the efficiency of an investment.', example: 'The marketing campaign had a high ROI.' },
+  { id: 'fc_biz_2', categoryId: 'fc_cat_business', term: 'B2B', definition: 'Business-to-Business. Transactions or business conducted between companies, rather than between a company and individual consumers.', example: 'Their primary sales model is B2B.' },
+  { id: 'fc_biz_3', categoryId: 'fc_cat_business', term: 'KPI', definition: 'Key Performance Indicator. A measurable value that demonstrates how effectively a company is achieving key business objectives.', example: 'Customer satisfaction is a key KPI for our support team.' },
+
+  // Sample Digital Marketing Flashcards (add 1000 if needed)
+  { id: 'fc_dm_1', categoryId: 'fc_cat_digital_marketing', term: 'SEO', definition: 'Search Engine Optimization. The process of improving the quality and quantity of website traffic to a website or a web page from search engines.', example: 'Good SEO is crucial for organic growth.' },
+  { id: 'fc_dm_2', categoryId: 'fc_cat_digital_marketing', term: 'CTR', definition: 'Click-Through Rate. The ratio of users who click on a specific link to the number of total users who view a page, email, or advertisement.', example: 'The ad campaign had a low CTR.' },
+  { id: 'fc_dm_3', categoryId: 'fc_cat_digital_marketing', term: 'PPC', definition: 'Pay-Per-Click. An internet advertising model used to drive traffic to websites, in which an advertiser pays a publisher when the ad is clicked.', example: 'They invested heavily in PPC advertising.' },
 ];
 // To add 1000 words per category, you would continue this pattern for each categoryId.
-// Example for fc_cat_maths, fc_cat_marketing, fc_cat_business would follow.
 // For brevity in this prototype, only English and IT have sample data.
 // The system is designed to handle many more cards if populated.
+    
