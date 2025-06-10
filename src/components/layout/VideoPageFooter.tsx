@@ -31,21 +31,24 @@ const VideoPageFooter = () => {
         {navItems.map((item) => {
           const isActive = pathname === item.href;
           return (
-            <Link key={item.label} href={item.disabled ? '#' : item.href} passHref legacyBehavior>
-              <a
-                className={cn(
-                  "flex flex-col items-center justify-center text-xs w-1/5 h-full transition-colors",
-                  isActive ? "text-primary" : "text-muted-foreground hover:text-foreground",
-                  item.disabled && "opacity-50 cursor-not-allowed hover:text-muted-foreground"
-                )}
-                aria-disabled={item.disabled}
-                onClick={(e) => {
-                  if (item.disabled) e.preventDefault();
-                }}
-              >
-                <item.icon className={cn("h-6 w-6 mb-0.5", isActive && "fill-current")} />
-                {item.label}
-              </a>
+            <Link
+              key={item.label}
+              href={item.disabled ? '#' : item.href}
+              className={cn(
+                "flex flex-col items-center justify-center text-xs w-1/5 h-full transition-colors",
+                isActive ? "text-primary" : "text-muted-foreground hover:text-foreground",
+                item.disabled && "opacity-50 cursor-not-allowed hover:text-muted-foreground"
+              )}
+              aria-disabled={item.disabled}
+              onClick={(e) => {
+                if (item.disabled) {
+                  e.preventDefault();
+                }
+                // For non-disabled items, NextLink handles navigation automatically.
+              }}
+            >
+              <item.icon className={cn("h-6 w-6 mb-0.5", isActive && "fill-current")} />
+              {item.label}
             </Link>
           );
         })}
