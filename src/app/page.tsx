@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Video as VideoIcon, Tv, Loader2, X, Search, LayoutGrid } from 'lucide-react';
 import VideoCard from '@/components/videos/VideoCard';
-import { videos as mockVideos, type Video, categories as mockCategories, type Category } from '@/data/mockData';
+import { videos as mockVideos, type Video, categories as defaultMockCategories, type Category } from '@/data/mockData'; // Renamed mockCategories to defaultMockCategories
 import CategoryCard from '@/components/categories/CategoryCard';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -29,11 +29,23 @@ export default function Home() {
 
   useEffect(() => {
     setIsLoadingCategories(true);
-    // For stability, student-facing views use mock data directly
-    setCategories(mockCategories.slice(0, 6)); // Show a limited number of categories
-    setIsLoadingCategories(false);
+    try {
+      const storedCategoriesString = localStorage.getItem('adminCategories');
+      if (storedCategoriesString) {
+        const parsedCategories = JSON.parse(storedCategoriesString) as Category[];
+        setCategories(parsedCategories.slice(0, 6)); // Show a limited number of categories
+      } else {
+        setCategories(defaultMockCategories.slice(0, 6));
+      }
+    } catch (error) {
+      console.error("Error loading categories from localStorage:", error);
+      setCategories(defaultMockCategories.slice(0, 6)); // Fallback to mock data on error
+    } finally {
+      setIsLoadingCategories(false);
+    }
 
     setIsLoadingTrendingVideos(true);
+    // For stability, student-facing views use mock data directly for videos for now
     setTrendingVideos(mockVideos.slice(0, 3));
     setIsLoadingTrendingVideos(false);
   }, []);
@@ -49,6 +61,7 @@ export default function Home() {
     if (allFeedVideos.length > 0 && !showVideoFeed) return; 
 
     setIsLoadingFeedVideos(true);
+    // For stability, student-facing views use mock data directly for videos
     setAllFeedVideos(mockVideos);
     setIsLoadingFeedVideos(false);
   };

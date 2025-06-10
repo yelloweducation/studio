@@ -5,9 +5,9 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import CourseCard from '@/components/courses/CourseCard';
-import { courses as allCourses, type Course, categories as allCategories, type Category } from '@/data/mockData';
+import { courses as defaultMockCourses, type Course, categories as defaultMockCategories, type Category } from '@/data/mockData';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Search, X, ChevronLeft } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -22,13 +22,54 @@ export default function SearchCoursesPage() {
   const [displayedCourses, setDisplayedCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Use mock data directly for student-facing views
-  const availableCourses: Course[] = useMemo(() => allCourses, []);
-  const availableCategories: Category[] = useMemo(() => allCategories, []);
+  const [availableCourses, setAvailableCourses] = useState<Course[]>([]);
+  const [availableCategories, setAvailableCategories] = useState<Category[]>([]);
 
   useEffect(() => {
     setIsLoading(true);
-    let filtered = availableCourses;
+    // Load courses from localStorage or fallback to mock
+    try {
+      const storedCoursesString = localStorage.getItem('adminCourses');
+      if (storedCoursesString) {
+        const parsedCourses = JSON.parse(storedCoursesString) as Course[];
+        setAvailableCourses(parsedCourses);
+      } else {
+        setAvailableCourses(defaultMockCourses);
+      }
+    } catch (error) {
+      console.error("Error loading courses from localStorage:", error);
+      setAvailableCourses(defaultMockCourses);
+    }
+
+    // Load categories from localStorage or fallback to mock
+    try {
+      const storedCategoriesString = localStorage.getItem('adminCategories');
+      if (storedCategoriesString) {
+        const parsedCategories = JSON.parse(storedCategoriesString) as Category[];
+        setAvailableCategories(parsedCategories);
+      } else {
+        setAvailableCategories(defaultMockCategories);
+      }
+    } catch (error) {
+      console.error("Error loading categories from localStorage:", error);
+      setAvailableCategories(defaultMockCategories);
+    }
+    // Note: setIsLoading(false) will be handled in the filtering useEffect
+  }, []);
+
+
+  useEffect(() => {
+    if (!availableCourses.length && !availableCategories.length && initialQuery === '' && initialCategory === 'all') {
+        // If everything is empty and no search params, might still be loading initial data
+        // or there's genuinely no data. Defer setIsLoading(false)
+        if(localStorage.getItem('adminCourses') || localStorage.getItem('adminCategories')){
+             // If local storage items exist, we are likely waiting for them.
+        } else {
+             setIsLoading(false); // No local storage, so assume initial mock data (or lack thereof) is final.
+        }
+    }
+
+    let filtered = [...availableCourses]; // Create a new array to avoid mutating state directly
 
     if (searchTerm) {
       filtered = filtered.filter(course =>
@@ -43,15 +84,21 @@ export default function SearchCoursesPage() {
     }
 
     setDisplayedCourses(filtered);
-    setIsLoading(false);
+    setIsLoading(false); // Set loading to false after filtering is complete
 
     // Update URL
     const params = new URLSearchParams();
     if (searchTerm) params.set('query', searchTerm);
-    if (selectedCategory !== 'all') params.set('category', selectedCategory);
-    router.replace(`/courses/search?${params.toString()}`, { scroll: false });
+    if (selectedCategory && selectedCategory !== 'all') params.set('category', selectedCategory);
+    
+    // Only push if params actually change to avoid redundant navigation
+    const currentQueryString = `?${params.toString()}`;
+    if (searchParams.toString() !== params.toString()) {
+        router.replace(`/courses/search${currentQueryString === '?' ? '' : currentQueryString}`, { scroll: false });
+    }
+    
 
-  }, [searchTerm, selectedCategory, availableCourses, router]);
+  }, [searchTerm, selectedCategory, availableCourses, availableCategories, router, searchParams, initialCategory, initialQuery]);
 
 
   const handleClearFilters = () => {
