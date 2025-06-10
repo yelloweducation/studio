@@ -65,7 +65,7 @@ const searchPageTranslations = {
     getSuggestion: "အကြံပြုချက်ရယူပါ", // Get Suggestion
     quickRecsIdeas: "ဤတွင် အကြံဉာဏ်အချို့ရှိပါသည်:", // Here are some ideas:
     noQuickRecsFound: "\"{query}\" အတွက် သီးခြားအကြံပြုချက်များ မတွေ့ပါ။ ကျယ်ပြန့်သော စကားလုံးကို စမ်းကြည့်ပါ သို့မဟုတ် အောက်တွင် ရှာဖွေပါ။", // No specific recommendations found for "{query}". Try a broader term or browse below!
-    popularTopics: "လူကြိုက်များသော ခေါင်းစဉ်များ", // Popular Topics
+    popularTopics: "တက်ရောက်မှုများသောသင်တန်းများ", // Popular Topics -> Courses with high attendance
     browseCategories: "အမျိုးအစားများ ကြည့်ရှုရန်", // Browse Categories
     noCategoriesAvailable: "အမျိုးအစားများ မရှိသေးပါ", // No Categories Available
     noCategoriesDesc: "အမျိုးအစားများ ထည့်သွင်းပြီးနောက် ဤနေရာတွင် ပေါ်လာပါမည်။", // Categories will appear here once added.
@@ -370,8 +370,8 @@ function SearchCoursesClientLogic() {
       
       {popularTopics.length > 0 && (
         <section className="py-4 md:py-6">
-          <h2 className="text-xl md:text-2xl font-headline font-semibold mb-4 flex items-center">
-            <ListFilter className="mr-2 h-6 w-6 text-primary" /> {t.popularTopics}
+          <h2 className="text-lg md:text-xl font-headline font-semibold mb-4 flex items-center">
+            <ListFilter className="mr-2 h-5 w-5 md:h-6 md:w-6 text-primary" /> {t.popularTopics}
           </h2>
           <div className="flex flex-wrap gap-2">
             {popularTopics.map(topic => (
