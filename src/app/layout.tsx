@@ -4,6 +4,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
+import { LanguageProvider } from '@/contexts/LanguageContext'; // Added
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Poppins, PT_Sans } from 'next/font/google';
@@ -48,21 +49,22 @@ export default function RootLayout({
       <body className="font-body antialiased flex flex-col min-h-screen">
         <ThemeProvider>
           <AuthProvider>
-            {/* Header and Footer already have internal logic to hide on /videos */}
-            <Header />
-            {pathname === '/videos' ? (
-              children // Render children directly for the /videos page
-            ) : (
-              <main className="flex-grow container mx-auto px-4 py-8">
-                {children} {/* Wrap other pages in the main container */}
-              </main>
-            )}
-            <Footer />
-            <Toaster />
+            <LanguageProvider> {/* Added LanguageProvider */}
+              {/* Header and Footer already have internal logic to hide on /videos */}
+              <Header />
+              {pathname === '/videos' ? (
+                children // Render children directly for the /videos page
+              ) : (
+                <main className="flex-grow container mx-auto px-4 py-8">
+                  {children} {/* Wrap other pages in the main container */}
+                </main>
+              )}
+              <Footer />
+              <Toaster />
+            </LanguageProvider> {/* Closed LanguageProvider */}
           </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
   );
 }
-
