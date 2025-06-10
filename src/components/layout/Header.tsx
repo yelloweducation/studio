@@ -2,7 +2,7 @@
 "use client";
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
-import LuminaLogo from '@/components/LuminaLogo';
+// LuminaLogo import removed as it's no longer used directly in the header's main bar
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { Home, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Menu } from 'lucide-react';
@@ -42,9 +42,9 @@ const Header = () => {
   const commonIconClasses = "mr-2 h-5 w-5";
 
   return (
-    <header className="bg-card shadow-md sticky top-0 z-50">
-      <nav className="container mx-auto px-4 py-3 flex justify-between items-center">
-        <LuminaLogo />
+    <header className="sticky top-0 z-50 bg-transparent"> {/* Removed bg-card and shadow-md, added bg-transparent */}
+      <nav className="container mx-auto px-4 py-3 flex justify-end items-center"> {/* Changed justify-between to justify-end */}
+        {/* LuminaLogo component removed from here */}
         
         {isMobile ? (
           <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>

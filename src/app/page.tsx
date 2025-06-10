@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Video as VideoIcon, Tv, Loader2, X, Search, LayoutGrid } from 'lucide-react';
+import { Video as VideoIcon, Tv, Loader2, X, Search, LayoutGrid, Circle } from 'lucide-react'; // Added Circle
 import VideoCard from '@/components/videos/VideoCard';
 import { videos as mockVideos, type Video, categories as defaultMockCategories, type Category } from '@/data/mockData';
 import CategoryCard from '@/components/categories/CategoryCard';
@@ -34,28 +34,24 @@ export default function Home() {
       const storedCategoriesString = localStorage.getItem('adminCategories');
       if (storedCategoriesString) {
         const parsedCategories = JSON.parse(storedCategoriesString) as Category[];
-        // Use parsedCategories directly if it's a valid array, even if empty
-        if (Array.isArray(parsedCategories)) {
+        if (Array.isArray(parsedCategories)) { // Use if valid array, even empty
             loadedCategories = parsedCategories;
         } else {
-            // Fallback if not an array (malformed data)
-            console.warn("adminCategories in localStorage was not an array, using default.");
+            console.warn("adminCategories in localStorage was not an array, using default mock categories.");
             loadedCategories = defaultMockCategories;
         }
       } else {
-        // Fallback if item doesn't exist in localStorage
         loadedCategories = defaultMockCategories;
       }
     } catch (error) {
-      console.error("Error loading categories from localStorage:", error);
-      loadedCategories = defaultMockCategories; // Fallback to mock data on error
+      console.error("Error loading categories from localStorage for Home:", error);
+      loadedCategories = defaultMockCategories; 
     } finally {
-      setCategories(loadedCategories.slice(0, 6)); // Show a limited number of categories
+      setCategories(loadedCategories.slice(0, 6)); 
       setIsLoadingCategories(false);
     }
 
     setIsLoadingTrendingVideos(true);
-    // For stability, student-facing views use mock data directly for videos for now
     setTrendingVideos(mockVideos.slice(0, 3));
     setIsLoadingTrendingVideos(false);
   }, []);
@@ -71,7 +67,6 @@ export default function Home() {
     if (allFeedVideos.length > 0 && !showVideoFeed) return; 
 
     setIsLoadingFeedVideos(true);
-    // For stability, student-facing views use mock data directly for videos
     setAllFeedVideos(mockVideos);
     setIsLoadingFeedVideos(false);
   };
@@ -122,9 +117,10 @@ export default function Home() {
   return (
     <div className="flex flex-col items-center pb-8">
       <section className="w-full max-w-2xl text-center pt-8 mb-10">
-        <h1 className="text-4xl sm:text-5xl font-headline font-bold mb-4 text-foreground">
-          Welcome to Yellow Institute
-        </h1>
+        <div className="flex items-center justify-center space-x-3 text-4xl sm:text-5xl font-bold font-headline text-foreground mb-4">
+          <Circle size={48} className="text-primary" /> {/* Increased icon size */}
+          <span>Yellow Institute</span>
+        </div>
         <p className="text-lg sm:text-xl text-muted-foreground mb-8">
           Your journey to knowledge and career insights.
         </p>
