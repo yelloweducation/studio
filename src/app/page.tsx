@@ -5,10 +5,9 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Video as VideoIcon, Tv, Loader2, X, Search, LayoutGrid, Circle } from 'lucide-react'; // Added Circle
+import { Video as VideoIcon, Tv, Loader2, X, Search, LayoutGrid, Circle, Compass } from 'lucide-react'; // Added Circle, Compass
 import VideoCard from '@/components/videos/VideoCard';
-import { videos as mockVideos, type Video, categories as defaultMockCategories, type Category } from '@/data/mockData';
-import CategoryCard from '@/components/categories/CategoryCard';
+import { videos as mockVideos, type Video } from '@/data/mockData'; // Categories removed from here
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -17,43 +16,17 @@ const CareerAdviceChatbox = lazy(() => import('@/components/ai/CareerAdviceChatb
 export default function Home() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   
-  const [trendingVideos, setTrendingVideos] = useState<Video[]>([]);
-  const [isLoadingTrendingVideos, setIsLoadingTrendingVideos] = useState(true);
+  // Categories and their loading state are removed as the section is removed.
+  // Trending videos state is removed as the section is removed.
 
   const [showVideoFeed, setShowVideoFeed] = useState(false);
   const [allFeedVideos, setAllFeedVideos] = useState<Video[]>([]);
   const [isLoadingFeedVideos, setIsLoadingFeedVideos] = useState(false);
 
   useEffect(() => {
-    setIsLoadingCategories(true);
-    let loadedCategories: Category[] = [];
-    try {
-      const storedCategoriesString = localStorage.getItem('adminCategories');
-      if (storedCategoriesString) {
-        const parsedCategories = JSON.parse(storedCategoriesString) as Category[];
-        if (Array.isArray(parsedCategories)) { // Use if valid array, even empty
-            loadedCategories = parsedCategories;
-        } else {
-            console.warn("adminCategories in localStorage was not an array, using default mock categories.");
-            loadedCategories = defaultMockCategories;
-        }
-      } else {
-        loadedCategories = defaultMockCategories;
-      }
-    } catch (error) {
-      console.error("Error loading categories from localStorage for Home:", error);
-      loadedCategories = defaultMockCategories; 
-    } finally {
-      setCategories(loadedCategories.slice(0, 6)); 
-      setIsLoadingCategories(false);
-    }
-
-    setIsLoadingTrendingVideos(true);
-    setTrendingVideos(mockVideos.slice(0, 3));
-    setIsLoadingTrendingVideos(false);
+    // Initial data loading for videos (if any were to be displayed directly, now only for feed)
+    // setTrendingVideos(mockVideos.slice(0, 3)); // No longer displayed on main page
   }, []);
 
   const handleSearchSubmit = (e: FormEvent) => {
@@ -67,7 +40,8 @@ export default function Home() {
     if (allFeedVideos.length > 0 && !showVideoFeed) return; 
 
     setIsLoadingFeedVideos(true);
-    setAllFeedVideos(mockVideos);
+    // Simulating loading all videos, in a real app this might be a fetch
+    setAllFeedVideos(mockVideos); 
     setIsLoadingFeedVideos(false);
   };
 
@@ -137,6 +111,17 @@ export default function Home() {
             <span className="sr-only">Search</span>
           </Button>
         </form>
+        
+        <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4 w-full max-w-md mx-auto">
+            <Button asChild size="lg" className="w-full sm:w-auto shadow-md hover:shadow-sm active:translate-y-px transition-all duration-150">
+                <Link href="/courses/search">
+                    <Compass className="mr-2 h-5 w-5" /> Explore
+                </Link>
+            </Button>
+            <Button onClick={handleShowVideos} size="lg" variant="outline" className="w-full sm:w-auto shadow-md hover:shadow-sm active:translate-y-px transition-all duration-150 border-accent text-accent hover:bg-accent/10">
+                <VideoIcon className="mr-2 h-5 w-5" /> View Reels
+            </Button>
+        </div>
       </section>
 
       <section className="w-full max-w-2xl mb-12">
@@ -157,80 +142,8 @@ export default function Home() {
         </Suspense>
       </section>
       
-      <section className="w-full mt-12">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl sm:text-3xl font-headline font-semibold flex items-center">
-            <LayoutGrid className="mr-2 h-7 w-7 text-primary" /> Explore Categories
-          </h2>
-          <Button variant="outline" asChild>
-            <Link href="/courses/search">View All Courses</Link>
-          </Button>
-        </div>
-        {isLoadingCategories ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="bg-card rounded-lg shadow-md">
-                <Skeleton className="w-full h-24 sm:h-32 rounded-t-lg" />
-                <div className="p-3 pt-4">
-                  <Skeleton className="h-5 w-3/4 mx-auto" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : categories.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {categories.map(category => (
-              <CategoryCard key={category.id} category={category} />
-            ))}
-          </div>
-        ) : (
-          <Card className="w-full mt-8">
-            <CardContent className="pt-6">
-              <p className="text-center text-muted-foreground">No categories available right now. Add some in the admin panel!</p>
-            </CardContent>
-          </Card>
-        )}
-      </section>
-
-      <section className="w-full mt-16">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl sm:text-3xl font-headline font-semibold flex items-center">
-            <Tv className="mr-2 h-7 w-7 text-primary" /> Trending Videos
-          </h2>
-          <Button variant="outline" onClick={handleShowVideos} className="hover:border-accent hover:text-accent">
-            <VideoIcon className="mr-2 h-5 w-5" /> View Reels
-          </Button>
-        </div>
-        {isLoadingTrendingVideos ? (
-           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="bg-card rounded-lg shadow-md overflow-hidden">
-                <Skeleton className="w-full aspect-[9/16]" />
-                <div className="p-4">
-                  <Skeleton className="h-4 w-3/4 mb-2" />
-                  <Skeleton className="h-3 w-1/2" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : trendingVideos.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-8">
-            {trendingVideos.map(video => (
-              <div key={video.id} className="w-full aspect-[9/16] rounded-lg overflow-hidden shadow-lg">
-                <VideoCard video={video} />
-              </div>
-            ))}
-          </div>
-        ) : (
-          !showVideoFeed && ( 
-            <Card className="w-full max-w-2xl mt-8">
-              <CardContent className="pt-6">
-                <p className="text-center text-muted-foreground">No trending videos available at the moment.</p>
-              </CardContent>
-            </Card>
-          )
-        )}
-      </section>
+      {/* Explore Categories section removed */}
+      {/* Trending Videos section removed */}
     </div>
   );
 }

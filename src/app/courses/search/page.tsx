@@ -7,10 +7,11 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import CourseCard from '@/components/courses/CourseCard';
+import CategoryCard from '@/components/categories/CategoryCard'; // Added
 import { courses as defaultMockCourses, type Course, categories as defaultMockCategories, type Category } from '@/data/mockData';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Search, X, ChevronLeft } from 'lucide-react';
+import { Search, X, ChevronLeft, LayoutGrid, GraduationCap } from 'lucide-react'; // Added LayoutGrid, GraduationCap
 import { Skeleton } from '@/components/ui/skeleton';
 
 // Client component containing the core logic and UI for the search page
@@ -61,17 +62,16 @@ function SearchCoursesClientLogic() {
       categoriesToUse = defaultMockCategories;
     }
     setAvailableCategories(categoriesToUse);
-    // Initial loading based on localStorage/mock is done, further loading state changes in filter effect
+    // setIsLoading(false) will be handled by the filter effect
   }, []);
 
   useEffect(() => {
-    // Sync local state with URL params if they change (e.g. browser back/forward)
     setSearchTerm(initialQuery);
     setSelectedCategory(initialCategory);
   }, [initialQuery, initialCategory]);
 
   useEffect(() => {
-    setIsLoading(true); // Start loading whenever filters or data change
+    setIsLoading(true); 
 
     let filtered = [...availableCourses];
 
@@ -90,8 +90,7 @@ function SearchCoursesClientLogic() {
     setDisplayedCourses(filtered);
     setIsLoading(false);
 
-    // Update URL
-    const params = new URLSearchParams(searchParams.toString()); // Current params as base
+    const params = new URLSearchParams(searchParams.toString());
     if (searchTerm) {
       params.set('query', searchTerm);
     } else {
@@ -104,7 +103,6 @@ function SearchCoursesClientLogic() {
     }
     
     const newQueryString = params.toString();
-    // Only push if params actually change to avoid redundant navigation and history entries
     if (newQueryString !== searchParams.toString()) {
         router.replace(`/courses/search${newQueryString ? `?${newQueryString}` : ''}`, { scroll: false });
     }
@@ -124,7 +122,7 @@ function SearchCoursesClientLogic() {
             <ChevronLeft className="h-5 w-5" />
             <span className="sr-only">Back</span>
           </Button>
-          <h1 className="text-3xl font-headline font-semibold">Explore Courses</h1>
+          <h1 className="text-3xl font-headline font-semibold">Explore Learning</h1>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
           <div className="md:col-span-2">
@@ -171,7 +169,46 @@ function SearchCoursesClientLogic() {
         )}
       </section>
 
+      {/* Categories Section */}
       <section>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-headline font-semibold flex items-center">
+            <LayoutGrid className="mr-2 h-6 w-6 text-primary" /> Browse Categories
+          </h2>
+        </div>
+        {isLoading ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="bg-card rounded-lg shadow-md">
+                <Skeleton className="w-full h-24 sm:h-32 rounded-t-lg" />
+                <div className="p-3 pt-4">
+                  <Skeleton className="h-5 w-3/4 mx-auto" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : availableCategories.length > 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {availableCategories.map(category => (
+              <CategoryCard key={category.id} category={category} />
+            ))}
+          </div>
+        ) : (
+          <Card className="col-span-full">
+            <CardContent className="pt-6 text-center">
+              <LayoutGrid className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
+              <h3 className="text-lg font-semibold">No Categories Available</h3>
+              <p className="text-sm text-muted-foreground">Categories will appear here once added.</p>
+            </CardContent>
+          </Card>
+        )}
+      </section>
+
+      {/* Course List Section */}
+      <section>
+         <h2 className="text-2xl font-headline font-semibold mb-6 mt-8 flex items-center">
+            <GraduationCap className="mr-2 h-6 w-6 text-primary" /> Available Courses
+        </h2>
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3, 4, 5, 6].map(i => (
@@ -236,9 +273,24 @@ function SearchPageInitialSkeleton() {
           </div>
         </div>
       </section>
+      {/* Category Skeletons in Initial Skeleton */}
+       <section>
+        <Skeleton className="h-7 w-1/2 mb-4 rounded-md" /> {/* Title Skeleton */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {[...Array(6)].map((_, i) => (
+              <div key={`cat-skel-${i}`} className="bg-card rounded-lg shadow-md">
+                <Skeleton className="w-full h-24 sm:h-32 rounded-t-lg" />
+                <div className="p-3 pt-4">
+                  <Skeleton className="h-5 w-3/4 mx-auto rounded-md" />
+                </div>
+              </div>
+            ))}
+          </div>
+      </section>
+      {/* Course Skeletons in Initial Skeleton */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {[1, 2, 3].map(i => (
-          <Card key={i} className="flex flex-col overflow-hidden shadow-lg">
+          <Card key={`course-skel-${i}`} className="flex flex-col overflow-hidden shadow-lg">
             <CardHeader className="p-0">
               <Skeleton className="aspect-[16/9] w-full" />
               <div className="p-6">
@@ -261,8 +313,6 @@ function SearchPageInitialSkeleton() {
   );
 }
 
-// Default export for the page - this component sets up the Suspense boundary.
-// It does not need to be a client component if it's only rendering Suspense and the client child.
 export default function SearchCoursesPage() {
   return (
     <Suspense fallback={<SearchPageInitialSkeleton />}>
