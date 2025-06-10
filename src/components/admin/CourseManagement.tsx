@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Edit3, Trash2, GraduationCap, BookOpen, Clock, Link as LinkIcon, Image as ImageIcon, Info, Tag, DollarSign, Filter, Star } from 'lucide-react';
+import { PlusCircle, Edit3, Trash2, GraduationCap, BookOpen, Clock, Link as LinkIcon, Image as ImageIcon, Info, Tag, DollarSign, Filter, Star, ListChecks, UsersIcon as TargetAudienceIcon, ShieldCheck, Timer } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -22,7 +22,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '../ui/label';
-import { Checkbox } from '../ui/checkbox'; // Added for isFeatured
+import { Checkbox } from '../ui/checkbox';
 
 const LessonForm = ({
   lesson,
@@ -103,8 +103,14 @@ const CourseForm = ({
   const [dataAiHint, setDataAiHint] = useState(course?.dataAiHint || 'education learning');
   const [price, setPrice] = useState<number | string>(course?.price ?? '');
   const [currency, setCurrency] = useState(course?.currency || 'USD');
-  const [isFeatured, setIsFeatured] = useState(course?.isFeatured || false); // Added for featured
+  const [isFeatured, setIsFeatured] = useState(course?.isFeatured || false);
   const [modules, setModules] = useState<Module[]>(course?.modules || []);
+
+  const [learningObjectives, setLearningObjectives] = useState(course?.learningObjectives?.join('\n') || '');
+  const [targetAudience, setTargetAudience] = useState(course?.targetAudience || '');
+  const [prerequisites, setPrerequisites] = useState(course?.prerequisites?.join('\n') || '');
+  const [estimatedTimeToComplete, setEstimatedTimeToComplete] = useState(course?.estimatedTimeToComplete || '');
+
 
   const [editingLesson, setEditingLesson] = useState<{ moduleIndex: number, lessonIndex?: number, lesson?: Partial<Lesson> } | null>(null);
 
@@ -152,7 +158,11 @@ const CourseForm = ({
       dataAiHint,
       price: Number(price) || 0, 
       currency,
-      isFeatured, // Added
+      isFeatured,
+      learningObjectives: learningObjectives.split('\n').filter(s => s.trim() !== ''),
+      targetAudience,
+      prerequisites: prerequisites.split('\n').filter(s => s.trim() !== ''),
+      estimatedTimeToComplete,
       modules,
     };
     onSubmit(courseData);
@@ -244,6 +254,30 @@ const CourseForm = ({
                 <Info className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             </div>
           </div>
+
+          {/* New Fields for Course Details */}
+          <div className="pt-4 border-t">
+            <h3 className="text-lg font-semibold mb-3">Additional Course Information</h3>
+            <div className="space-y-4">
+                <div>
+                    <Label htmlFor="learningObjectives" className="flex items-center"><ListChecks className="mr-2 h-4 w-4 text-muted-foreground"/> Learning Objectives (one per line)</Label>
+                    <Textarea id="learningObjectives" value={learningObjectives} onChange={e => setLearningObjectives(e.target.value)} rows={4} placeholder="Students will be able to...\nUnderstand concept X..."/>
+                </div>
+                <div>
+                    <Label htmlFor="targetAudience" className="flex items-center"><TargetAudienceIcon className="mr-2 h-4 w-4 text-muted-foreground"/> Target Audience</Label>
+                    <Input id="targetAudience" value={targetAudience} onChange={e => setTargetAudience(e.target.value)} placeholder="e.g., Beginners, Advanced Developers"/>
+                </div>
+                <div>
+                    <Label htmlFor="prerequisites" className="flex items-center"><ShieldCheck className="mr-2 h-4 w-4 text-muted-foreground"/> Prerequisites (one per line)</Label>
+                    <Textarea id="prerequisites" value={prerequisites} onChange={e => setPrerequisites(e.target.value)} rows={3} placeholder="Basic HTML knowledge\nFamiliarity with JavaScript..."/>
+                </div>
+                <div>
+                    <Label htmlFor="estimatedTimeToComplete" className="flex items-center"><Timer className="mr-2 h-4 w-4 text-muted-foreground"/> Estimated Time to Complete</Label>
+                    <Input id="estimatedTimeToComplete" value={estimatedTimeToComplete} onChange={e => setEstimatedTimeToComplete(e.target.value)} placeholder="e.g., Approx. 20 hours"/>
+                </div>
+            </div>
+          </div>
+
 
           <div className="space-y-4 pt-4 border-t">
             <h3 className="text-lg font-semibold flex items-center"><BookOpen className="mr-2 h-5 w-5 text-primary"/> Modules</h3>

@@ -25,7 +25,11 @@ export type Course = {
   dataAiHint?: string;
   price?: number;
   currency?: string;
-  isFeatured?: boolean; // Added for featured courses
+  isFeatured?: boolean;
+  learningObjectives?: string[];
+  targetAudience?: string;
+  prerequisites?: string[];
+  estimatedTimeToComplete?: string;
 };
 
 export type User = {
@@ -107,7 +111,16 @@ export const courses: Course[] = [
     dataAiHint: 'programming code',
     price: 0, // Free course
     currency: 'USD',
-    isFeatured: true, // Mark as featured
+    isFeatured: true,
+    learningObjectives: [
+      'Understand the basic structure of an HTML document.',
+      'Apply CSS for styling web pages.',
+      'Write basic JavaScript for interactivity.',
+      'Build a simple static website.'
+    ],
+    targetAudience: 'Absolute beginners with no prior coding experience interested in web development.',
+    prerequisites: ['Basic computer literacy.', 'A modern web browser and text editor.'],
+    estimatedTimeToComplete: 'Approx. 15-20 hours',
     modules: [
       {
         id: 'm1c1',
@@ -146,6 +159,15 @@ export const courses: Course[] = [
     price: 49.99,
     currency: 'USD',
     isFeatured: false,
+    learningObjectives: [
+        'Master ES6+ features like arrow functions, destructuring, and template literals.',
+        'Understand asynchronous JavaScript using Promises and async/await.',
+        'Learn about JavaScript modules and their usage.',
+        'Apply common JavaScript design patterns.'
+    ],
+    targetAudience: 'JavaScript developers with some existing knowledge looking to deepen their understanding.',
+    prerequisites: ['Solid understanding of JavaScript fundamentals (variables, functions, loops, DOM manipulation).', 'Familiarity with HTML and CSS.'],
+    estimatedTimeToComplete: 'Approx. 25-30 hours',
     modules: [
       {
         id: 'm1c2',
@@ -174,7 +196,16 @@ export const courses: Course[] = [
     dataAiHint: 'python data',
     price: 99.00,
     currency: 'USD',
-    isFeatured: true, // Mark as featured
+    isFeatured: true,
+    learningObjectives: [
+        'Use Python libraries like NumPy and Pandas for data manipulation.',
+        'Create data visualizations using Matplotlib and Seaborn.',
+        'Understand the basics of machine learning concepts.',
+        'Build simple predictive models with Scikit-learn.'
+    ],
+    targetAudience: 'Aspiring data scientists or analysts, or developers looking to get into data science.',
+    prerequisites: ['Basic Python programming knowledge is recommended.', 'Familiarity with basic statistics is helpful but not strictly required.'],
+    estimatedTimeToComplete: 'Approx. 40-50 hours',
     modules: [
       {
         id: 'm1c3',
@@ -279,7 +310,7 @@ export const initialLearningPaths: LearningPath[] = [
     icon: 'Milestone',
     courseIds: ['course1', 'course2'], // Example: Links Intro Web Dev and Adv JS
     imageUrl: 'https://placehold.co/300x200.png',
-    dataAiHint: 'web development journey'
+    dataAiHint: 'web development'
   },
   {
     id: 'lp2',
@@ -288,6 +319,6 @@ export const initialLearningPaths: LearningPath[] = [
     icon: 'TrendingUp',
     courseIds: ['course3'], // Example: Links Data Science with Python
     imageUrl: 'https://placehold.co/300x200.png',
-    dataAiHint: 'data analytics career'
+    dataAiHint: 'data analytics'
   },
 ];

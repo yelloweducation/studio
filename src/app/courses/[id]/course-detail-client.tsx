@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChevronLeft, BookOpenText, PlayCircle, Lock, CheckCircle, AlertTriangle, Clock, ExternalLink, ArrowRight, Home, ShoppingCart, BadgeDollarSign, Hourglass } from 'lucide-react';
+import { ChevronLeft, BookOpenText, PlayCircle, Lock, CheckCircle, AlertTriangle, Clock, ExternalLink, ArrowRight, Home, ShoppingCart, BadgeDollarSign, Hourglass, ListChecks, Users as TargetAudienceIcon, ShieldCheck, Timer } from 'lucide-react';
 import { getEmbedUrl } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage, type Language } from '@/contexts/LanguageContext';
@@ -33,9 +33,9 @@ const courseDetailTranslations = {
     taughtBy: "Taught by {instructor}",
     categoryLabel: "Category: {category}",
     priceLabel: "Price: {price} {currency}",
-    courseAccess: "Course Access",
-    loginToPurchase: "Login to Purchase for {price} {currency}",
-    purchaseFor: "Purchase for {price} {currency}",
+    courseAccess: "သင်တန်းကြေးသွင်းရန်",
+    loginToPurchase: "{price} {currency} လော့ဂ်အင်ဝင်ပါ",
+    purchaseFor: "{price} {currency}",
     paymentSubmitted: "Payment Submitted",
     paymentSubmittedDesc: "Your payment is currently under review.",
     startLearning: "Start Learning",
@@ -54,7 +54,15 @@ const courseDetailTranslations = {
     courseNotFound: "Course Not Found",
     courseNotFoundDesc: "Sorry, we couldn't find the course you were looking for (ID: {courseId}). It might have been moved or removed.",
     exploreOtherCourses: "Explore Other Courses",
-    backToHome: "Back to Home"
+    backToHome: "Back to Home",
+    whatYouWillLearn: "What You'll Learn",
+    targetAudience: "Who This Course Is For",
+    prerequisites: "Prerequisites",
+    estimatedTime: "Estimated Time to Complete",
+    noLearningObjectives: "Learning objectives will be listed here soon.",
+    noTargetAudience: "Information about the target audience will be available soon.",
+    noPrerequisites: "No specific prerequisites, or they will be listed soon.",
+    noEstimatedTime: "Estimated completion time will be provided soon.",
   },
   my: {
     backToCourses: "အတန်းများသို့ ပြန်သွားရန်",
@@ -82,7 +90,15 @@ const courseDetailTranslations = {
     courseNotFound: "အတန်း မတွေ့ပါ",
     courseNotFoundDesc: "တောင်းပန်ပါသည်၊ သင်ရှာဖွေနေသော အတန်း (ID: {courseId}) ကို ရှာမတွေ့ပါ။ ၎င်းကို ရွှေ့ပြောင်းခြင်း သို့မဟုတ် ဖယ်ရှားခြင်း ဖြစ်နိုင်ပါသည်။",
     exploreOtherCourses: "အခြားအတန်းများ ရှာဖွေရန်",
-    backToHome: "ပင်မစာမျက်နှာသို့ ပြန်သွားရန်"
+    backToHome: "ပင်မစာမျက်နှာသို့ ပြန်သွားရန်",
+    whatYouWillLearn: "သင်ဘာတွေလေ့လာရမလဲ",
+    targetAudience: "ဒီအတန်းက ဘယ်သူတွေအတွက်လဲ",
+    prerequisites: "ကြိုတင်လိုအပ်ချက်များ",
+    estimatedTime: "ပြီးဆုံးရန် ခန့်မှန်းအချိန်",
+    noLearningObjectives: "သင်ယူရမည့်အချက်များ မကြာမီ ဒီမှာ ဖော်ပြပါမည်။",
+    noTargetAudience: "ဤအတန်းအတွက် ရည်ရွယ်ထားသော ကျောင်းသားများအချက်အလက် မကြာမီ ရရှိပါမည်။",
+    noPrerequisites: "သီးခြားကြိုတင်လိုအပ်ချက်များ မရှိပါ သို့မဟုတ် မကြာမီ ဒီမှာ ဖော်ပြပါမည်။",
+    noEstimatedTime: "ပြီးဆုံးရန် ခန့်မှန်းအချိန် မကြာမီ ဖော်ပြပါမည်။",
   }
 };
 
@@ -364,6 +380,9 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
                     <Skeleton className="h-5 w-3/4" />
                 </CardContent>
             </Card>
+            {/* Skeletons for new sections */}
+            <Card><CardContent className="pt-6"><Skeleton className="h-20 w-full" /></CardContent></Card>
+            <Card><CardContent className="pt-6"><Skeleton className="h-16 w-full" /></CardContent></Card>
           </div>
           <div className="md:col-span-1 space-y-6 md:sticky md:top-24">
             <Card>
@@ -410,7 +429,7 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
     );
   }
 
-  const { title, description, category, instructor, modules, imageUrl, dataAiHint, price, currency } = currentCourse;
+  const { title, description, category, instructor, modules, imageUrl, dataAiHint, price, currency, learningObjectives, targetAudience, prerequisites, estimatedTimeToComplete } = currentCourse;
 
   return (
     <div className="max-w-4xl mx-auto py-2 md:py-8">
@@ -429,7 +448,7 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
                   layout="fill"
                   objectFit="cover"
                   data-ai-hint={dataAiHint || 'course education'}
-                  priority // Added priority for LCP
+                  priority 
                 />
               </div>
             )}
@@ -448,6 +467,65 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
               <p className="text-foreground/90 whitespace-pre-line">{description}</p>
             </CardContent>
           </Card>
+          
+          {/* Learning Objectives */}
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-xl font-headline flex items-center"><ListChecks className="mr-2 h-6 w-6 text-primary" /> {t.whatYouWillLearn}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {learningObjectives && learningObjectives.length > 0 ? (
+                <ul className="list-disc list-inside space-y-1 text-foreground/90 pl-2">
+                  {learningObjectives.map((obj, index) => <li key={index}>{obj}</li>)}
+                </ul>
+              ) : (
+                <p className="text-muted-foreground">{t.noLearningObjectives}</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Target Audience */}
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-xl font-headline flex items-center"><TargetAudienceIcon className="mr-2 h-6 w-6 text-primary" /> {t.targetAudience}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {targetAudience ? (
+                <p className="text-foreground/90">{targetAudience}</p>
+              ) : (
+                <p className="text-muted-foreground">{t.noTargetAudience}</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Prerequisites */}
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-xl font-headline flex items-center"><ShieldCheck className="mr-2 h-6 w-6 text-primary" /> {t.prerequisites}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {prerequisites && prerequisites.length > 0 ? (
+                <ul className="list-disc list-inside space-y-1 text-foreground/90 pl-2">
+                  {prerequisites.map((pre, index) => <li key={index}>{pre}</li>)}
+                </ul>
+              ) : (
+                <p className="text-muted-foreground">{t.noPrerequisites}</p>
+              )}
+            </CardContent>
+          </Card>
+          
+          {/* Estimated Time */}
+           {estimatedTimeToComplete && (
+            <Card className="shadow-lg">
+                <CardHeader>
+                <CardTitle className="text-xl font-headline flex items-center"><Timer className="mr-2 h-6 w-6 text-primary" /> {t.estimatedTime}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                <p className="text-foreground/90">{estimatedTimeToComplete}</p>
+                </CardContent>
+            </Card>
+          )}
+
         </div>
 
         <div className="md:col-span-1 space-y-6 md:sticky md:top-24">
@@ -526,5 +604,3 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
     </div>
   );
 }
-
-    
