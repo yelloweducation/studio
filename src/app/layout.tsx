@@ -1,5 +1,5 @@
 
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next'; // Added Viewport
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/contexts/AuthContext';
@@ -27,11 +27,13 @@ const ptSans = PT_Sans({
 export const metadata: Metadata = {
   title: 'Yellow Institute',
   description: 'Your journey to knowledge starts here at Yellow Institute.',
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    // Removed viewportFit: 'cover'
-  },
+  // Viewport configuration removed from here
+};
+
+// Separate viewport export
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
 };
 
 export default function RootLayout({
@@ -44,7 +46,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className={`${poppins.variable} ${ptSans.variable}`}>
       <head>
-        {/* Viewport meta tag is now handled by the metadata object */}
+        {/* Viewport meta tag is now handled by the viewport export */}
       </head>
       <body className="font-body antialiased flex flex-col min-h-screen">
         <ThemeProvider>
