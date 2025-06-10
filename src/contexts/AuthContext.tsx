@@ -2,7 +2,7 @@
 "use client";
 import type { ReactNode } from 'react';
 import React, { createContext, useState, useEffect, useCallback } from 'react';
-import { getAuthState, saveAuthState, clearAuthState, loginUser as apiLogin, registerUser as apiRegister, logoutUser as apiLogout } from '@/lib/authUtils';
+import { getAuthState as getInitialAuthState, saveAuthState, clearAuthState, loginUser as apiLogin, registerUser as apiRegister, logoutUser as apiLogout } from '@/lib/authUtils';
 import type { User } from '@/data/mockData';
 
 interface AuthContextType {
@@ -26,18 +26,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedAuth = getAuthState();
+    // getInitialAuthState now handles re-verification of role from localStorage users list
+    const storedAuth = getInitialAuthState();
     setAuthState(storedAuth);
     setLoading(false);
   }, []);
 
   const login = useCallback(async (email: string, pass: string) => {
     setLoading(true);
-    const user = apiLogin(email, pass);
+    const user = apiLogin(email, pass); // apiLogin now uses central user list and saves auth state
     if (user) {
-      const newAuthState = { isAuthenticated: true, user, role: user.role };
-      setAuthState(newAuthState);
-      saveAuthState(newAuthState);
+      // Auth state is already saved by apiLogin, just update local context state
+      setAuthState({ isAuthenticated: true, user, role: user.role });
       setLoading(false);
       return user;
     }
@@ -47,11 +47,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const register = useCallback(async (name: string, email: string, pass: string) => {
     setLoading(true);
-    const user = apiRegister(name, email, pass);
+    const user = apiRegister(name, email, pass); // apiRegister now adds to central list and saves auth state
     if (user) {
-      const newAuthState = { isAuthenticated: true, user, role: user.role };
-      setAuthState(newAuthState);
-      saveAuthState(newAuthState);
+      // Auth state is already saved by apiRegister
+      setAuthState({ isAuthenticated: true, user, role: user.role });
       setLoading(false);
       return user;
     }
@@ -60,10 +59,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const logout = useCallback(() => {
-    apiLogout();
+    apiLogout(); // Clears auth state from localStorage
     const newAuthState = { isAuthenticated: false, user: null, role: null };
     setAuthState(newAuthState);
-    clearAuthState();
+    // No need to call clearAuthState() here as apiLogout does it.
   }, []);
 
   return (
