@@ -2,17 +2,19 @@
 // This directive applies to the module, making SearchCoursesClientLogic a client component.
 "use client"; 
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import CourseCard from '@/components/courses/CourseCard';
-import CategoryCard from '@/components/categories/CategoryCard'; // Added
+import CategoryCard from '@/components/categories/CategoryCard';
 import { courses as defaultMockCourses, type Course, categories as defaultMockCategories, type Category } from '@/data/mockData';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Search, X, ChevronLeft, LayoutGrid, GraduationCap } from 'lucide-react'; // Added LayoutGrid, GraduationCap
+import { Search, X, ChevronLeft, LayoutGrid, GraduationCap } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+
+const CareerAdviceChatbox = lazy(() => import('@/components/ai/CareerAdviceChatbox'));
 
 // Client component containing the core logic and UI for the search page
 function SearchCoursesClientLogic() {
@@ -62,7 +64,6 @@ function SearchCoursesClientLogic() {
       categoriesToUse = defaultMockCategories;
     }
     setAvailableCategories(categoriesToUse);
-    // setIsLoading(false) will be handled by the filter effect
   }, []);
 
   useEffect(() => {
@@ -103,10 +104,11 @@ function SearchCoursesClientLogic() {
     }
     
     const newQueryString = params.toString();
-    if (newQueryString !== searchParams.toString()) {
+    // Only push route if the query string actually changed to prevent infinite loops.
+    if (newQueryString !== searchParams.toString().replace(/\+/g, '%20')) { // Handle space encoding
         router.replace(`/courses/search${newQueryString ? `?${newQueryString}` : ''}`, { scroll: false });
     }
-  }, [searchTerm, selectedCategory, availableCourses, availableCategories, router, searchParams]);
+  }, [searchTerm, selectedCategory, availableCourses, router, searchParams]);
 
 
   const handleClearFilters = () => {
@@ -169,14 +171,13 @@ function SearchCoursesClientLogic() {
         )}
       </section>
 
-      {/* Categories Section */}
       <section>
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-headline font-semibold flex items-center">
             <LayoutGrid className="mr-2 h-6 w-6 text-primary" /> Browse Categories
           </h2>
         </div>
-        {isLoading ? (
+        {isLoading && availableCategories.length === 0 ? ( // Show skeleton only if categories are truly loading and not yet available
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="bg-card rounded-lg shadow-md">
@@ -204,12 +205,11 @@ function SearchCoursesClientLogic() {
         )}
       </section>
 
-      {/* Course List Section */}
       <section>
          <h2 className="text-2xl font-headline font-semibold mb-6 mt-8 flex items-center">
             <GraduationCap className="mr-2 h-6 w-6 text-primary" /> Available Courses
         </h2>
-        {isLoading ? (
+        {isLoading && displayedCourses.length === 0 ? ( // Show skeleton only if courses are truly loading and not yet available
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3, 4, 5, 6].map(i => (
               <Card key={i} className="flex flex-col overflow-hidden shadow-lg">
@@ -249,11 +249,28 @@ function SearchCoursesClientLogic() {
           </Card>
         )}
       </section>
+
+      <section className="w-full mt-12 mb-8">
+        <Suspense fallback={
+            <Card className="w-full max-w-2xl mx-auto shadow-xl">
+                <CardHeader className="pb-4">
+                    <Skeleton className="h-7 w-1/2" />
+                </CardHeader>
+                <CardContent>
+                    <Skeleton className="h-40 w-full" />
+                </CardContent>
+                <CardFooter>
+                    <Skeleton className="h-10 w-full" />
+                </CardFooter>
+            </Card>
+        }>
+          <CareerAdviceChatbox />
+        </Suspense>
+      </section>
     </div>
   );
 }
 
-// Skeleton component for the Suspense fallback
 function SearchPageInitialSkeleton() {
   return (
     <div className="space-y-8">
@@ -273,9 +290,8 @@ function SearchPageInitialSkeleton() {
           </div>
         </div>
       </section>
-      {/* Category Skeletons in Initial Skeleton */}
        <section>
-        <Skeleton className="h-7 w-1/2 mb-4 rounded-md" /> {/* Title Skeleton */}
+        <Skeleton className="h-7 w-1/2 mb-4 rounded-md" /> 
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {[...Array(6)].map((_, i) => (
               <div key={`cat-skel-${i}`} className="bg-card rounded-lg shadow-md">
@@ -287,7 +303,6 @@ function SearchPageInitialSkeleton() {
             ))}
           </div>
       </section>
-      {/* Course Skeletons in Initial Skeleton */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {[1, 2, 3].map(i => (
           <Card key={`course-skel-${i}`} className="flex flex-col overflow-hidden shadow-lg">
@@ -308,6 +323,19 @@ function SearchPageInitialSkeleton() {
             </CardFooter>
           </Card>
         ))}
+      </section>
+      <section className="w-full mt-12 mb-8">
+        <Card className="w-full max-w-2xl mx-auto shadow-xl">
+          <CardHeader className="pb-4">
+            <Skeleton className="h-7 w-1/2" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-40 w-full" />
+          </CardContent>
+          <CardFooter>
+            <Skeleton className="h-10 w-full" />
+          </CardFooter>
+        </Card>
       </section>
     </div>
   );

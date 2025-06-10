@@ -11,22 +11,18 @@ import { videos as mockVideos, type Video } from '@/data/mockData'; // Categorie
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
-const CareerAdviceChatbox = lazy(() => import('@/components/ai/CareerAdviceChatbox'));
+// CareerAdviceChatbox import removed
 
 export default function Home() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Categories and their loading state are removed as the section is removed.
-  // Trending videos state is removed as the section is removed.
-
   const [showVideoFeed, setShowVideoFeed] = useState(false);
   const [allFeedVideos, setAllFeedVideos] = useState<Video[]>([]);
   const [isLoadingFeedVideos, setIsLoadingFeedVideos] = useState(false);
 
   useEffect(() => {
     // Initial data loading for videos (if any were to be displayed directly, now only for feed)
-    // setTrendingVideos(mockVideos.slice(0, 3)); // No longer displayed on main page
   }, []);
 
   const handleSearchSubmit = (e: FormEvent) => {
@@ -40,7 +36,6 @@ export default function Home() {
     if (allFeedVideos.length > 0 && !showVideoFeed) return; 
 
     setIsLoadingFeedVideos(true);
-    // Simulating loading all videos, in a real app this might be a fetch
     setAllFeedVideos(mockVideos); 
     setIsLoadingFeedVideos(false);
   };
@@ -92,7 +87,7 @@ export default function Home() {
     <div className="flex flex-col items-center pb-8">
       <section className="w-full max-w-2xl text-center pt-8 mb-10">
         <div className="flex items-center justify-center space-x-3 text-4xl sm:text-5xl font-bold font-headline text-foreground mb-4">
-          <Circle size={48} className="text-primary" /> {/* Increased icon size */}
+          <Circle size={48} className="text-primary" />
           <span>Yellow Institute</span>
         </div>
         <p className="text-lg sm:text-xl text-muted-foreground mb-8">
@@ -124,26 +119,8 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="w-full max-w-2xl mb-12">
-        <Suspense fallback={
-            <Card className="w-full max-w-2xl mx-auto shadow-xl">
-                <CardHeader className="pb-4">
-                    <Skeleton className="h-7 w-1/2" />
-                </CardHeader>
-                <CardContent>
-                    <Skeleton className="h-40 w-full" />
-                </CardContent>
-                <CardFooter>
-                    <Skeleton className="h-10 w-full" />
-                </CardFooter>
-            </Card>
-        }>
-          <CareerAdviceChatbox />
-        </Suspense>
-      </section>
+      {/* AI Career Advisor section removed from here */}
       
-      {/* Explore Categories section removed */}
-      {/* Trending Videos section removed */}
     </div>
   );
 }
