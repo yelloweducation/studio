@@ -72,7 +72,7 @@ const searchPageTranslations = {
     availableCourses: "ရရှိနိုင်သော သင်တန်းများ", // Available Courses
     noCoursesFound: "သင်တန်းများ မတွေ့ပါ", // No Courses Found
     noCoursesDesc: "သင်၏ ရှာဖွေရေး စကားလုံးများ သို့မဟုတ် အမျိုးအစား စစ်ထုတ်မှုများကို ချိန်ညှိကြည့်ပါ။", // Try adjusting your search terms or category filters.
-    exploreLearningPaths: "သင်ယူမှု လမ်းကြောင်းများ ရှာဖွေရန်", // Explore Learning Paths
+    exploreLearningPaths: "ပညာရေးလမ်းကြောင်းများ", // Explore Learning Paths
     viewPath: "လမ်းကြောင်းကြည့်ရန်" // View Path
   }
 };
@@ -606,3 +606,4 @@ export default function SearchCoursesPage() {
     </Suspense>
   );
 }
+
