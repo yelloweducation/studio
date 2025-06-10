@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Video as VideoIcon, Search, Compass, Circle } from 'lucide-react'; 
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext'; // Added
+import { cn } from "@/lib/utils"; // Added for conditional classnames
 
 // Placeholder translations - in a real app, these would come from i18n files/library
 const homePageTranslations = {
@@ -59,12 +60,18 @@ export default function Home() {
   return (
     <div className="flex flex-col items-center pb-8">
       <section className="w-full max-w-2xl md:max-w-3xl lg:max-w-4xl text-center pt-8 mb-10">
-        <div className="flex items-center justify-center space-x-2 lg:space-x-3 text-3xl sm:text-4xl lg:text-5xl font-bold font-headline text-foreground mb-4">
-          <Circle size={32} className="text-primary block lg:hidden" /> 
-          <Circle size={40} className="text-primary hidden lg:block" /> 
+        <div className={cn(
+          "flex items-center justify-center space-x-2 lg:space-x-3 font-bold font-headline text-foreground mb-4",
+          language === 'my' ? 'text-2xl sm:text-3xl lg:text-4xl' : 'text-3xl sm:text-4xl lg:text-5xl'
+        )}>
+          <Circle size={language === 'my' ? 28 : 32} className="text-primary block lg:hidden" /> 
+          <Circle size={language === 'my' ? 36 : 40} className="text-primary hidden lg:block" /> 
           <span>{t.title}</span>
         </div>
-        <p className="text-lg sm:text-xl lg:text-2xl text-muted-foreground mb-8">
+        <p className={cn(
+          "text-muted-foreground mb-8",
+          language === 'my' ? 'text-base sm:text-lg lg:text-xl' : 'text-lg sm:text-xl lg:text-2xl'
+        )}>
           {t.subtitle}
         </p>
         <form onSubmit={handleSearchSubmit} className="flex w-full max-w-lg sm:max-w-xl lg:max-w-2xl mx-auto">
