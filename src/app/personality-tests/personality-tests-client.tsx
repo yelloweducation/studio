@@ -175,26 +175,26 @@ export default function PersonalityTestsClient() {
 
   if (quizState === 'not_started') {
     return (
-      <div className="space-y-10 flex flex-col items-center">
+      <div className="space-y-8 md:space-y-10 flex flex-col items-center">
         <section className="text-center max-w-2xl">
-          <Lightbulb className="mx-auto h-16 w-16 text-primary mb-4" />
-          <h1 className="text-3xl md:text-4xl font-bold font-headline mb-3">{t.quizIntroTitle}</h1>
-          <p className="text-lg md:text-xl text-muted-foreground">{t.quizIntroDescription}</p>
+          <Lightbulb className="mx-auto h-12 w-12 md:h-16 md:w-16 text-primary mb-3 md:mb-4" />
+          <h1 className="text-2xl md:text-3xl font-bold font-headline mb-2 md:mb-3">{t.quizIntroTitle}</h1>
+          <p className="text-base md:text-lg text-muted-foreground">{t.quizIntroDescription}</p>
         </section>
-        <Button size="lg" onClick={handleStartQuiz} className="shadow-lg">
+        <Button size="lg" onClick={handleStartQuiz} className="shadow-lg text-base md:text-lg">
           {t.startQuizButton} <ArrowRight className="ml-2 h-5 w-5" />
         </Button>
-        <section className="w-full max-w-2xl mt-12">
+        <section className="w-full max-w-2xl mt-10 md:mt-12">
           <Card className="bg-accent/10 border-accent/30 shadow-lg">
             <CardHeader>
-              <CardTitle className="text-xl font-headline flex items-center">
-                <CheckCircle className="mr-3 h-6 w-6 text-accent" />
+              <CardTitle className="text-lg md:text-xl font-headline flex items-center">
+                <CheckCircle className="mr-2 md:mr-3 h-5 w-5 md:h-6 md:w-6 text-accent" />
                 {t.pageTitle}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-base text-muted-foreground">{t.pageDescription}</p>
-              <p className="text-sm text-muted-foreground mt-3">
+              <p className="text-sm md:text-base text-muted-foreground">{t.pageDescription}</p>
+              <p className="text-xs md:text-sm text-muted-foreground mt-2 md:mt-3">
                 Note: This is a simplified illustrative quiz. For a comprehensive personality assessment like MBTI (e.g., ENFJ, INTP), further development is planned.
               </p>
             </CardContent>
@@ -205,20 +205,20 @@ export default function PersonalityTestsClient() {
   }
 
   if (quizState === 'in_progress_initial' || quizState === 'in_progress_additional') {
-    if (!currentQuestion) return <p>Loading question...</p>; // Should not happen if logic is correct
+    if (!currentQuestion) return <p>Loading question...</p>; 
 
     return (
-      <div className="max-w-xl mx-auto">
+      <div className="max-w-lg md:max-w-xl mx-auto">
         <Card className="shadow-xl">
           <CardHeader>
-            <Progress value={progressPercentage} className="w-full h-2 mb-3" />
-            <CardTitle className="text-lg font-headline text-center">
+            <Progress value={progressPercentage} className="w-full h-1.5 md:h-2 mb-2 md:mb-3" />
+            <CardTitle className="text-sm md:text-base font-headline text-center text-muted-foreground">
               {t.questionProgress
                 .replace('{current}', overallQuestionNumber.toString())
                 .replace('{total}', (quizState === 'in_progress_initial' ? initialQuizQuestions.length : initialQuizQuestions.length + additionalQuizQuestions.length).toString())
               }
             </CardTitle>
-            <CardDescription className="text-xl text-center text-foreground pt-2 min-h-[60px]">
+            <CardDescription className="text-lg md:text-xl text-center text-foreground pt-1 md:pt-2 min-h-[50px] md:min-h-[60px]">
               {getTranslatedText(currentQuestion.text)}
             </CardDescription>
           </CardHeader>
@@ -226,14 +226,14 @@ export default function PersonalityTestsClient() {
             <RadioGroup
               value={answers[currentQuestion.id]}
               onValueChange={(value) => handleAnswerSelect(currentQuestion.id, value as StyleId)}
-              className="space-y-3"
+              className="space-y-2.5 md:space-y-3"
             >
               {currentQuestion.options.map(option => (
                 <Label
                   key={option.value}
                   htmlFor={`option-${currentQuestion.id}-${option.value}`}
-                  className={`flex items-center space-x-3 p-4 border rounded-lg cursor-pointer transition-all
-                    ${answers[currentQuestion.id] === option.value ? 'bg-primary/10 border-primary ring-2 ring-primary' : 'hover:bg-muted/50'}`}
+                  className={`flex items-center space-x-2 md:space-x-3 p-3 md:p-4 border rounded-lg cursor-pointer transition-all text-sm leading-snug
+                    ${answers[currentQuestion.id] === option.value ? 'bg-primary/10 border-primary ring-1 md:ring-2 ring-primary' : 'hover:bg-muted/50'}`}
                 >
                   <RadioGroupItem value={option.value} id={`option-${currentQuestion.id}-${option.value}`} />
                   <span>{getTranslatedText(option.text)}</span>
@@ -243,7 +243,7 @@ export default function PersonalityTestsClient() {
           </CardContent>
           <CardFooter>
             <Button 
-              className="w-full text-lg py-3" 
+              className="w-full text-base md:text-lg py-2.5 md:py-3" 
               onClick={handleNextQuestion}
               disabled={!answers[currentQuestion.id]}
             >
@@ -260,20 +260,20 @@ export default function PersonalityTestsClient() {
 
   if (quizState === 'asking_for_more') {
     return (
-      <div className="max-w-xl mx-auto">
+      <div className="max-w-lg md:max-w-xl mx-auto">
         <Card className="shadow-xl text-center">
           <CardHeader>
-            <HelpCircle className="mx-auto h-16 w-16 text-primary mb-3" />
-            <CardTitle className="text-2xl font-headline">{t.askMoreQuestionsTitle}</CardTitle>
-            <CardDescription className="text-lg text-muted-foreground pt-1">
-              {t.askMoreQuestionsDescription.replace('3 more questions', `${additionalQuizQuestions.length} more questions`)}
+            <HelpCircle className="mx-auto h-12 w-12 md:h-16 md:w-16 text-primary mb-2 md:mb-3" />
+            <CardTitle className="text-xl md:text-2xl font-headline">{t.askMoreQuestionsTitle}</CardTitle>
+            <CardDescription className="text-base md:text-lg text-muted-foreground pt-1">
+              {t.askMoreQuestionsDescription.replace(`${additionalQuizQuestions.length} more questions`, `${additionalQuizQuestions.length} ${language === 'my' ? 'ခု နောက်ထပ်မေးခွန်းများ' : 'more questions'}`)}
             </CardDescription>
           </CardHeader>
-          <CardFooter className="flex flex-col sm:flex-row gap-3">
-            <Button className="w-full sm:flex-1 text-lg py-3" onClick={handleProceedWithAdditionalQuestions}>
+          <CardFooter className="flex flex-col sm:flex-row gap-2 md:gap-3">
+            <Button className="w-full sm:flex-1 text-base md:text-lg py-2.5 md:py-3" onClick={handleProceedWithAdditionalQuestions}>
               {t.askMoreQuestionsConfirm}
             </Button>
-            <Button className="w-full sm:flex-1 text-lg py-3" variant="outline" onClick={handleDeclineAdditionalQuestions}>
+            <Button className="w-full sm:flex-1 text-base md:text-lg py-2.5 md:py-3" variant="outline" onClick={handleDeclineAdditionalQuestions}>
               {t.askMoreQuestionsDecline}
             </Button>
           </CardFooter>
@@ -290,20 +290,20 @@ export default function PersonalityTestsClient() {
 
 
     return (
-      <div className="max-w-xl mx-auto">
+      <div className="max-w-lg md:max-w-xl mx-auto">
         <Card className="shadow-xl text-center">
           <CardHeader>
-            <resultStyle.Icon className="mx-auto h-16 w-16 text-primary mb-3" />
-            <CardTitle className="text-2xl font-headline">{t.resultTitle}</CardTitle>
-            <CardDescription className="text-3xl font-bold text-accent pt-1">
+            <resultStyle.Icon className="mx-auto h-12 w-12 md:h-16 md:w-16 text-primary mb-2 md:mb-3" />
+            <CardTitle className="text-xl md:text-2xl font-headline">{t.resultTitle}</CardTitle>
+            <CardDescription className="text-2xl md:text-3xl font-bold text-accent pt-1">
               {styleTitle}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-lg text-foreground/90">{styleDescription}</p>
+            <p className="text-base md:text-lg text-foreground/90">{styleDescription}</p>
           </CardContent>
           <CardFooter>
-            <Button className="w-full text-lg py-3" onClick={handleStartQuiz} variant="outline">
+            <Button className="w-full text-base md:text-lg py-2.5 md:py-3" onClick={handleStartQuiz} variant="outline">
               <RotateCcw className="mr-2 h-5 w-5" /> {t.retakeQuizButton}
             </Button>
           </CardFooter>
@@ -314,4 +314,3 @@ export default function PersonalityTestsClient() {
 
   return <p>Loading quiz or an unexpected state occurred...</p>;
 }
-
