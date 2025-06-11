@@ -18,7 +18,6 @@ if (!ai || typeof ai.definePrompt !== 'function' || typeof ai.defineFlow !== 'fu
   console.error(errorMessage);
 }
 
-// Define Zod schema for individual course objects as they are passed to the flow
 const CourseSchemaForFlow = z.object({
   id: z.string(),
   title: z.string(),
@@ -40,29 +39,41 @@ const RecommendedCourseSchema = z.object({
 
 const QuickRecommendationOutputSchema = z.object({
   recommendations: z.array(RecommendedCourseSchema).max(2).describe('A list of 1 or 2 course recommendations based on the user interest and available courses.'),
+  error?: z.string().optional().describe("An error message if recommendations could not be generated."),
 });
 export type QuickRecommendationOutput = z.infer<typeof QuickRecommendationOutputSchema>;
 
 export async function getQuickRecommendations(input: QuickRecommendationInput): Promise<QuickRecommendationOutput> {
-  console.log('[getQuickRecommendations] Invoked with user interest:', input.userInterest, 'and', input.availableCourses?.length, 'courses.');
-  if (!ai || typeof ai.definePrompt !== 'function') { // Defensive check before using quickRecommendationFlow
-    console.error("[getQuickRecommendations] Genkit 'ai' object is not available or not properly initialized. Cannot proceed.");
-    return { recommendations: [] };
-  }
   try {
+    console.log('[getQuickRecommendations] Invoked with user interest:', input.userInterest, 'and', input.availableCourses?.length, 'courses.');
+
+    if (!ai || typeof ai.defineFlow !== 'function') {
+      console.error("[getQuickRecommendations] Genkit 'ai' object is not properly initialized. AI features will not work effectively.");
+      return { recommendations: [], error: "The AI recommendation service is currently unavailable due to an initialization error." };
+    }
+
+    if (typeof quickRecommendationFlow !== 'function') {
+      const errorMsg = "[getQuickRecommendations] 'quickRecommendationFlow' is not defined as a function. This indicates a serious problem with the AI flow module initialization.";
+      console.error(errorMsg);
+      return { recommendations: [], error: "A critical error occurred with the AI recommendation flow." };
+    }
+    
     if (!input.availableCourses || input.availableCourses.length === 0) {
         console.warn('[getQuickRecommendations] No available courses provided.');
-        return { recommendations: [] }; // No courses to recommend from
+        return { recommendations: [], error: "No courses available to recommend from." };
     }
+
     const result = await quickRecommendationFlow(input);
-    console.log('[getQuickRecommendations] Successfully returned recommendations.');
+    console.log('[getQuickRecommendations] Successfully received result from quickRecommendationFlow.');
     return result;
+
   } catch (error) {
-    console.error("[getQuickRecommendations] Error calling quickRecommendationFlow:", error);
-    if (error instanceof Error && error.stack) {
+    console.error("[getQuickRecommendations] Unexpected top-level error in getQuickRecommendations server action:", error);
+    let userFriendlyMessage = "An unexpected error occurred while trying to get course recommendations. Please try again later.";
+     if (error instanceof Error && error.stack) {
         console.error("[getQuickRecommendations] Stack trace:", error.stack);
     }
-    return { recommendations: [] }; // Return empty on error
+    return { recommendations: [], error: userFriendlyMessage };
   }
 }
 
@@ -96,15 +107,15 @@ if (ai && typeof ai.definePrompt === 'function' && typeof ai.defineFlow === 'fun
       outputSchema: QuickRecommendationOutputSchema,
     },
     async (input): Promise<QuickRecommendationOutput> => {
-      console.log('[quickRecommendationFlow] Invoked with user interest:', input.userInterest, 'and', input.availableCourses?.length, 'courses.');
+      console.log('[quickRecommendationFlow] Real flow invoked with user interest:', input.userInterest, 'and', input.availableCourses?.length, 'courses.');
       try {
         const genkitResponse = await prompt(input);
         
         if (!genkitResponse || !genkitResponse.output) {
           console.warn('[quickRecommendationFlow] QuickRecommendationPrompt returned no output for interest:', input.userInterest, 'Genkit Response:', JSON.stringify(genkitResponse));
-          return { recommendations: [] };
+          return { recommendations: [], error: "The AI couldn't generate recommendations for that interest." };
         }
-        // Ensure recommendations are drawn from provided course IDs
+        
         const validRecommendations = genkitResponse.output.recommendations.filter(rec => 
           input.availableCourses.some(course => course.id === rec.id)
         );
@@ -121,14 +132,14 @@ if (ai && typeof ai.definePrompt === 'function' && typeof ai.defineFlow === 'fun
         if (error instanceof Error && error.stack) {
           console.error("[quickRecommendationFlow] Stack trace:", error.stack);
         }
-        return { recommendations: [] };
+        return { recommendations: [], error: "An error occurred while the AI was processing your recommendation request." };
       }
     }
   );
 } else {
-    console.error("[QuickRecommendationFlow] ai.definePrompt or ai.defineFlow is not available. Skipping prompt and flow definition.");
+    console.error("[QuickRecommendationFlow] ai.definePrompt or ai.defineFlow is not available at module level. Skipping real prompt and flow definition, using fallback.");
     quickRecommendationFlow = async (input: QuickRecommendationInput): Promise<QuickRecommendationOutput> => {
-        console.error("[QuickRecommendationFlow] Fallback used because 'ai' was not initialized.");
-        return { recommendations: [] };
+        console.warn("[QuickRecommendationFlow] Fallback quickRecommendationFlow used because 'ai' was not properly initialized or Genkit methods were unavailable.");
+        return { recommendations: [], error: "The AI recommendation service is currently unavailable due to a setup issue. Please check server logs." };
     };
 }

@@ -15,9 +15,6 @@ import {z} from 'genkit';
 if (!ai || typeof ai.definePrompt !== 'function' || typeof ai.defineFlow !== 'function') {
   const errorMessage = "[CareerAdviceFlow] CRITICAL: Genkit 'ai' object from '@/ai/genkit' is not properly initialized or is missing essential methods. This usually means Genkit initialization failed, often due to missing API keys (e.g., GOOGLE_API_KEY) in the environment. Check Netlify function logs and environment variable settings for 'GOOGLE_API_KEY' or 'GEMINI_API_KEY'.";
   console.error(errorMessage);
-  // If 'ai' is truly unusable, subsequent calls like ai.definePrompt will fail.
-  // Throwing an error here might give a clearer initial error in logs if this module is loaded and 'ai' is bad.
-  // However, it's often better to let the specific 'ai.method' call fail to see the exact point of usage error.
 }
 
 const CareerAdviceInputSchema = z.object({
@@ -31,29 +28,42 @@ const CareerAdviceOutputSchema = z.object({
 export type CareerAdviceOutput = z.infer<typeof CareerAdviceOutputSchema>;
 
 export async function getCareerAdvice(input: CareerAdviceInput): Promise<CareerAdviceOutput> {
-  console.log('[getCareerAdvice] Invoked with input query:', input.query);
-  if (!ai || typeof ai.definePrompt !== 'function') { // Defensive check before using careerAdviceFlow
-    console.error("[getCareerAdvice] Genkit 'ai' object is not available or not properly initialized. Cannot proceed.");
-    return { advice: "AI service is currently unavailable due to an initialization error. Please check server logs." };
-  }
   try {
-    const result = await careerAdviceFlow(input);
-    console.log('[getCareerAdvice] Successfully returned advice.');
-    return result;
-  } catch (error) {
-    console.error("[getCareerAdvice] Error calling careerAdviceFlow:", error);
-    if (error instanceof Error && error.stack) {
-        console.error("[getCareerAdvice] Stack trace:", error.stack);
+    console.log('[getCareerAdvice] Invoked with input query:', input.query);
+
+    if (!ai || typeof ai.defineFlow !== 'function') {
+      console.error("[getCareerAdvice] Genkit 'ai' object is not properly initialized. AI features will not work effectively.");
+      // This error should ideally be caught by the main try-catch, but for clarity:
+      return { advice: "The AI service is currently unavailable due to an initialization error. Please check server logs or contact support." };
     }
-    // Ensure the returned object matches the CareerAdviceOutput schema
-    return { advice: "An unexpected error occurred while trying to get career advice from the AI. Please check the logs or try again later." };
+    
+    if (typeof careerAdviceFlow !== 'function') {
+        const errorMsg = "[getCareerAdvice] 'careerAdviceFlow' is not defined as a function. This indicates a serious problem with the AI flow module initialization, possibly due to Genkit setup issues.";
+        console.error(errorMsg);
+        return { advice: "A critical error occurred with the AI advisory flow. Please contact support if this persists." };
+    }
+
+    const result = await careerAdviceFlow(input);
+    // careerAdviceFlow (real or fallback) is expected to return CareerAdviceOutput
+    console.log('[getCareerAdvice] Successfully received result from careerAdviceFlow.');
+    return result;
+
+  } catch (error) {
+    console.error("[getCareerAdvice] Unexpected top-level error in getCareerAdvice server action:", error);
+    let userFriendlyMessage = "An unexpected error occurred while trying to get career advice. Please try again later or check server logs.";
+    if (error instanceof Error) {
+        // You could check for specific error messages or types if needed here
+        // For example: if (error.message.includes("API_KEY_INVALID")) { ... }
+        if (error.stack) {
+            console.error("[getCareerAdvice] Stack trace:", error.stack);
+        }
+    }
+    return { advice: userFriendlyMessage };
   }
 }
 
 // Define prompt and flow only if 'ai' seems available.
-// This is a bit problematic as top-level consts are hard to make conditional.
-// The check above and in genkit.ts is the primary defense.
-let prompt: any; // Define with any to handle potential undefined 'ai'
+let prompt: any; 
 let careerAdviceFlow: any;
 
 if (ai && typeof ai.definePrompt === 'function' && typeof ai.defineFlow === 'function') {
@@ -79,7 +89,7 @@ if (ai && typeof ai.definePrompt === 'function' && typeof ai.defineFlow === 'fun
       outputSchema: CareerAdviceOutputSchema,
     },
     async (input): Promise<CareerAdviceOutput> => {
-      console.log('[careerAdviceFlow] Invoked with input query:', input.query);
+      console.log('[careerAdviceFlow] Real flow invoked with input query:', input.query);
       try {
         const genkitResponse = await prompt(input);
         
@@ -94,16 +104,14 @@ if (ai && typeof ai.definePrompt === 'function' && typeof ai.defineFlow === 'fun
         if (error instanceof Error && error.stack) {
           console.error("[careerAdviceFlow] Stack trace:", error.stack);
         }
-        // Ensure the returned object matches the CareerAdviceOutput schema
         return { advice: "An error occurred while the AI was processing your career advice request. Please try again later." };
       }
     }
   );
 } else {
-    console.error("[CareerAdviceFlow] ai.definePrompt or ai.defineFlow is not available. Skipping prompt and flow definition.");
-    // Define a fallback for careerAdviceFlow if 'ai' is not initialized
+    console.error("[CareerAdviceFlow] ai.definePrompt or ai.defineFlow is not available at module level. Skipping real prompt and flow definition, using fallback.");
     careerAdviceFlow = async (input: CareerAdviceInput): Promise<CareerAdviceOutput> => {
-        console.error("[CareerAdviceFlow] Fallback used because 'ai' was not initialized.");
-        return { advice: "AI service is currently unavailable (initialization failed). Please check server logs." };
+        console.warn("[CareerAdviceFlow] Fallback careerAdviceFlow used because 'ai' was not properly initialized or Genkit methods were unavailable.");
+        return { advice: "The AI career advisor service is currently unavailable due to a setup issue. Please check server logs or contact support." };
     };
 }
