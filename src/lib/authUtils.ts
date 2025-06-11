@@ -1,8 +1,8 @@
 
 import type { User } from '@/data/mockData';
-import { users as initialMockUsers } from '@/data/mockData';
-import { db } from './firebase'; // Import Firestore instance
-import { collection, query, where, getDocs, addDoc, doc, setDoc, updateDoc } from 'firebase/firestore';
+import { mockUsersForSeeding } from '@/data/mockData'; // Changed from initialMockUsers
+import { db } from './firebase';
+import { collection, query, where, getDocs, addDoc, doc, setDoc, updateDoc, serverTimestamp, writeBatch, getDoc } from 'firebase/firestore'; // Added getDoc
 
 const AUTH_STORAGE_KEY = 'luminaLearnAuth';
 
@@ -12,7 +12,6 @@ export interface AuthState {
   role: 'student' | 'admin' | null;
 }
 
-// Helper to fetch a user by email from Firestore
 const getUserByEmailFromFirestore = async (email: string): Promise<User | null> => {
   try {
     const usersCol = collection(db, 'users');
@@ -28,23 +27,6 @@ const getUserByEmailFromFirestore = async (email: string): Promise<User | null> 
   return null;
 };
 
-// Helper to fetch a user by ID from Firestore
-const getUserByIdFromFirestore = async (userId: string): Promise<User | null> => {
-  try {
-    const userDocRef = doc(db, 'users', userId);
-    // Correct way to get a document by ID if you have the ID:
-    const userSnap = await getDocs(query(collection(db, 'users'), where('__name__', '==', userId)));
-     if (!userSnap.empty) {
-        const userDoc = userSnap.docs[0];
-        return { id: userDoc.id, ...userDoc.data() } as User;
-    }
-  } catch (error) {
-    console.error("Error fetching user by ID from Firestore:", error);
-  }
-  return null;
-};
-
-// Function to get all users from Firestore
 export const getAllUsersFromFirestore = async (): Promise<User[]> => {
   try {
     const usersCol = collection(db, 'users');
@@ -56,19 +38,18 @@ export const getAllUsersFromFirestore = async (): Promise<User[]> => {
   }
 };
 
-// Function to update a user's role in Firestore
 export const updateUserRoleInFirestore = async (userId: string, newRole: 'admin' | 'student'): Promise<void> => {
   try {
     const userDocRef = doc(db, 'users', userId);
     await updateDoc(userDocRef, {
-      role: newRole
+      role: newRole,
+      updatedAt: serverTimestamp() // Also update timestamp
     });
   } catch (error) {
     console.error(`Error updating role for user ${userId} in Firestore:`, error);
-    throw error; // Re-throw to be caught by the calling component
+    throw error;
   }
 };
-
 
 export const getAuthState = (): AuthState => {
   if (typeof window === 'undefined') {
@@ -78,14 +59,7 @@ export const getAuthState = (): AuthState => {
   if (storedState) {
     try {
       const parsedState = JSON.parse(storedState) as AuthState;
-      // Re-verify user existence and role if using Firestore as the source of truth
-      // For this example, we'll trust the stored user object if it exists.
-      // A robust solution would involve checking against Firebase Auth's current user
-      // and fetching fresh role data from Firestore upon app load.
       if (parsedState.isAuthenticated && parsedState.user) {
-        // Attempt to use the user data directly from the auth token for role resilience
-        // if the main user list (previously from localStorage, now Firestore) might be out of sync.
-        // This is a heuristic for the described Netlify logout issue.
         return parsedState;
       }
     } catch (e) {
@@ -110,8 +84,7 @@ export const clearAuthState = () => {
 
 export const loginUser = async (email: string, password_raw: string): Promise<User | null> => {
   const user = await getUserByEmailFromFirestore(email);
-
-  if (user && user.passwordHash === password_raw) {
+  if (user && user.passwordHash === password_raw) { // Simplified password check
     saveAuthState({ isAuthenticated: true, user, role: user.role });
     return user;
   }
@@ -126,17 +99,21 @@ export const registerUser = async (name: string, email: string, password_raw: st
     return null;
   }
 
-  const newUserOmitId: Omit<User, 'id'> = {
+  const newUserOmitId: Omit<User, 'id' | 'createdAt'> = {
     name,
     email,
-    role: 'student',
-    passwordHash: password_raw,
+    role: 'student', // Default role
+    passwordHash: password_raw, // Simplified password storage
   };
 
   try {
     const usersCol = collection(db, 'users');
-    const docRef = await addDoc(usersCol, newUserOmitId);
-    const createdUser: User = { id: docRef.id, ...newUserOmitId };
+    const fullUserData = {
+      ...newUserOmitId,
+      createdAt: serverTimestamp(),
+    };
+    const docRef = await addDoc(usersCol, fullUserData);
+    const createdUser: User = { id: docRef.id, ...newUserOmitId, createdAt: new Date() };
     saveAuthState({ isAuthenticated: true, user: createdUser, role: createdUser.role });
     return createdUser;
   } catch (error) {
@@ -153,34 +130,51 @@ export const findUserByEmail = async (email: string): Promise<User | null> => {
   return await getUserByEmailFromFirestore(email);
 };
 
-export const seedInitialUsers = async () => {
-  const usersCol = collection(db, 'users');
-  const snapshot = await getDocs(usersCol);
-  if (snapshot.empty) {
-    console.log("Users collection is empty. Seeding initial mock users to Firestore...");
-    for (const user of initialMockUsers) {
-      const existing = await getUserByEmailFromFirestore(user.email);
-      if (!existing) {
-        try {
-          const userRef = doc(db, 'users', user.id);
-          await setDoc(userRef, {
+// --- Seeding Function for Users ---
+export const seedInitialUsersToFirestore = async (): Promise<{ successCount: number, errorCount: number, skippedCount: number }> => {
+  let successCount = 0;
+  let errorCount = 0;
+  let skippedCount = 0;
+  const batch = writeBatch(db);
+
+  for (const user of mockUsersForSeeding) {
+    try {
+      // Check by email first to prevent duplicates if IDs are not stable or for general safety
+      const existingUserByEmail = await getUserByEmailFromFirestore(user.email);
+      if (existingUserByEmail) {
+        skippedCount++;
+        continue;
+      }
+      
+      // If using mock IDs, check if document with that ID exists
+      const userRef = doc(db, 'users', user.id);
+      const docSnap = await getDoc(userRef);
+
+      if (!docSnap.exists()) {
+        const userData = { 
             name: user.name,
             email: user.email,
             role: user.role,
-            passwordHash: user.passwordHash
-          });
-        } catch (error) {
-          console.error("Error seeding user:", user.email, error);
-        }
+            passwordHash: user.passwordHash, // In a real app, this would be securely hashed by Firebase Auth
+            createdAt: serverTimestamp() 
+        };
+        batch.set(userRef, userData);
+        successCount++;
+      } else {
+        skippedCount++; // Skipped because user with this ID already exists
       }
+    } catch (e) {
+      console.error(`Error preparing to seed user ${user.email} (ID: ${user.id}):`, e);
+      errorCount++;
     }
-    console.log("Initial user seeding complete (if any were missing).");
-  } else {
-    // console.log("Users collection already contains data. No seeding needed.");
   }
-};
 
-// Ensure initial users are seeded (call this cautiously, e.g., on app init or manually)
-// Removed automatic call from here to avoid multiple executions.
-// Call this from a higher-level component or setup script if needed.
-// seedInitialUsers();
+  try {
+    await batch.commit();
+  } catch (e) {
+    console.error("Error committing user seed batch:", e);
+    errorCount += successCount; // Assume all attempted in batch failed if commit fails
+    successCount = 0;
+  }
+  return { successCount, errorCount, skippedCount };
+};

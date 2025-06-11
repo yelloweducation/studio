@@ -2,6 +2,12 @@
 import { db } from './firebase';
 import { collection, getDocs, addDoc, doc, setDoc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, getDoc, where, writeBatch, Timestamp } from 'firebase/firestore';
 import type { Category, Course, Video, LearningPath, PaymentSettings, PaymentSubmission, Enrollment } from '@/data/mockData';
+import { 
+  mockCoursesForSeeding, 
+  mockCategoriesForSeeding, 
+  mockVideosForSeeding, 
+  mockLearningPathsForSeeding 
+} from '@/data/mockData'; // Import mock data for seeding
 
 // --- Category Functions ---
 export const getCategoriesFromFirestore = async (): Promise<Category[]> => {
@@ -16,21 +22,23 @@ export const getCategoriesFromFirestore = async (): Promise<Category[]> => {
   }
 };
 
-export const addCategoryToFirestore = async (categoryData: Omit<Category, 'id'>): Promise<Category> => {
+export const addCategoryToFirestore = async (categoryData: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>): Promise<Category> => {
   try {
     const categoriesCol = collection(db, 'categories');
-    const docRef = await addDoc(categoriesCol, {
+    const fullCategoryData = {
       ...categoryData,
       createdAt: serverTimestamp(),
-    });
-    return { id: docRef.id, ...categoryData, createdAt: new Date() }; // Return with approximate timestamp
+      updatedAt: serverTimestamp(),
+    };
+    const docRef = await addDoc(categoriesCol, fullCategoryData);
+    return { id: docRef.id, ...categoryData, createdAt: new Date(), updatedAt: new Date() };
   } catch (error) {
     console.error("Error adding category to Firestore:", error);
     throw error;
   }
 };
 
-export const updateCategoryInFirestore = async (categoryId: string, categoryData: Partial<Omit<Category, 'id'>>): Promise<void> => {
+export const updateCategoryInFirestore = async (categoryId: string, categoryData: Partial<Omit<Category, 'id' | 'createdAt' | 'updatedAt'>>): Promise<void> => {
   try {
     const categoryDocRef = doc(db, 'categories', categoryId);
     await updateDoc(categoryDocRef, {
@@ -81,21 +89,23 @@ export const getCourseByIdFromFirestore = async (courseId: string): Promise<Cour
   }
 };
 
-export const addCourseToFirestore = async (courseData: Omit<Course, 'id'>): Promise<Course> => {
+export const addCourseToFirestore = async (courseData: Omit<Course, 'id' | 'createdAt' | 'updatedAt'>): Promise<Course> => {
   try {
     const coursesCol = collection(db, 'courses');
-    const docRef = await addDoc(coursesCol, {
+    const fullCourseData = {
       ...courseData,
       createdAt: serverTimestamp(),
-    });
-    return { id: docRef.id, ...courseData, createdAt: new Date() };
+      updatedAt: serverTimestamp(),
+    };
+    const docRef = await addDoc(coursesCol, fullCourseData);
+    return { id: docRef.id, ...courseData, createdAt: new Date(), updatedAt: new Date() };
   } catch (error) {
     console.error("Error adding course to Firestore:", error);
     throw error;
   }
 };
 
-export const updateCourseInFirestore = async (courseId: string, courseData: Partial<Omit<Course, 'id'>>): Promise<void> => {
+export const updateCourseInFirestore = async (courseId: string, courseData: Partial<Omit<Course, 'id' | 'createdAt' | 'updatedAt'>>): Promise<void> => {
   try {
     const courseDocRef = doc(db, 'courses', courseId);
     await updateDoc(courseDocRef, {
@@ -122,30 +132,32 @@ export const deleteCourseFromFirestore = async (courseId: string): Promise<void>
 export const getVideosFromFirestore = async (): Promise<Video[]> => {
   try {
     const videosCol = collection(db, 'videos');
-    const q = query(videosCol, orderBy('createdAt', 'desc')); // Example: order by creation date
+    const q = query(videosCol, orderBy('createdAt', 'desc'));
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Video));
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), createdAt: (doc.data().createdAt as Timestamp)?.toDate ? (doc.data().createdAt as Timestamp).toDate().toISOString() : doc.data().createdAt } as Video));
   } catch (error) {
     console.error("Error fetching videos from Firestore:", error);
     return [];
   }
 };
 
-export const addVideoToFirestore = async (videoData: Omit<Video, 'id'>): Promise<Video> => {
+export const addVideoToFirestore = async (videoData: Omit<Video, 'id' | 'createdAt' | 'updatedAt'>): Promise<Video> => {
   try {
     const videosCol = collection(db, 'videos');
-    const docRef = await addDoc(videosCol, {
+    const fullVideoData = {
       ...videoData,
       createdAt: serverTimestamp(),
-    });
-    return { id: docRef.id, ...videoData, createdAt: new Date() };
+      updatedAt: serverTimestamp(),
+    };
+    const docRef = await addDoc(videosCol, fullVideoData);
+    return { id: docRef.id, ...videoData, createdAt: new Date(), updatedAt: new Date() };
   } catch (error) {
     console.error("Error adding video to Firestore:", error);
     throw error;
   }
 };
 
-export const updateVideoInFirestore = async (videoId: string, videoData: Partial<Omit<Video, 'id'>>): Promise<void> => {
+export const updateVideoInFirestore = async (videoId: string, videoData: Partial<Omit<Video, 'id' | 'createdAt' | 'updatedAt'>>): Promise<void> => {
   try {
     const videoDocRef = doc(db, 'videos', videoId);
     await updateDoc(videoDocRef, {
@@ -181,21 +193,23 @@ export const getLearningPathsFromFirestore = async (): Promise<LearningPath[]> =
   }
 };
 
-export const addLearningPathToFirestore = async (pathData: Omit<LearningPath, 'id'>): Promise<LearningPath> => {
+export const addLearningPathToFirestore = async (pathData: Omit<LearningPath, 'id' | 'createdAt' | 'updatedAt'>): Promise<LearningPath> => {
   try {
     const pathsCol = collection(db, 'learningPaths');
-    const docRef = await addDoc(pathsCol, {
+    const fullPathData = {
       ...pathData,
       createdAt: serverTimestamp(),
-    });
-    return { id: docRef.id, ...pathData, createdAt: new Date() };
+      updatedAt: serverTimestamp(),
+    };
+    const docRef = await addDoc(pathsCol, fullPathData);
+    return { id: docRef.id, ...pathData, createdAt: new Date(), updatedAt: new Date() };
   } catch (error) {
     console.error("Error adding learning path to Firestore:", error);
     throw error;
   }
 };
 
-export const updateLearningPathInFirestore = async (pathId: string, pathData: Partial<Omit<LearningPath, 'id'>>): Promise<void> => {
+export const updateLearningPathInFirestore = async (pathId: string, pathData: Partial<Omit<LearningPath, 'id' | 'createdAt' | 'updatedAt'>>): Promise<void> => {
   try {
     const pathDocRef = doc(db, 'learningPaths', pathId);
     await updateDoc(pathDocRef, {
@@ -219,7 +233,7 @@ export const deleteLearningPathFromFirestore = async (pathId: string): Promise<v
 };
 
 // --- PaymentSettings Functions ---
-const PAYMENT_SETTINGS_DOC_ID = 'globalPaymentSettings'; // Use a fixed ID for the single settings document
+const PAYMENT_SETTINGS_DOC_ID = 'globalPaymentSettings';
 
 export const getPaymentSettingsFromFirestore = async (): Promise<PaymentSettings | null> => {
   try {
@@ -228,7 +242,7 @@ export const getPaymentSettingsFromFirestore = async (): Promise<PaymentSettings
     if (docSnap.exists()) {
       return docSnap.data() as PaymentSettings;
     }
-    return null; // Or return initialPaymentSettings from mockData if preferred as a default
+    return null;
   } catch (error) {
     console.error("Error fetching payment settings from Firestore:", error);
     return null;
@@ -238,10 +252,10 @@ export const getPaymentSettingsFromFirestore = async (): Promise<PaymentSettings
 export const savePaymentSettingsToFirestore = async (settingsData: PaymentSettings): Promise<void> => {
   try {
     const settingsDocRef = doc(db, 'paymentSettings', PAYMENT_SETTINGS_DOC_ID);
-    await setDoc(settingsDocRef, { // Use setDoc with merge:true or just update if sure it exists
+    await setDoc(settingsDocRef, {
       ...settingsData,
       updatedAt: serverTimestamp(),
-    }, { merge: true }); // merge:true creates the doc if it doesn't exist, or updates if it does
+    }, { merge: true });
   } catch (error) {
     console.error("Error saving payment settings to Firestore:", error);
     throw error;
@@ -257,7 +271,6 @@ export const getPaymentSubmissionsFromFirestore = async (): Promise<PaymentSubmi
     return querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
-        // Convert Firestore Timestamps to ISO strings if they are stored as Timestamps
         submittedAt: (doc.data().submittedAt as Timestamp)?.toDate ? (doc.data().submittedAt as Timestamp).toDate().toISOString() : doc.data().submittedAt,
         reviewedAt: (doc.data().reviewedAt as Timestamp)?.toDate ? (doc.data().reviewedAt as Timestamp).toDate().toISOString() : doc.data().reviewedAt,
       } as PaymentSubmission));
@@ -278,13 +291,13 @@ export const addPaymentSubmissionToFirestore = async (submissionData: Omit<Payme
       updatedAt: serverTimestamp(),
     };
     const docRef = await addDoc(submissionsCol, fullSubmissionData);
-    return { 
-        id: docRef.id, 
-        ...submissionData, 
-        status: 'pending', 
-        submittedAt: fullSubmissionData.submittedAt, 
-        createdAt: new Date(), 
-        updatedAt: new Date() 
+    return {
+        id: docRef.id,
+        ...submissionData,
+        status: 'pending',
+        submittedAt: fullSubmissionData.submittedAt,
+        createdAt: new Date(),
+        updatedAt: new Date()
     };
   } catch (error) {
     console.error("Error adding payment submission to Firestore:", error);
@@ -297,7 +310,7 @@ export const updatePaymentSubmissionInFirestore = async (submissionId: string, d
     const submissionDocRef = doc(db, 'paymentSubmissions', submissionId);
     await updateDoc(submissionDocRef, {
       ...dataToUpdate,
-      reviewedAt: dataToUpdate.reviewedAt || new Date().toISOString(), // Ensure reviewedAt is set/updated
+      reviewedAt: dataToUpdate.reviewedAt || new Date().toISOString(),
       updatedAt: serverTimestamp(),
     });
   } catch (error) {
@@ -305,7 +318,6 @@ export const updatePaymentSubmissionInFirestore = async (submissionId: string, d
     throw error;
   }
 };
-
 
 // --- Enrollment Functions ---
 export const getEnrollmentForUserAndCourse = async (userId: string, courseId: string): Promise<Enrollment | null> => {
@@ -366,4 +378,140 @@ export const getEnrollmentsByUserId = async (userId: string): Promise<Enrollment
     console.error(`Error fetching enrollments for user ${userId}:`, error);
     return [];
   }
+};
+
+// --- Seeding Functions ---
+export const seedCoursesToFirestore = async (): Promise<{ successCount: number, errorCount: number, skippedCount: number }> => {
+  let successCount = 0;
+  let errorCount = 0;
+  let skippedCount = 0;
+  const batch = writeBatch(db);
+
+  for (const course of mockCoursesForSeeding) {
+    const courseRef = doc(db, 'courses', course.id);
+    try {
+      const docSnap = await getDoc(courseRef);
+      if (!docSnap.exists()) {
+        const courseData = { ...course, createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
+        batch.set(courseRef, courseData);
+        successCount++;
+      } else {
+        skippedCount++;
+      }
+    } catch (e) {
+      console.error(`Error preparing to seed course ${course.id}:`, e);
+      errorCount++;
+    }
+  }
+
+  try {
+    await batch.commit();
+  } catch (e) {
+    console.error("Error committing course seed batch:", e);
+    // If batch commit fails, a portion of successCount might be errors
+    errorCount += successCount; // Assume all attempted in batch failed if commit fails
+    successCount = 0;
+  }
+  return { successCount, errorCount, skippedCount };
+};
+
+export const seedCategoriesToFirestore = async (): Promise<{ successCount: number, errorCount: number, skippedCount: number }> => {
+  let successCount = 0;
+  let errorCount = 0;
+  let skippedCount = 0;
+  const batch = writeBatch(db);
+
+  for (const category of mockCategoriesForSeeding) {
+    const categoryRef = doc(db, 'categories', category.id);
+    try {
+      const docSnap = await getDoc(categoryRef);
+      if (!docSnap.exists()) {
+        const categoryData = { ...category, createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
+        batch.set(categoryRef, categoryData);
+        successCount++;
+      } else {
+        skippedCount++;
+      }
+    } catch (e) {
+      console.error(`Error preparing to seed category ${category.id}:`, e);
+      errorCount++;
+    }
+  }
+  try {
+    await batch.commit();
+  } catch (e) {
+    console.error("Error committing category seed batch:", e);
+    errorCount += successCount;
+    successCount = 0;
+  }
+  return { successCount, errorCount, skippedCount };
+};
+
+export const seedVideosToFirestore = async (): Promise<{ successCount: number, errorCount: number, skippedCount: number }> => {
+  let successCount = 0;
+  let errorCount = 0;
+  let skippedCount = 0;
+  const batch = writeBatch(db);
+
+  for (const video of mockVideosForSeeding) {
+    const videoRef = doc(db, 'videos', video.id);
+    try {
+      const docSnap = await getDoc(videoRef);
+      if (!docSnap.exists()) {
+         // Ensure createdAt from mock data is converted to Firestore Timestamp if it's a Date object
+        const videoData = { 
+            ...video, 
+            createdAt: video.createdAt instanceof Date ? Timestamp.fromDate(video.createdAt) : serverTimestamp(), // Use mock date or serverTimestamp
+            updatedAt: serverTimestamp() 
+        };
+        batch.set(videoRef, videoData);
+        successCount++;
+      } else {
+        skippedCount++;
+      }
+    } catch (e) {
+      console.error(`Error preparing to seed video ${video.id}:`, e);
+      errorCount++;
+    }
+  }
+  try {
+    await batch.commit();
+  } catch (e) {
+    console.error("Error committing video seed batch:", e);
+    errorCount += successCount;
+    successCount = 0;
+  }
+  return { successCount, errorCount, skippedCount };
+};
+
+export const seedLearningPathsToFirestore = async (): Promise<{ successCount: number, errorCount: number, skippedCount: number }> => {
+  let successCount = 0;
+  let errorCount = 0;
+  let skippedCount = 0;
+  const batch = writeBatch(db);
+
+  for (const path of mockLearningPathsForSeeding) {
+    const pathRef = doc(db, 'learningPaths', path.id);
+    try {
+      const docSnap = await getDoc(pathRef);
+      if (!docSnap.exists()) {
+        const pathData = { ...path, createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
+        batch.set(pathRef, pathData);
+        successCount++;
+      } else {
+        skippedCount++;
+      }
+    } catch (e) {
+      console.error(`Error preparing to seed learning path ${path.id}:`, e);
+      errorCount++;
+    }
+  }
+  try {
+    await batch.commit();
+  } catch (e) {
+    console.error("Error committing learning path seed batch:", e);
+    errorCount += successCount;
+    successCount = 0;
+  }
+  return { successCount, errorCount, skippedCount };
 };

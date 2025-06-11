@@ -11,8 +11,9 @@ import CategoryManagement from "@/components/admin/CategoryManagement";
 import PaymentSubmissions from "@/components/admin/PaymentSubmissions";
 import PaymentSettingsManagement from "@/components/admin/PaymentSettingsManagement";
 import LearningPathManagement from "@/components/admin/LearningPathManagement";
+import DataSeeding from "@/components/admin/DataSeeding"; // Added
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, BarChart3, Settings as SettingsIcon, Video as VideoIcon, Image as ImageIcon, Shapes, GraduationCap, Menu as MenuIcon, CreditCard, BookOpenCheck } from "lucide-react";
+import { Users, BarChart3, Settings as SettingsIcon, Video as VideoIcon, Image as ImageIcon, Shapes, GraduationCap, Menu as MenuIcon, CreditCard, BookOpenCheck, DatabaseZap } from "lucide-react"; // Added DatabaseZap
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import {
@@ -21,7 +22,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useLanguage, type Language } from '@/contexts/LanguageContext'; // Added
+import { useLanguage, type Language } from '@/contexts/LanguageContext';
 
 const adminDashboardTranslations = {
   en: {
@@ -36,19 +37,21 @@ const adminDashboardTranslations = {
     images: "Images",
     users: "Users",
     stats: "Stats",
+    dataSeed: "Data Seed", // Added
   },
   my: {
-    title: "အက်ဒမင် ဒက်ရှ်ဘုတ်", // Admin Dashboard
-    description: "သင်၏ လေ့လာရေး ပလက်ဖောင်းကို စီမံပါ။", // Manage your learning platform.
-    courses: "အတန်းများ", // Courses
-    categories: "အမျိုးအစားများ", // Categories
-    learningPaths: "လမ်းကြောင်းများ", // Paths
-    payments: "ငွေပေးချေမှုများ", // Payments
-    paymentConfig: "ငွေပေးချေမှု ဆက်တင်", // Payment Config
-    videos: "ဗီဒီယိုများ", // Videos
-    images: "ပုံများ", // Images
-    users: "အသုံးပြုသူများ", // Users
-    stats: "စာရင်းအင်း", // Stats
+    title: "အက်ဒမင် ဒက်ရှ်ဘုတ်",
+    description: "သင်၏ လေ့လာရေး ပလက်ဖောင်းကို စီမံပါ။",
+    courses: "အတန်းများ",
+    categories: "အမျိုးအစားများ",
+    learningPaths: "လမ်းကြောင်းများ",
+    payments: "ငွေပေးချေမှုများ",
+    paymentConfig: "ငွေပေးချေမှု ဆက်တင်",
+    videos: "ဗီဒီယိုများ",
+    images: "ပုံများ",
+    users: "အသုံးပြုသူများ",
+    stats: "စာရင်းအင်း",
+    dataSeed: "ဒေတာထည့်သွင်းရန်", // Added
   }
 };
 
@@ -62,14 +65,15 @@ const adminTabsConfig = (t: typeof adminDashboardTranslations.en) => [
   { value: "images", label: t.images, Icon: ImageIcon },
   { value: "users", label: t.users, Icon: Users },
   { value: "stats", label: t.stats, Icon: BarChart3 },
+  { value: "dataSeed", label: t.dataSeed, Icon: DatabaseZap }, // Added
 ];
 
 export default function AdminDashboardPage() {
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState("courses");
-  const { language } = useLanguage(); // Added
-  const t = adminDashboardTranslations[language]; // Added
-  const adminTabs = adminTabsConfig(t); // Added
+  const { language } = useLanguage();
+  const t = adminDashboardTranslations[language];
+  const adminTabs = adminTabsConfig(t);
 
   const currentTab = adminTabs.find(tab => tab.value === activeTab) || adminTabs[0];
 
@@ -110,14 +114,14 @@ export default function AdminDashboardPage() {
               </DropdownMenu>
             </div>
           ) : (
-            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-2 mb-6">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-10 gap-2 mb-6">
               {adminTabs.map((tab) => (
                 <TabsTrigger
                   key={tab.value}
                   value={tab.value}
                   className="py-2.5 px-3 text-sm sm:text-base sm:py-3"
                 >
-                  <tab.Icon className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/> {tab.label}
+                  <tab.Icon className="mr-1.5 h-4 w-4 sm:h-5 sm:w-5"/> {tab.label}
                 </TabsTrigger>
               ))}
             </TabsList>
@@ -149,6 +153,9 @@ export default function AdminDashboardPage() {
           </TabsContent>
           <TabsContent value="stats">
             <EnrollmentStats />
+          </TabsContent>
+          <TabsContent value="dataSeed"> {/* Added */}
+            <DataSeeding />
           </TabsContent>
         </Tabs>
       </div>

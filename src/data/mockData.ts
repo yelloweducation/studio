@@ -1,6 +1,6 @@
 
-import type { LucideIcon } from 'lucide-react'; // Keep for potential direct use in components
-import type * as LucideIcons from 'lucide-react'; // For FlashcardCategory iconName type
+import type { LucideIcon } from 'lucide-react';
+import type * as LucideIcons from 'lucide-react';
 
 export type Lesson = {
   id: string;
@@ -27,7 +27,7 @@ export type Question = {
   text: string;
   options: Option[];
   correctOptionId: string;
-  points?: number; // Optional points per question
+  points?: number;
 };
 
 export type Quiz = {
@@ -35,11 +35,11 @@ export type Quiz = {
   title: string;
   quizType: 'practice' | 'graded';
   questions: Question[];
-  passingScore?: number; // For graded quizzes, e.g., 70 for 70%
+  passingScore?: number;
 };
 
 export type Course = {
-  id: string; // Firestore document ID
+  id: string;
   title: string;
   description: string;
   category: string;
@@ -55,95 +55,86 @@ export type Course = {
   prerequisites?: string[];
   estimatedTimeToComplete?: string;
   quizzes?: Quiz[];
-  // Timestamps for Firestore
-  createdAt?: any; // Firestore ServerTimestamp
-  updatedAt?: any; // Firestore ServerTimestamp
+  createdAt?: any;
+  updatedAt?: any;
 };
 
 export type User = {
-  id: string; // Firestore document ID (or Firebase Auth UID)
+  id: string;
   name: string;
   email: string;
   role: 'student' | 'admin';
-  passwordHash: string; // For mock/simplified auth; Firebase Auth handles this securely.
-  // Timestamps for Firestore
-  createdAt?: any; // Firestore ServerTimestamp
+  passwordHash: string;
+  createdAt?: any;
 };
 
 export type Enrollment = {
-  id: string; // Firestore document ID
+  id: string;
   userId: string;
   courseId: string;
-  progress: number; // 0-100
-  enrolledDate: string; // ISO date string
-  // Timestamps for Firestore
-  createdAt?: any; // Firestore ServerTimestamp
-  updatedAt?: any; // Firestore ServerTimestamp
+  progress: number;
+  enrolledDate: string;
+  createdAt?: any;
+  updatedAt?: any;
 };
 
 export type Video = {
-  id: string; // Firestore document ID
+  id: string;
   title: string;
   description: string;
   thumbnailUrl?: string;
-  videoUrl?: string;
-  embedUrl?: string;
+  videoUrl?: string; // This was for direct video file links, embedUrl is preferred
+  embedUrl?: string; // For YouTube, TikTok embeds
   dataAiHint?: string;
-  // Timestamps for Firestore
-  createdAt?: any; // Firestore ServerTimestamp
-  updatedAt?: any; // Firestore ServerTimestamp
+  createdAt?: any;
+  updatedAt?: any;
 };
 
 export type Category = {
-  id: string; // Firestore document ID
+  id: string;
   name: string;
   imageUrl?: string;
   dataAiHint?: string;
   iconName?: keyof typeof LucideIcons;
-  // Timestamps for Firestore
-  createdAt?: any; // Firestore ServerTimestamp
-  updatedAt?: any; // Firestore ServerTimestamp
+  createdAt?: any;
+  updatedAt?: any;
 };
 
 export type PaymentSubmissionStatus = 'pending' | 'approved' | 'rejected';
 
 export type PaymentSubmission = {
-  id: string; // Firestore document ID
+  id: string;
   userId: string;
   courseId: string;
   amount: number;
   currency: string;
-  screenshotUrl: string; // Consider Firebase Storage for actual file uploads
+  screenshotUrl: string;
   status: PaymentSubmissionStatus;
-  submittedAt: string; // ISO date string
-  reviewedAt?: string; // ISO date string
+  submittedAt: string;
+  reviewedAt?: string;
   adminNotes?: string;
-  // Timestamps for Firestore
-  createdAt?: any; // Firestore ServerTimestamp
-  updatedAt?: any; // Firestore ServerTimestamp
+  createdAt?: any;
+  updatedAt?: any;
 };
 
 export type PaymentSettings = {
-  // id: string; // Typically, there's one document for settings, e.g., 'globalPaymentSettings'
   bankName?: string;
   accountNumber?: string;
   accountHolderName?: string;
   additionalInstructions?: string;
-  // Timestamps for Firestore
-  updatedAt?: any; // Firestore ServerTimestamp
+  updatedAt?: any;
 };
 
 export type LearningPath = {
-  id: string; // Firestore document ID
+  id: string;
   title: string;
   description: string;
   icon?: string;
   courseIds: string[];
   imageUrl?: string;
   dataAiHint?: string;
-  // Timestamps for Firestore
-  createdAt?: any; // Firestore ServerTimestamp
-  updatedAt?: any; // Firestore ServerTimestamp
+  createdAt?: any;
+  updatedAt?: any;
 };
 
 export type FlashcardCategory = {
@@ -162,17 +153,14 @@ export type Flashcard = {
   pronunciation?: string;
 };
 
+// --- Default Mock Data for Seeding ---
+// These arrays are intended for initial data seeding into Firestore.
 
-// --- Default/Initial Mock Data ---
-// This data can be used for seeding Firestore if it's empty,
-// or as a fallback if Firestore is unavailable during development.
-// The application should now primarily fetch data from Firestore.
-
-export const courses_DEPRECATED_USE_FIRESTORE: Course[] = [
+export const mockCoursesForSeeding: Course[] = [
   {
     id: 'course1',
     title: 'Introduction to Web Development',
-    description: 'Learn the fundamentals of HTML, CSS, and JavaScript.',
+    description: 'Learn the fundamentals of HTML, CSS, and JavaScript. Build your first static website and understand core web concepts.',
     category: 'Web Development',
     instructor: 'Dr. Web Coder',
     imageUrl: 'https://placehold.co/600x400.png',
@@ -195,7 +183,7 @@ export const courses_DEPRECATED_USE_FIRESTORE: Course[] = [
         title: 'HTML Basics',
         lessons: [
           { id: 'l1m1c1', title: 'Intro to HTML', duration: '10min', description: 'An overview of HTML structure and tags.', embedUrl: 'https://www.youtube.com/watch?v=kUMe1FH4CHE' },
-          { id: 'l2m1c1', title: 'HTML Forms', duration: '12min', description: 'Learn how to create forms in HTML.'}
+          { id: 'l2m1c1', title: 'HTML Forms', duration: '12min', description: 'Learn how to create forms in HTML.', imageUrl: 'https://placehold.co/600x400.png' }
         ]
       },
       {
@@ -203,61 +191,120 @@ export const courses_DEPRECATED_USE_FIRESTORE: Course[] = [
         title: 'CSS Fundamentals',
         lessons: [
           { id: 'l1m2c1', title: 'Styling with CSS', duration: '15min', description: 'Introduction to CSS selectors and properties.' },
-          { id: 'l2m2c1', title: 'CSS Box Model', duration: '18min', description: 'Understanding the CSS box model.'}
+          { id: 'l2m2c1', title: 'CSS Box Model', duration: '18min', description: 'Understanding the CSS box model.', embedUrl: 'https://www.youtube.com/watch?v=rggvsg08c2g' }
         ]
       }
     ],
-    quizzes: [ /* ... quizzes ... */ ]
+    quizzes: [
+      {
+        id: 'quiz1c1',
+        title: 'HTML Basics Quiz',
+        quizType: 'practice',
+        questions: [
+          { id: 'q1quiz1c1', text: 'What does HTML stand for?', options: [{id: 'o1', text:'Hyper Text Markup Language'}, {id: 'o2', text:'High Tech Modern Language'}], correctOptionId: 'o1' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'course2',
+    title: 'Advanced JavaScript Concepts',
+    description: 'Dive deep into JavaScript, exploring asynchronous programming, closures, and modern ES6+ features.',
+    category: 'JavaScript',
+    instructor: 'Prof. JS Guru',
+    imageUrl: 'https://placehold.co/600x400.png',
+    dataAiHint: 'javascript advanced',
+    price: 49.99,
+    currency: 'USD',
+    isFeatured: true,
+    learningObjectives: [
+      'Master asynchronous JavaScript (Promises, async/await).',
+      'Understand closures and lexical scoping.',
+      'Utilize ES6+ features like arrow functions, destructuring, and modules.',
+      'Learn about event loop and JavaScript runtime.'
+    ],
+    targetAudience: 'Developers with basic JavaScript knowledge looking to deepen their understanding.',
+    prerequisites: ['Solid understanding of JavaScript fundamentals (variables, loops, functions).'],
+    estimatedTimeToComplete: 'Approx. 25-30 hours',
+    modules: [
+      {
+        id: 'm1c2',
+        title: 'Asynchronous JavaScript',
+        lessons: [
+          { id: 'l1m1c2', title: 'Callbacks & Promises', duration: '20min', embedUrl: 'https://www.youtube.com/watch?v=DHvZLI7Db8E' },
+          { id: 'l2m1c2', title: 'Async/Await', duration: '15min' }
+        ]
+      }
+    ]
   },
 ];
-export const defaultMockCourses = courses_DEPRECATED_USE_FIRESTORE;
 
-export const users: User[] = [
-  { id: 'user1', name: 'Student User', email: 'student@example.com', role: 'student', passwordHash: 'password123' },
-  { id: 'user2', name: 'Admin User', email: 'admin@example.com', role: 'admin', passwordHash: 'adminpass' },
-  { id: 'user3', name: 'Jane Doe', email: 'jane@example.com', role: 'student', passwordHash: 'password123' },
+export const mockUsersForSeeding: User[] = [
+  { id: 'user1-seed', name: 'Student User', email: 'student@example.com', role: 'student', passwordHash: 'password123' },
+  { id: 'user2-seed', name: 'Admin User', email: 'admin@example.com', role: 'admin', passwordHash: 'adminpass' },
 ];
 
+export const mockVideosForSeeding: Video[] = [
+  { id: 'video1-seed', title: '🎬 Quick HTML Tip', description: 'A short tip on HTML structure for beginners.', thumbnailUrl: 'https://placehold.co/360x640.png', dataAiHint: 'code snippet', embedUrl: 'https://www.youtube.com/watch?v=kUMe1FH4CHE', createdAt: new Date('2023-01-01T10:00:00Z') },
+  { id: 'video2-seed', title: '🚀 CSS Flexbox Explained', description: 'Understand CSS Flexbox in under 5 minutes!', thumbnailUrl: 'https://placehold.co/360x640.png', dataAiHint: 'css layout', embedUrl: 'https://www.youtube.com/watch?v=fYq5PXgSsbE', createdAt: new Date('2023-01-02T11:00:00Z') },
+];
+
+export const mockCategoriesForSeeding: Category[] = [
+  { id: 'cat1-seed', name: 'Web Development', imageUrl: 'https://placehold.co/200x150.png', dataAiHint: 'coding web', iconName: 'Globe' },
+  { id: 'cat2-seed', name: 'Data Science', imageUrl: 'https://placehold.co/200x150.png', dataAiHint: 'analytics charts', iconName: 'DatabaseZap' },
+  { id: 'cat3-seed', name: 'JavaScript', imageUrl: 'https://placehold.co/200x150.png', dataAiHint: 'javascript logo', iconName: 'Braces' },
+  { id: 'cat4-seed', name: 'Cloud Computing', imageUrl: 'https://placehold.co/200x150.png', dataAiHint: 'cloud network', iconName: 'Cloud' },
+  { id: 'cat5-seed', name: 'AI & ML', imageUrl: 'https://placehold.co/200x150.png', dataAiHint: 'artificial intelligence', iconName: 'BrainCircuit' },
+];
+
+export const mockLearningPathsForSeeding: LearningPath[] = [
+  {
+    id: 'lp1-seed',
+    title: 'Full-Stack Web Developer Path',
+    description: 'Master front-end and back-end technologies to build complete web applications from scratch.',
+    icon: 'Milestone', // Lucide icon name
+    courseIds: ['course1', 'course2'], // Ensure these IDs match seeded course IDs
+    imageUrl: 'https://placehold.co/300x200.png',
+    dataAiHint: 'web development journey'
+  },
+  {
+    id: 'lp2-seed',
+    title: 'JavaScript Fundamentals',
+    description: 'A focused path to build a strong foundation in JavaScript, from basics to more advanced concepts.',
+    icon: 'BookOpenText',
+    courseIds: ['course2'], // Assuming 'course2' is Advanced JS. Create a basic JS course if needed.
+    imageUrl: 'https://placehold.co/300x200.png',
+    dataAiHint: 'javascript learning'
+  }
+];
+
+// Deprecated mock data - used for initial setup or local dev if Firestore is down.
+// The application primarily uses Firestore.
+export const courses_DEPRECATED_USE_FIRESTORE: Course[] = mockCoursesForSeeding;
+export const defaultMockCourses = courses_DEPRECATED_USE_FIRESTORE;
+
+export const users: User[] = mockUsersForSeeding; // This is used by authUtils for mock login.
+
 export const enrollments_DEPRECATED_USE_FIRESTORE: Enrollment[] = [
-  { id: 'enroll1', userId: 'user1', courseId: 'course1', progress: 50, enrolledDate: '2023-01-15' },
+  // { id: 'enroll1', userId: 'user1-seed', courseId: 'course1', progress: 50, enrolledDate: '2023-01-15' },
 ];
 export const initialEnrollments = enrollments_DEPRECATED_USE_FIRESTORE;
 
-
-export const videos_DEPRECATED_USE_FIRESTORE: Video[] = [
-  { id: 'video1', title: '🎬 Quick HTML Tip', description: 'A short tip on HTML structure.' , thumbnailUrl: 'https://placehold.co/360x640.png', dataAiHint: 'code snippet', embedUrl: 'https://www.youtube.com/watch?v=kUMe1FH4CHE'},
-];
+export const videos_DEPRECATED_USE_FIRESTORE: Video[] = mockVideosForSeeding;
 export const defaultMockVideos = videos_DEPRECATED_USE_FIRESTORE;
 
-export const initialCategoriesData: Category[] = [
-  { id: 'cat1', name: 'Web Development', imageUrl: 'https://placehold.co/200x150.png', dataAiHint: 'coding web', iconName: 'Globe' },
-  { id: 'cat2', name: 'Data Science', imageUrl: 'https://placehold.co/200x150.png', dataAiHint: 'analytics charts', iconName: 'DatabaseZap' },
-  { id: 'cat3', name: 'JavaScript', imageUrl: 'https://placehold.co/200x150.png', dataAiHint: 'javascript logo', iconName: 'Braces' },
-  { id: 'cat4', name: 'Cloud Computing', imageUrl: 'https://placehold.co/200x150.png', dataAiHint: 'cloud network', iconName: 'Cloud' },
-  { id: 'cat5', name: 'AI & ML', imageUrl: 'https://placehold.co/200x150.png', dataAiHint: 'artificial intelligence', iconName: 'BrainCircuit' },
-];
+export const initialCategoriesData: Category[] = mockCategoriesForSeeding;
 export const defaultMockCategories = initialCategoriesData;
-
 
 export const paymentSubmissions_DEPRECATED_USE_FIRESTORE: PaymentSubmission[] = [];
 export const initialPaymentSubmissions = paymentSubmissions_DEPRECATED_USE_FIRESTORE;
 
 export const initialPaymentSettings: PaymentSettings = {
-    bankName: '',
-    accountNumber: '',
-    accountHolderName: '',
-    additionalInstructions: 'Please include your User ID or Course Name in the payment reference.',
+    bankName: 'Example Bank Global',
+    accountNumber: '0000-0000-0000-0000',
+    accountHolderName: 'Yellow Institute Global',
+    additionalInstructions: 'Please include your User ID or Course Name in the payment reference. Payments are typically verified within 24 business hours.',
 };
 
-export const initialLearningPaths_DEPRECATED_USE_FIRESTORE: LearningPath[] = [
-  {
-    id: 'lp1',
-    title: 'Full-Stack Web Developer Path',
-    description: 'Master front-end and back-end technologies to build complete web applications.',
-    icon: 'Milestone',
-    courseIds: ['course1', 'course2'], // Ensure these IDs match actual course IDs in Firestore
-    imageUrl: 'https://placehold.co/300x200.png',
-    dataAiHint: 'web development'
-  },
-];
+export const initialLearningPaths_DEPRECATED_USE_FIRESTORE: LearningPath[] = mockLearningPathsForSeeding;
 export const initialLearningPaths = initialLearningPaths_DEPRECATED_USE_FIRESTORE;
