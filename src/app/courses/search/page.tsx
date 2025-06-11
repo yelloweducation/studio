@@ -12,7 +12,7 @@ import { type Course, type Category, type LearningPath } from '@/data/mockData';
 import { getCoursesFromFirestore, getCategoriesFromFirestore, getLearningPathsFromFirestore } from '@/lib/firestoreUtils'; // Firestore imports
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
-import { Search, X, LayoutGrid, GraduationCap, Star, Milestone, AlertTriangle, ListFilter } from 'lucide-react';
+import { Search, X, LayoutGrid, GraduationCap, Star, Milestone, AlertTriangle, ListFilter, Info } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
@@ -31,14 +31,18 @@ const searchPageTranslations = {
     allCategories: "All Categories",
     clearFilters: "Clear Filters",
     featuredCourses: "Featured Courses",
+    noFeaturedCourses: "No featured courses available at the moment.",
     popularTopics: "Popular Topics",
+    noPopularTopics: "No popular topics to display currently.",
     browseCategories: "Browse Categories",
-    noCategoriesAvailable: "No Categories Available",
-    noCategoriesDesc: "Categories will appear here once added.",
+    noCategoriesAvailable: "No Categories Found",
+    noCategoriesDesc: "It looks like there are no categories in the system yet. Please check back later or contact an admin.",
     availableCourses: "Available Courses",
     noCoursesFound: "No Courses Found",
-    noCoursesDesc: "Try adjusting your search terms or category filters.",
+    noCoursesDesc: "Try adjusting your search terms or category filters. If you're looking for all courses, there might be none in the system yet.",
     exploreLearningPaths: "Explore Learning Paths",
+    noLearningPaths: "No Learning Paths Available",
+    noLearningPathsDesc: "Learning paths will appear here once they are created.",
     viewPath: "View Path"
   },
   my: {
@@ -48,14 +52,18 @@ const searchPageTranslations = {
     allCategories: "အမျိုးအစားအားလုံး",
     clearFilters: "စစ်ထုတ်မှုများ ဖယ်ရှားရန်",
     featuredCourses: "အထူးပြု အတန်းများ",
+    noFeaturedCourses: "လက်ရှိတွင် အထူးပြု အတန်းများ မရှိသေးပါ။",
     popularTopics: "ရှာဖွေမှုများသောအတန်းများ",
+    noPopularTopics: "လက်ရှိတွင် ပြသရန် လူကြိုက်များသော ခေါင်းစဉ်များ မရှိပါ။",
     browseCategories: "အမျိုးအစားများ ကြည့်ရှုရန်",
-    noCategoriesAvailable: "အမျိုးအစားများ မရှိသေးပါ",
-    noCategoriesDesc: "အမျိုးအစားများ ထည့်သွင်းပြီးနောက် ဤနေရာတွင် ပေါ်လာပါမည်။",
+    noCategoriesAvailable: "အမျိုးအစားများ မတွေ့ပါ",
+    noCategoriesDesc: "စနစ်တွင် အမျိုးအစားများ မရှိသေးပုံရသည်။ ကျေးဇူးပြု၍ နောက်မှပြန်စစ်ဆေးပါ သို့မဟုတ် စီမံခန့်ခွဲသူကို ဆက်သွယ်ပါ။",
     availableCourses: "တက်ရောက်နိုင်သောအတန်းများ",
     noCoursesFound: "အတန်းများ မတွေ့ပါ",
-    noCoursesDesc: "သင်၏ ရှာဖွေရေး စကားလုံးများ သို့မဟုတ် အမျိုးအစား စစ်ထုတ်မှုများကို ချိန်ညှိကြည့်ပါ။",
+    noCoursesDesc: "သင်၏ ရှာဖွေရေး စကားလုံးများ သို့မဟုတ် အမျိုးအစား စစ်ထုတ်မှုများကို ချိန်ညှိကြည့်ပါ။ အကယ်၍ သင်သည် အတန်းအားလုံးကို ရှာဖွေနေပါက၊ စနစ်တွင် အတန်းများ မရှိသေးခြင်း ဖြစ်နိုင်သည်။",
     exploreLearningPaths: "ပညာရေးလမ်းကြောင်းများ",
+    noLearningPaths: "ပညာရေးလမ်းကြောင်းများ မရှိသေးပါ",
+    noLearningPathsDesc: "ပညာရေးလမ်းကြောင်းများကို ဖန်တီးပြီးသည်နှင့် ဤနေရာတွင် ပေါ်လာပါမည်။",
     viewPath: "လမ်းကြောင်းကြည့်ရန်"
   }
 };
@@ -160,7 +168,7 @@ function SearchCoursesClientLogic() {
     setSearchTerm(''); 
   };
   
-  if (isLoadingData && displayedCourses.length === 0) { 
+  if (isLoadingData) { 
       return <SearchPageInitialSkeleton />;
   }
 
@@ -212,7 +220,7 @@ function SearchCoursesClientLogic() {
         )}
       </section>
 
-      {featuredCourses.length > 0 && (
+      {featuredCourses.length > 0 ? (
         <section className="py-4 md:py-6">
           <h2 className="text-xl md:text-2xl font-headline font-semibold mb-4 flex items-center">
             <Star className="mr-2 h-6 w-6 text-primary fill-primary" /> {t.featuredCourses}
@@ -231,9 +239,20 @@ function SearchCoursesClientLogic() {
             <CarouselNext className="mr-12 hidden sm:flex" />
           </Carousel>
         </section>
+      ) : (
+        <section className="py-4 md:py-6">
+            <h2 className="text-xl md:text-2xl font-headline font-semibold mb-4 flex items-center">
+                <Star className="mr-2 h-6 w-6 text-primary fill-primary" /> {t.featuredCourses}
+            </h2>
+            <Card>
+                <CardContent className="pt-6 text-center">
+                    <p className="text-muted-foreground">{t.noFeaturedCourses}</p>
+                </CardContent>
+            </Card>
+        </section>
       )}
       
-      {popularTopics.length > 0 && (
+      {popularTopics.length > 0 ? (
         <section className="py-4 md:py-6">
           <h2 className="text-lg md:text-xl font-headline font-semibold mb-4 flex items-center">
             <ListFilter className="mr-2 h-5 w-5 md:h-6 md:w-6 text-primary" /> {t.popularTopics}
@@ -251,6 +270,17 @@ function SearchCoursesClientLogic() {
             ))}
           </div>
         </section>
+      ) : (
+        <section className="py-4 md:py-6">
+           <h2 className="text-lg md:text-xl font-headline font-semibold mb-4 flex items-center">
+            <ListFilter className="mr-2 h-5 w-5 md:h-6 md:w-6 text-primary" /> {t.popularTopics}
+          </h2>
+            <Card>
+                <CardContent className="pt-6 text-center">
+                    <p className="text-muted-foreground">{t.noPopularTopics}</p>
+                </CardContent>
+            </Card>
+        </section>
       )}
 
       <section className="py-4 md:py-6">
@@ -259,18 +289,7 @@ function SearchCoursesClientLogic() {
             <LayoutGrid className="mr-2 h-6 w-6 text-primary" /> {t.browseCategories}
           </h2>
         </div>
-        {isLoadingData && availableCategories.length === 0 ? ( 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="bg-card rounded-lg shadow-md">
-                <Skeleton className="w-full h-24 sm:h-32 rounded-t-lg" />
-                <div className="p-3 pt-4">
-                  <Skeleton className="h-5 w-3/4 mx-auto" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : availableCategories.length > 0 ? (
+        {availableCategories.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
             {availableCategories.map(category => (
               <CategoryCard key={category.id} category={category} />
@@ -291,29 +310,7 @@ function SearchCoursesClientLogic() {
          <h2 className="text-xl md:text-2xl font-headline font-semibold mb-4 md:mb-6 mt-4 md:mt-8 flex items-center">
             <GraduationCap className="mr-2 h-6 w-6 text-primary" /> {t.availableCourses}
         </h2>
-        {isLoadingData && displayedCourses.length === 0 ? ( 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-            {[1, 2, 3, 4, 5, 6].map(i => (
-              <Card key={i} className="flex flex-col overflow-hidden shadow-lg">
-                <CardHeader className="p-0">
-                  <Skeleton className="aspect-[16/9] w-full" />
-                  <div className="p-6">
-                    <Skeleton className="h-6 w-3/4 mb-2" />
-                    <Skeleton className="h-4 w-1/2" />
-                  </div>
-                </CardHeader>
-                <CardContent className="flex-grow px-6 pb-4">
-                  <Skeleton className="h-4 w-full mb-1" />
-                  <Skeleton className="h-4 w-5/6 mb-3" />
-                  <Skeleton className="h-3 w-1/3" />
-                </CardContent>
-                <CardFooter className="px-6 pb-6">
-                  <Skeleton className="h-10 w-full" />
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
-        ) : displayedCourses.length > 0 ? (
+        {displayedCourses.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {displayedCourses.map(course => (
               <CourseCard key={course.id} course={course} />
@@ -332,7 +329,7 @@ function SearchCoursesClientLogic() {
         )}
       </section>
       
-      {learningPaths.length > 0 && (
+      {learningPaths.length > 0 ? (
         <section className="py-4 md:py-6">
           <h2 className="text-xl md:text-2xl font-headline font-semibold mb-4 flex items-center">
             <Milestone className="mr-2 h-6 w-6 text-primary" /> {t.exploreLearningPaths}
@@ -365,6 +362,19 @@ function SearchCoursesClientLogic() {
                 );
             })}
           </div>
+        </section>
+      ) : (
+         <section className="py-4 md:py-6">
+          <h2 className="text-xl md:text-2xl font-headline font-semibold mb-4 flex items-center">
+            <Milestone className="mr-2 h-6 w-6 text-primary" /> {t.exploreLearningPaths}
+          </h2>
+          <Card>
+            <CardContent className="pt-6 text-center">
+                <Info className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+                <h3 className="text-lg font-semibold">{t.noLearningPaths}</h3>
+                <p className="text-sm text-muted-foreground">{t.noLearningPathsDesc}</p>
+            </CardContent>
+          </Card>
         </section>
       )}
 
