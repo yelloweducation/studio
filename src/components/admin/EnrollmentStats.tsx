@@ -2,7 +2,7 @@
 "use client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart3, Users, BookOpen, Activity, Info } from 'lucide-react';
-import { enrollments, users, courses } from '@/data/mockData'; // Using mock data for now
+import { users, courses_DEPRECATED_USE_FIRESTORE as courses, initialEnrollments as enrollments } from '@/data/mockData'; // Using mock data for now
 
 export default function EnrollmentStats() {
   const totalUsers = users.length;
