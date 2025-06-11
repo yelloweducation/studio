@@ -6,7 +6,6 @@ import {
   updateUserRoleInMock,
   addUserToMock,
   comparePassword,
-  // hashPassword, // No longer directly used here, done in addUserToMock
   SUPER_ADMIN_EMAIL,
   getAllUsersFromMock as getAllUsersFromMockUtil
 } from '@/lib/authUtils';
@@ -14,7 +13,7 @@ import type { User as MockUserType, Role as PrismaRoleType } from '@/lib/authUti
 
 const LoginInputSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
-  password: z.string().min(1, { message: "Password cannot be empty." }),
+  password: z.string().min(1, { message: "Password cannot be empty." }), // Keep min 1 for initial validation
 });
 
 const RegisterInputSchema = z.object({
@@ -30,7 +29,7 @@ const UpdateRoleInputSchema = z.object({
 
 
 export const serverLoginUser = async (email_from_form_raw: string, password_from_form: string): Promise<MockUserType | null> => {
-  const email_from_form = email_from_form_raw.toLowerCase(); // Normalize email for lookup
+  const email_from_form = email_from_form_raw.toLowerCase();
   console.log(`[AuthActions - serverLoginUser] Attempting login for email: ${email_from_form}, password_from_form (prefix): ${password_from_form.substring(0,3)}... (length: ${password_from_form.length})`);
   
   const validation = LoginInputSchema.safeParse({ email: email_from_form, password: password_from_form });
@@ -39,24 +38,25 @@ export const serverLoginUser = async (email_from_form_raw: string, password_from
     return null;
   }
 
-  const validatedEmail = validation.data.email; // Already lowercased
+  const validatedEmail = validation.data.email;
   const validatedPassword = validation.data.password;
 
-  const user = await findUserByEmailFromMock(validatedEmail); // Uses in-memory store
+  const user = await findUserByEmailFromMock(validatedEmail);
 
   if (user) {
     console.log(`[AuthActions - serverLoginUser] User found for ${validatedEmail}. ID: ${user.id}. Stored hash (prefix): ${user.passwordHash?.substring(0,10)}...`);
     
     let isMatch = false;
     
+    // Secure bcryptjs comparison for all users
     console.log(`[AuthActions - serverLoginUser] Proceeding with bcrypt.compare for user ${validatedEmail}.`);
-    isMatch = await comparePassword(validatedPassword, user.passwordHash || ''); // Passwords are now compared against the in-memory hashed password.
+    isMatch = await comparePassword(validatedPassword, user.passwordHash || '');
         
     console.log(`[AuthActions - serverLoginUser] Final isMatch result for ${validatedEmail}: ${isMatch}`);
 
     if (isMatch) {
       console.log(`[AuthActions - serverLoginUser] Password match for user ID: ${user.id}. Login successful.`);
-      // @ts-ignore // passwordHash exists on MockUserType in authUtils
+      // @ts-ignore 
       const { passwordHash, ...userWithoutPasswordHash } = user; 
       return userWithoutPasswordHash as MockUserType;
     } else {
@@ -78,7 +78,6 @@ export const serverRegisterUser = async (name: string, email_raw: string, passwo
     throw new Error(errorMessages || "Invalid registration data. Please check your inputs.");
   }
 
-  // findUserByEmailFromMock now checks the in-memory store
   const existingUser = await findUserByEmailFromMock(validation.data.email);
   if (existingUser) {
     console.error(`[AuthActions - serverRegisterUser] User already exists with email: ${validation.data.email}.`);
@@ -86,10 +85,9 @@ export const serverRegisterUser = async (name: string, email_raw: string, passwo
   }
 
   try {
-    // addUserToMock now adds to in-memory store and hashes password
     const newUser = await addUserToMock({
       name: validation.data.name,
-      email: validation.data.email, // Use validated (potentially lowercased) email
+      email: validation.data.email,
       role: validation.data.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase() ? 'ADMIN' : 'STUDENT',
     }, validation.data.password); 
 
@@ -109,7 +107,7 @@ export const serverRegisterUser = async (name: string, email_raw: string, passwo
 
 export async function getAllUsersServerAction(): Promise<MockUserType[]> {
   console.log("[AuthActions - getAllUsersServerAction] Fetching all users from in-memory store.");
-  const users = await getAllUsersFromMockUtil(); // Fetches from in-memory store
+  const users = await getAllUsersFromMockUtil();
   return users.map(user => {
     // @ts-ignore
     const { passwordHash, ...userWithoutPasswordHash } = user;
@@ -131,7 +129,6 @@ export async function updateUserRoleServerAction(userId: string, newRole: Prisma
       throw new Error("InvalidRole");
   }
   try {
-    // updateUserRoleInMock now updates the in-memory store
     const updatedUser = await updateUserRoleInMock(validation.data.userId, validation.data.newRole as 'student' | 'admin');
     if (updatedUser) {
       console.log(`[AuthActions - updateUserRoleServerAction] Role updated successfully for user ID: ${userId} to ${newRole}`);
@@ -147,5 +144,4 @@ export async function updateUserRoleServerAction(userId: string, newRole: Prisma
     throw error;
   }
 }
-
     
