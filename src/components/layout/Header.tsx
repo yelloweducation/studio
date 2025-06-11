@@ -19,7 +19,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import React, { useEffect, useState, useRef } from 'react';
 import { cn } from "@/lib/utils";
-import { useLanguage, type Language } from '@/contexts/LanguageContext'; // Added
+import { useLanguage, type Language } from '@/contexts/LanguageContext';
 
 const headerTranslations = {
   en: {
@@ -33,18 +33,20 @@ const headerTranslations = {
     toggleTheme: "Toggle Theme",
     openMenu: "Open menu",
     loading: "Loading...",
+    all: "ALL",
   },
   my: {
-    home: "ပင်မ", // Pin-Ma (Main/Home)
-    explore: "ရှာဖွေရန်", // Sha Phway Yan (Explore)
-    welcome: "ကြိုဆိုပါတယ်", // Kyo So Ba Deh (Welcome)
-    dashboard: "ဒက်ရှ်ဘုတ်", // Dashboard
-    logout: "ထွက်ရန်", // Thwet Yan (Logout)
-    login: "ဝင်ရန်", // Win Yan (Login)
-    register: "စာရင်းသွင်းရန်", // Sa Yin Thwin Yan (Register)
-    toggleTheme: "အသွင်ပြောင်းရန်", // A Thwin Pyaung Yan (Toggle Theme)
-    openMenu: "မီနူးဖွင့်ပါ", // Menu Fwint Ba
-    loading: "လုပ်ဆောင်နေသည်...", // Lok Saung Nay De...
+    home: "ပင်မ",
+    explore: "ရှာဖွေရန်",
+    welcome: "ကြိုဆိုပါတယ်",
+    dashboard: "ဒက်ရှ်ဘုတ်",
+    logout: "ထွက်ရန်",
+    login: "ဝင်ရန်",
+    register: "စာရင်းသွင်းရန်",
+    toggleTheme: "အသွင်ပြောင်းရန်",
+    openMenu: "မီနူးဖွင့်ပါ",
+    loading: "လုပ်ဆောင်နေသည်...",
+    all: "အားလုံး",
   }
 };
 
@@ -55,16 +57,31 @@ const Header = () => {
   const { theme, toggleTheme } = useTheme();
   const isMobile = useIsMobile();
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
-  const { language } = useLanguage(); // Added
-  const t = headerTranslations[language]; // Added
+  const { language } = useLanguage();
+  const t = headerTranslations[language];
 
   const [headerVisible, setHeaderVisible] = useState(true);
   const lastScrollY = useRef(0);
   const headerScrollThreshold = 100;
 
+  const isOnHomepage = pathname === '/';
+  const isOnCourseSearchPage = pathname === '/courses/search';
+
+  // Determine if special styling (transparent, different nav) should be used
+  const useSpecialHeaderStyle = isOnHomepage || isOnCourseSearchPage;
+
+  // Determine if the sheet menu should be shown
+  // Show sheet if:
+  // 1. On mobile AND (on course search page OR on any other page that's NOT the homepage)
+  // 2. On desktop AND on course search page
+  const showSheet = (isMobile && (isOnCourseSearchPage || !isOnHomepage)) || (!isMobile && isOnCourseSearchPage);
+
+
   useEffect(() => {
     const controlHeader = () => {
-      if (pathname === '/courses/search') {
+      if (pathname === '/videos') return; // No scroll effect on videos page
+
+      if (isOnHomepage || isOnCourseSearchPage) { // Apply scroll effect to homepage and course search
         const currentScrollY = window.scrollY;
         if (currentScrollY > headerScrollThreshold && currentScrollY > lastScrollY.current) {
           setHeaderVisible(false);
@@ -73,23 +90,19 @@ const Header = () => {
         }
         lastScrollY.current = currentScrollY;
       } else {
-        setHeaderVisible(true);
+        setHeaderVisible(true); // Always visible on other pages
       }
     };
-
-    if (pathname !== '/videos') {
-        window.addEventListener('scroll', controlHeader);
-        controlHeader(); 
-    } else {
-        setHeaderVisible(true); 
-    }
+    
+    window.addEventListener('scroll', controlHeader);
+    controlHeader(); // Initial check
 
     return () => {
       window.removeEventListener('scroll', controlHeader);
     };
-  }, [pathname]);
+  }, [pathname, isOnHomepage, isOnCourseSearchPage]);
 
-  // This check MUST come AFTER all hook calls.
+
   if (pathname === '/videos') {
     return null;
   }
@@ -103,29 +116,25 @@ const Header = () => {
   const getDashboardPath = () => {
     if (role === 'admin') return '/dashboard/admin';
     if (role === 'student') return '/dashboard/student';
-    return '/';
+    return '/'; // Fallback
   };
-
-  const isCourseSearchPage = pathname === '/courses/search';
-  const isMobileHomepage = isMobile && pathname === '/';
-  const isMobileCourseSearchPage = isMobile && isCourseSearchPage;
 
   const commonNavButtonClasses = "w-full justify-start py-3 px-2 text-base";
   const commonIconClasses = "mr-2 h-5 w-5";
-
+  
   const headerBaseClasses = 'sticky top-0 z-50 transition-transform duration-300 ease-in-out';
-  const headerBackgroundClasses = (isMobileHomepage || isMobileCourseSearchPage) ? '' : 'bg-background/80 backdrop-blur-md border-b';
+  const headerBackgroundClasses = useSpecialHeaderStyle ? '' : 'bg-background/80 backdrop-blur-md border-b';
 
   return (
     <header className={cn(
         headerBaseClasses,
         headerBackgroundClasses,
-        {'!-translate-y-full': !headerVisible && isCourseSearchPage}
+        {'!-translate-y-full': !headerVisible && useSpecialHeaderStyle }
       )}>
       <nav className="container mx-auto px-4 py-3 flex justify-between items-center min-h-[57px]">
         {/* === LEFT SECTION === */}
         <div className="flex items-center">
-          {isMobileHomepage ? (
+          {isOnHomepage ? (
             <div className="flex items-center space-x-1">
               <Button variant="ghost" size="sm" asChild
                 className={cn(
@@ -133,7 +142,7 @@ const Header = () => {
                   pathname === '/' && "underline underline-offset-4 decoration-primary decoration-2"
                 )}
               >
-                <Link href="/">{language === 'my' ? 'အားလုံး' : 'ALL'}</Link>
+                <Link href="/">{t.all}</Link>
               </Button>
               {!authLoading && isAuthenticated && (
                 <Button variant="ghost" size="sm" asChild className="text-foreground hover:bg-transparent hover:text-foreground/70 px-2 font-medium">
@@ -141,20 +150,18 @@ const Header = () => {
                 </Button>
               )}
             </div>
+          ) : isOnCourseSearchPage ? (
+            <h1 className="text-xl font-bold font-headline text-foreground flex items-center">
+              <Search className="mr-2 h-5 w-5 text-primary"/> {t.explore}
+            </h1>
           ) : (
-            isCourseSearchPage && isMobile ? ( 
-              <h1 className="text-xl font-bold font-headline text-foreground flex items-center">
-                <Search className="mr-2 h-5 w-5 text-primary"/> {t.explore}
-              </h1>
-            ) : (
-              <LuminaLogo />
-            )
+            <LuminaLogo />
           )}
         </div>
 
         {/* === RIGHT SECTION === */}
         <div className="flex items-center space-x-1">
-          {isMobileHomepage ? (
+          {isOnHomepage && !showSheet ? ( // Direct icons for homepage (mobile & desktop if not using sheet)
             <>
               {authLoading && (
                 <Button variant="ghost" size="icon" disabled>
@@ -175,7 +182,7 @@ const Header = () => {
                 {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
               </Button>
             </>
-          ) : isMobile ? (
+          ) : showSheet ? ( // Sheet for course search (mobile & desktop) and other mobile pages
             <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon">
@@ -185,10 +192,10 @@ const Header = () => {
               </SheetTrigger>
               <SheetContent side="right" className="w-[280px] sm:w-[320px] p-0">
                 <SheetHeader className="p-4 border-b">
-                  {isCourseSearchPage ? (
+                  {isOnCourseSearchPage ? (
                     <SheetTitle className="flex items-center"><Search className="mr-2 h-5 w-5 text-primary"/>{t.explore}</SheetTitle>
                   ) : (
-                    <SheetTitle><LuminaLogo /></SheetTitle>
+                    <SheetTitle><LuminaLogo /></SheetTitle> 
                   )}
                 </SheetHeader>
                 <div className="flex flex-col space-y-1 p-4">
@@ -197,7 +204,7 @@ const Header = () => {
                       <Link href="/"><Home className={commonIconClasses} /> {t.home}</Link>
                     </Button>
                   </SheetClose>
-                  {!isCourseSearchPage && (
+                  {!isOnCourseSearchPage && ( // Don't show "Explore" link if already on explore page with sheet
                     <SheetClose asChild>
                       <Button variant="ghost" asChild className={commonNavButtonClasses}>
                         <Link href="/courses/search"><Search className={commonIconClasses} /> {t.explore}</Link>
@@ -247,13 +254,12 @@ const Header = () => {
                 </div>
               </SheetContent>
             </Sheet>
-          ) : (
-            // Desktop navigation
+          ) : ( // Desktop navigation for other pages (not homepage, not course search)
             <>
               <Button variant="ghost" size="sm" asChild className={cn("hover:bg-accent/20", pathname === '/' && "bg-accent/10")}>
                 <Link href="/"><Home className="mr-1 h-4 w-4" /> {t.home}</Link>
               </Button>
-              {!isCourseSearchPage && (
+              {!isOnCourseSearchPage && (
                   <Button variant="ghost" size="sm" asChild className={cn("hover:bg-accent/20", pathname === '/courses/search' && "bg-accent/10")}>
                       <Link href="/courses/search"><Search className="mr-1 h-4 w-4" /> {t.explore}</Link>
                   </Button>
