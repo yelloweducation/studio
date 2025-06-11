@@ -124,7 +124,7 @@ export default function Home() {
         {/* Text Links Section */}
         <div className="mt-6 text-center space-y-2">
           <Link href="/personality-tests" className={cn(
-            "inline-flex items-center text-sm font-medium text-foreground hover:text-primary transition-colors blinking-cursor-text py-1 group",
+            "inline-flex items-center text-sm font-medium text-foreground hover:text-primary transition-colors py-1 group",
             language === 'my' ? 'text-xs sm:text-sm' : 'text-sm'
           )}>
             <Brain className="mr-2 h-4 w-4 text-primary/80 group-hover:text-primary transition-colors" />
@@ -132,7 +132,7 @@ export default function Home() {
           </Link>
           <br /> {/* Ensure it's on a new line */}
           <Link href="/flash-cards" className={cn(
-            "inline-flex items-center text-sm font-medium text-foreground hover:text-primary transition-colors blinking-cursor-text py-1 group",
+            "inline-flex items-center text-sm font-medium text-foreground hover:text-primary transition-colors py-1 group",
             language === 'my' ? 'text-xs sm:text-sm' : 'text-sm'
           )}>
             <Layers className="mr-2 h-4 w-4 text-primary/80 group-hover:text-primary transition-colors" />
