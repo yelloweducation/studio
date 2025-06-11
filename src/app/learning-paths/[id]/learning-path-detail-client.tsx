@@ -36,15 +36,13 @@ export default function LearningPathDetailClient({ pathId }: LearningPathDetailC
       setIsLoading(true);
       
       try {
-        const allPaths = await getLearningPathsFromDb(); // Use Prisma-based function
+        const allPaths = await getLearningPathsFromDb(); 
         const currentPath = allPaths.find(p => p.id === pathId);
         setLearningPath(currentPath || null);
 
         if (currentPath && currentPath.courses && currentPath.courses.length > 0) {
-          // Prisma relation 'courses' on LearningPath should be LearningPathCourse[]
-          // We need to extract the actual Course objects
           const courseIds = currentPath.courses.map(lpc => lpc.courseId);
-          const allCourses = await getCoursesFromDb(); // Fetch all courses to filter from
+          const allCourses = await getCoursesFromDb(); 
           const coursesForPath = allCourses.filter(course => courseIds.includes(course.id));
           setPathCourses(coursesForPath);
         } else {

@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { ImageIcon, Save, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { type Course, type Video, type Category, type LearningPath } from '@/lib/dbUtils'; // Use Prisma types from dbUtils
+import type { Course, Video, Category, LearningPath } from '@/lib/dbUtils'; // Use Prisma types from dbUtils
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
 import { 
@@ -69,7 +69,7 @@ export default function ImageManagement() {
   ) => {
     setIsSaving(prev => ({ ...prev, [itemId]: true }));
     let itemToSave: Course | Video | Category | LearningPath | undefined;
-    let updateFunction: (id: string, data: Partial<any>) => Promise<any>; // Allow any for Prisma update data
+    let updateFunction: (id: string, data: Partial<any>) => Promise<any>; 
     let itemName = '';
 
     try {
@@ -99,7 +99,7 @@ export default function ImageManagement() {
       }
 
       if (itemToSave) {
-        const dataToUpdate: { imageUrl?: string | null, dataAiHint?: string | null } = { // Ensure types match Prisma schema (nullable)
+        const dataToUpdate: { imageUrl?: string | null, dataAiHint?: string | null } = { 
           imageUrl: itemToSave.imageUrl || null,
           dataAiHint: itemToSave.dataAiHint || null,
         };

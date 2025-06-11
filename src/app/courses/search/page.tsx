@@ -9,8 +9,7 @@ import { Button } from '@/components/ui/button';
 import CourseCard from '@/components/courses/CourseCard';
 import CategoryCard from '@/components/categories/CategoryCard';
 import { type Course, type Category, type LearningPath } from '@/lib/dbUtils'; // Use Prisma types from dbUtils
-// REMOVE: import { getCoursesFromDb, getCategoriesFromDb, getLearningPathsFromDb } from '@/lib/dbUtils';
-import { getSearchPageData } from '@/actions/searchPageActions'; // ADDED: Import server action
+import { getSearchPageData } from '@/actions/searchPageActions'; 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { Search, X, LayoutGrid, GraduationCap, Star, Milestone, AlertTriangle, ListFilter, Info } from 'lucide-react';
@@ -19,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import * as LucideIcons from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import Image from 'next/image'; // Ensure Image is imported
 
 const isValidLucideIcon = (iconName: string | undefined | null): iconName is keyof typeof LucideIcons => {
   return typeof iconName === 'string' && iconName in LucideIcons;
@@ -102,7 +102,6 @@ function SearchCoursesClientLogic() {
     const loadData = async () => {
       setIsLoadingData(true);
       try {
-        // UPDATED: Call server action
         const { 
             courses: coursesFromDb, 
             categories: categoriesFromDb, 
@@ -120,7 +119,6 @@ function SearchCoursesClientLogic() {
 
       } catch (error) {
         console.error("Error loading data via server action:", error);
-        // Set states to empty arrays or handle error appropriately
         setAllFetchedCourses([]);
         setFeaturedCourses([]);
         setPopularTopics([]);

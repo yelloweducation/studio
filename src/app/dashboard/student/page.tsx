@@ -8,7 +8,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import CourseCard from "@/components/courses/CourseCard"; 
 import { type Course, type Enrollment } from "@/lib/dbUtils"; // Use Prisma types from dbUtils
-import { getEnrollmentsByUserIdFromDb, getCourseByIdFromDb } from "@/lib/dbUtils"; // Use Prisma-based functions
+import { getEnrollmentsByUserIdFromDb } from "@/lib/dbUtils"; // Use Prisma-based functions
 import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -48,7 +48,6 @@ export default function StudentDashboardPage() {
       if (user) {
         setIsLoading(true);
         try {
-          // getEnrollmentsByUserIdFromDb should include course data if Prisma schema is set up with include
           const userEnrollments = await getEnrollmentsByUserIdFromDb(user.id); 
           const coursesData = userEnrollments.map(enrollment => enrollment.course).filter(course => course !== null) as Course[];
           setEnrolledCoursesDetails(coursesData);
@@ -129,7 +128,6 @@ export default function StudentDashboardPage() {
                     <p className="text-center text-muted-foreground">
                         {t.activityPlaceholder}
                     </p>
-                    {/* Future: Display a list or chart of recent activity/progress from enrollments */}
                 </CardContent>
             </Card>
         </section>

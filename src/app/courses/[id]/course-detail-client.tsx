@@ -4,8 +4,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { type Course, type Module, type Lesson, type User, type Enrollment, type PaymentSubmission, type PaymentSubmissionStatus, type Quiz } from '@/lib/dbUtils'; // Use Prisma types from dbUtils
-import { getCourseByIdFromDb, getPaymentSubmissionsFromDb, getEnrollmentForUserAndCourseFromDb, createEnrollmentInDb } from '@/lib/dbUtils'; // Use Prisma-based functions
+import { type Course, type Module, type Lesson, type User, type Enrollment, type PaymentSubmission, type PaymentSubmissionStatus, type Quiz, type QuizType } from '@/lib/dbUtils'; 
+import { getCourseByIdFromDb, getPaymentSubmissionsFromDb, getEnrollmentForUserAndCourseFromDb, createEnrollmentInDb } from '@/lib/dbUtils'; 
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,7 +21,7 @@ interface CompletionInfo {
   progress: number;
 }
 interface PaymentInfo {
-  status: PaymentSubmissionStatus | null; // Prisma's enum for status
+  status: PaymentSubmissionStatus | null; 
   submission?: PaymentSubmission;
 }
 
@@ -137,7 +137,7 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
       setCurrentCourse(null);
       setFirstLessonPath(null);
 
-      const courseFromDb = await getCourseByIdFromDb(courseId); // Use Prisma-based function
+      const courseFromDb = await getCourseByIdFromDb(courseId); 
       setCurrentCourse(courseFromDb);
 
       if (courseFromDb?.modules?.[0]?.lessons?.[0]) {
@@ -161,7 +161,7 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
       setIsLoadingPage(true); 
 
       if (isAuthenticated && user) {
-        const enrollment = await getEnrollmentForUserAndCourseFromDb(user.id, currentCourse.id); // Use Prisma-based function
+        const enrollment = await getEnrollmentForUserAndCourseFromDb(user.id, currentCourse.id); 
         if (enrollment) {
           setCompletionInfo({ isCompleted: enrollment.progress === 100, progress: enrollment.progress });
         } else {
@@ -169,7 +169,7 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
         }
 
         if (currentCourse.price && currentCourse.price > 0) {
-          const allSubmissions = await getPaymentSubmissionsFromDb(); // Use Prisma-based function
+          const allSubmissions = await getPaymentSubmissionsFromDb(); 
           const userSubmission = allSubmissions.find(s => s.userId === user.id && s.courseId === currentCourse.id);
           setPaymentInfo({ status: userSubmission?.status || null, submission: userSubmission });
         } else {
@@ -470,7 +470,7 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
               <CardContent>
                 <ul className="space-y-3">
                   {quizzes.map((quiz: Quiz) => {
-                    const QuizIcon = quiz.quizType === 'GRADED' ? GradedQuizIcon : PracticeQuizIcon; // Prisma uses uppercase for enums
+                    const QuizIcon = quiz.quizType === 'GRADED' ? GradedQuizIcon : PracticeQuizIcon; 
                     const quizLabel = quiz.quizType === 'GRADED' ? t.gradedQuiz : t.practiceQuiz;
                     return (
                       <li key={quiz.id} className="p-3 border rounded-lg bg-card hover:shadow-sm transition-shadow">

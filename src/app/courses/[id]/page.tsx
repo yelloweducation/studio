@@ -2,9 +2,8 @@
 // This file is now a Server Component
 import React from 'react';
 import type { Metadata, ResolvingMetadata } from 'next';
-// Import the Prisma version of getCourseByIdFromDb to fetch data for metadata
-import { getCourseByIdFromDb } from '@/lib/dbUtils';
-import CourseDetailClient from './course-detail-client'; // Import the client component
+import { getCourseByIdFromDb } from '@/lib/dbUtils'; // Use Prisma-based function
+import CourseDetailClient from './course-detail-client'; 
 
 type Props = {
   params: { id: string }
@@ -15,7 +14,6 @@ export async function generateMetadata(
   parent: ResolvingMetadata
 ): Promise<Metadata> {
   const id = params.id;
-  // Fetch course data using Prisma for metadata generation
   const course = await getCourseByIdFromDb(id);
 
   if (!course) {
@@ -41,8 +39,6 @@ export async function generateMetadata(
   }
 }
 
-// This is the Server Component that Next.js will render for the page.
 export default function CoursePage({ params }: Props) {
-  // It passes the courseId to the Client Component, which will handle fetching/displaying actual course data.
   return <CourseDetailClient courseId={params.id} />;
 }

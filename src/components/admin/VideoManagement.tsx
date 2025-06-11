@@ -1,7 +1,7 @@
 
 "use client";
 import { useState, useEffect, type FormEvent } from 'react';
-import { videos_DEPRECATED_USE_FIRESTORE as initialVideos, type Video } from '@/data/mockData'; // Kept for potential seeding logic
+import { type Video as PrismaVideo } from '@/lib/dbUtils'; // Use Prisma types from dbUtils
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -20,7 +20,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
-import { getVideosFromDb, addVideoToDb, updateVideoInDb, deleteVideoFromDb } from '@/lib/dbUtils'; // Updated to use dbUtils
+import { getVideosFromDb, addVideoToDb, updateVideoInDb, deleteVideoFromDb } from '@/lib/dbUtils'; // Use Prisma-based functions from dbUtils
 import { Label } from '../ui/label';
 
 const VideoForm = ({
@@ -29,8 +29,8 @@ const VideoForm = ({
   onCancel,
   isSubmitting
 }: {
-  video?: Video,
-  onSubmit: (data: Omit<Video, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>, // Prisma types don't always have createdAt/updatedAt on input
+  video?: PrismaVideo,
+  onSubmit: (data: Omit<PrismaVideo, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>,
   onCancel: () => void,
   isSubmitting: boolean
 }) => {
@@ -42,13 +42,13 @@ const VideoForm = ({
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const videoData: Omit<Video, 'id' | 'createdAt' | 'updatedAt'> = {
+    const videoData: Omit<PrismaVideo, 'id' | 'createdAt' | 'updatedAt'> = {
       title,
       description,
       thumbnailUrl,
       embedUrl,
       dataAiHint,
-      videoUrl: video?.videoUrl || '', // Keep if still relevant, though embedUrl is primary
+      // videoUrl: video?.videoUrl || '', // This field is not in Prisma schema
     };
     await onSubmit(videoData);
   };
@@ -67,7 +67,7 @@ const VideoForm = ({
           </div>
           <div>
             <Label htmlFor="thumbnailUrl">Thumbnail URL (for fallback)</Label>
-            <Input id="thumbnailUrl" value={thumbnailUrl} onChange={e => setThumbnailUrl(e.target.value)} disabled={isSubmitting}/>
+            <Input id="thumbnailUrl" value={thumbnailUrl || ''} onChange={e => setThumbnailUrl(e.target.value)} disabled={isSubmitting}/>
             {thumbnailUrl && (
               <div className="mt-2 relative w-32 aspect-[9/16] border rounded overflow-hidden">
                 <Image src={thumbnailUrl} alt="Thumbnail preview" layout="fill" objectFit="cover" />
@@ -79,7 +79,7 @@ const VideoForm = ({
             <div className="relative">
                 <Input 
                     id="embedUrl" 
-                    value={embedUrl} 
+                    value={embedUrl || ''} 
                     onChange={e => setEmbedUrl(e.target.value)} 
                     placeholder="e.g., https://www.youtube.com/watch?v=..."
                     className="pl-8"
@@ -91,7 +91,7 @@ const VideoForm = ({
           </div>
           <div>
             <Label htmlFor="dataAiHint">Thumbnail AI Hint (keywords)</Label>
-            <Input id="dataAiHint" value={dataAiHint} onChange={e => setDataAiHint(e.target.value)} placeholder="e.g. tech tutorial" disabled={isSubmitting}/>
+            <Input id="dataAiHint" value={dataAiHint || ''} onChange={e => setDataAiHint(e.target.value)} placeholder="e.g. tech tutorial" disabled={isSubmitting}/>
           </div>
         </div>
       </ScrollArea>
@@ -110,8 +110,8 @@ const VideoForm = ({
 
 
 export default function VideoManagement() {
-  const [videos, setVideos] = useState<Video[]>([]);
-  const [editingVideo, setEditingVideo] = useState<Video | undefined>(undefined);
+  const [videos, setVideos] = useState<PrismaVideo[]>([]);
+  const [editingVideo, setEditingVideo] = useState<PrismaVideo | undefined>(undefined);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [isSubmittingForm, setIsSubmittingForm] = useState(false);
@@ -120,18 +120,18 @@ export default function VideoManagement() {
   useEffect(() => {
     const loadVideos = async () => {
       setIsLoadingData(true);
-      const dbVideos = await getVideosFromDb(); // Use Prisma-based function
+      const dbVideos = await getVideosFromDb(); 
       setVideos(dbVideos);
       setIsLoadingData(false);
     };
     loadVideos();
   }, []);
 
-  const handleAddVideo = async (data: Omit<Video, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const handleAddVideo = async (data: Omit<PrismaVideo, 'id' | 'createdAt' | 'updatedAt'>) => {
     setIsSubmittingForm(true);
     try {
-      const newVideo = await addVideoToDb(data); // Use Prisma-based function
-      setVideos(prev => [newVideo, ...prev].sort((a, b) => (b.createdAt as any) - (a.createdAt as any) || 0)); // Prisma returns Date objects for createdAt
+      const newVideo = await addVideoToDb(data); 
+      setVideos(prev => [newVideo, ...prev].sort((a, b) => (new Date(b.createdAt!) as any) - (new Date(a.createdAt!) as any) || 0));
       closeForm();
       toast({ title: "Video Added", description: `${data.title} has been successfully added.` });
     } catch (error) {
@@ -141,12 +141,12 @@ export default function VideoManagement() {
     }
   };
 
-  const handleEditVideo = async (data: Omit<Video, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const handleEditVideo = async (data: Omit<PrismaVideo, 'id' | 'createdAt' | 'updatedAt'>) => {
     if (!editingVideo || !editingVideo.id) return;
     setIsSubmittingForm(true);
     try {
-      const updatedVideo = await updateVideoInDb(editingVideo.id, data); // Use Prisma-based function
-      setVideos(prev => prev.map(v => v.id === editingVideo.id ? updatedVideo : v).sort((a,b) => (b.createdAt as any) - (a.createdAt as any) || 0));
+      const updatedVideo = await updateVideoInDb(editingVideo.id, data); 
+      setVideos(prev => prev.map(v => v.id === editingVideo.id ? updatedVideo : v).sort((a,b) => (new Date(b.createdAt!) as any) - (new Date(a.createdAt!) as any) || 0));
       closeForm();
       toast({ title: "Video Updated", description: `${data.title} has been successfully updated.` });
     } catch (error) {
@@ -159,7 +159,7 @@ export default function VideoManagement() {
   const handleDeleteVideo = async (videoId: string) => {
     const videoToDelete = videos.find(v => v.id === videoId);
     try {
-      await deleteVideoFromDb(videoId); // Use Prisma-based function
+      await deleteVideoFromDb(videoId); 
       setVideos(prev => prev.filter(v => v.id !== videoId));
       toast({ title: "Video Deleted", description: `${videoToDelete?.title} has been deleted.`, variant: "destructive" });
     } catch (error) {
@@ -167,7 +167,7 @@ export default function VideoManagement() {
     }
   };
 
-  const openForm = (video?: Video) => {
+  const openForm = (video?: PrismaVideo) => {
     setEditingVideo(video ? JSON.parse(JSON.stringify(video)) : undefined);
     setIsFormOpen(true);
   };

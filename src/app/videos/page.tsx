@@ -1,11 +1,11 @@
 
 "use client";
 import React, { useState, useEffect } from 'react';
-import { type Video } from '@/data/mockData'; 
+import type { Video } from '@/lib/dbUtils'; // Updated to use Prisma type from dbUtils
 import VideoCard from '@/components/videos/VideoCard';
 import { Loader2 } from 'lucide-react';
 import VideoPageHeader from '@/components/layout/VideoPageHeader';
-import { getVideosFromDb } from '@/lib/dbUtils'; // Updated to use dbUtils
+import { getVideosFromDb } from '@/lib/dbUtils'; // Updated to use Prisma-based function
 
 export default function VideosPage() {
   const [allFeedVideos, setAllFeedVideos] = useState<Video[]>([]);
@@ -14,7 +14,7 @@ export default function VideosPage() {
   useEffect(() => {
     const fetchVideos = async () => {
       setIsLoadingFeedVideos(true);
-      const videosFromDb = await getVideosFromDb(); // Use Prisma-based function
+      const videosFromDb = await getVideosFromDb(); 
       setAllFeedVideos(videosFromDb);
       setIsLoadingFeedVideos(false);
     };

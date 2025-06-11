@@ -36,7 +36,7 @@ const LearningPathForm = ({
   onCancel,
   isSubmitting,
 }: {
-  path?: LearningPath;
+  path?: LearningPath & { courses?: { course: Course }[] }; // Prisma type includes nested relation
   allCourses: Course[];
   onSubmit: (data: Omit<LearningPath, 'id' | 'createdAt' | 'updatedAt' | 'courses'> & { courseIdsToConnect?: string[] }) => Promise<void>;
   onCancel: () => void;
@@ -45,8 +45,6 @@ const LearningPathForm = ({
   const [title, setTitle] = useState(path?.title || '');
   const [description, setDescription] = useState(path?.description || '');
   const [icon, setIcon] = useState(path?.icon || 'Milestone');
-  // For Prisma, we expect LearningPath.courses to be LearningPathCourse[]
-  // We need to extract course IDs for checkbox state
   const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>(path?.courses?.map(lpc => lpc.courseId) || []);
   const [imageUrl, setImageUrl] = useState(path?.imageUrl || 'https://placehold.co/300x200.png');
   const [dataAiHint, setDataAiHint] = useState(path?.dataAiHint || 'learning path');
@@ -69,7 +67,7 @@ const LearningPathForm = ({
       icon,
       imageUrl,
       dataAiHint,
-      courseIdsToConnect: selectedCourseIds, // This is how we pass IDs to dbUtils
+      courseIdsToConnect: selectedCourseIds,
     });
   };
 
@@ -151,7 +149,7 @@ const LearningPathForm = ({
 export default function LearningPathManagement() {
   const [learningPaths, setLearningPaths] = useState<LearningPath[]>([]);
   const [allCourses, setAllCourses] = useState<Course[]>([]);
-  const [editingPath, setEditingPath] = useState<LearningPath | undefined>(undefined);
+  const [editingPath, setEditingPath] = useState<(LearningPath & { courses?: { course: Course }[] }) | undefined>(undefined);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [isSubmittingForm, setIsSubmittingForm] = useState(false);
@@ -164,7 +162,7 @@ export default function LearningPathManagement() {
         getLearningPathsFromDb(),
         getCoursesFromDb()
       ]);
-      setLearningPaths(pathsFromDb);
+      setLearningPaths(pathsFromDb as any); // Cast if Prisma type for courses relation is different initially
       setAllCourses(coursesFromDb);
       setIsLoadingData(false);
     };
@@ -174,8 +172,8 @@ export default function LearningPathManagement() {
   const handleAddPath = async (data: Omit<LearningPath, 'id' | 'createdAt' | 'updatedAt' | 'courses'> & { courseIdsToConnect?: string[] }) => {
     setIsSubmittingForm(true);
     try {
-      const newPath = await addLearningPathToDb(data); // Use Prisma-based function
-      setLearningPaths(prev => [newPath, ...prev].sort((a, b) => a.title.localeCompare(b.title)));
+      const newPath = await addLearningPathToDb(data);
+      setLearningPaths(prev => [newPath, ...prev].sort((a, b) => a.title.localeCompare(b.title)) as any);
       closeForm();
       toast({ title: "Learning Path Added", description: `"${data.title}" created.` });
     } catch (error) {
@@ -189,8 +187,8 @@ export default function LearningPathManagement() {
     if (!editingPath || !editingPath.id) return;
     setIsSubmittingForm(true);
     try {
-      const updatedPath = await updateLearningPathInDb(editingPath.id, data); // Use Prisma-based function
-      setLearningPaths(prev => prev.map(p => (p.id === editingPath.id ? updatedPath : p)).sort((a,b) => a.title.localeCompare(b.title)));
+      const updatedPath = await updateLearningPathInDb(editingPath.id, data);
+      setLearningPaths(prev => prev.map(p => (p.id === editingPath.id ? updatedPath : p)).sort((a,b) => a.title.localeCompare(b.title)) as any);
       closeForm();
       toast({ title: "Learning Path Updated", description: `"${data.title}" updated.` });
     } catch (error) {
@@ -203,7 +201,7 @@ export default function LearningPathManagement() {
   const handleDeletePath = async (pathId: string) => {
     const pathToDelete = learningPaths.find(p => p.id === pathId);
     try {
-      await deleteLearningPathFromDb(pathId); // Use Prisma-based function
+      await deleteLearningPathFromDb(pathId);
       setLearningPaths(prev => prev.filter(p => p.id !== pathId));
       toast({ title: "Learning Path Deleted", description: `"${pathToDelete?.title}" deleted.`, variant: "destructive" });
     } catch (error) {
@@ -211,7 +209,7 @@ export default function LearningPathManagement() {
     }
   };
 
-  const openForm = (path?: LearningPath) => {
+  const openForm = (path?: LearningPath & { courses?: { course: Course }[] }) => {
     setEditingPath(path ? JSON.parse(JSON.stringify(path)) : undefined);
     setIsFormOpen(true);
   };
@@ -277,10 +275,10 @@ export default function LearningPathManagement() {
                       {path.title}
                     </h3>
                     <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{path.description}</p>
-                    <p className="text-xs text-muted-foreground mt-1">Courses: {path.courses?.length || path.courseIds?.length || 0}</p> {/* Display count from relation or stored IDs */}
+                    <p className="text-xs text-muted-foreground mt-1">Courses: {(path as any).courses?.length || (path as any).courseIds?.length || 0}</p>
                   </div>
                   <div className="flex flex-col sm:flex-row sm:space-x-2 gap-2 sm:gap-0 w-full sm:w-auto sm:items-center mt-2 sm:mt-0 shrink-0 self-start sm:self-center">
-                    <Button variant="outline" size="sm" onClick={() => openForm(path)} className="w-full sm:w-auto hover:border-primary hover:text-primary">
+                    <Button variant="outline" size="sm" onClick={() => openForm(path as any)} className="w-full sm:w-auto hover:border-primary hover:text-primary">
                       <Edit3 className="mr-1 h-4 w-4" /> Edit
                     </Button>
                     <Dialog>

@@ -1,9 +1,8 @@
 
 // This file is now a Server Component
 import type { Metadata, ResolvingMetadata } from 'next';
-// Import the Prisma version of getLearningPathsFromDb and getCoursesFromDb
-import { getLearningPathsFromDb, getCoursesFromDb } from '@/lib/dbUtils';
-import LearningPathDetailClient from './learning-path-detail-client'; // Import the new client component
+import { getLearningPathsFromDb, getCoursesFromDb } from '@/lib/dbUtils'; // Use Prisma-based functions
+import LearningPathDetailClient from './learning-path-detail-client'; 
 
 type Props = {
   params: { id: string }
@@ -14,7 +13,6 @@ export async function generateMetadata(
   parent: ResolvingMetadata
 ): Promise<Metadata> {
   const id = params.id;
-  // Fetch all learning paths and find the current one using Prisma
   const allPaths = await getLearningPathsFromDb();
   const learningPath = allPaths.find((p) => p.id === id);
 
@@ -25,12 +23,10 @@ export async function generateMetadata(
     }
   }
 
-  // Fetch all courses and filter by IDs in the current path using Prisma
   const allCourses = await getCoursesFromDb();
-  // The 'courses' relation on LearningPath should contain LearningPathCourse objects
   const pathCourseIds = learningPath.courses?.map(lpc => lpc.courseId) || [];
   const pathCourses = allCourses.filter(course => pathCourseIds.includes(course.id));
-  const courseTitles = pathCourses.map(c => c.title).slice(0, 3); // Get first 3 course titles for description
+  const courseTitles = pathCourses.map(c => c.title).slice(0, 3);
 
   const previousImages = (await parent).openGraph?.images || []
 
@@ -47,8 +43,6 @@ export async function generateMetadata(
   }
 }
 
-// This is the Server Component that Next.js will render for the page.
 export default function LearningPathPageContainer({ params }: Props) {
-  // It passes the pathId to the Client Component.
   return <LearningPathDetailClient pathId={params.id} />;
 }

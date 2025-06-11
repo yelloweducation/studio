@@ -5,9 +5,9 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image'; 
 import { useAuth } from '@/hooks/useAuth';
-import { type Course, type PaymentSubmission, type User, type PaymentSettings } from '@/lib/dbUtils'; // Use Prisma types from dbUtils
-import { initialPaymentSettings as mockDefaultPaymentSettings } from '@/data/mockData'; // For default structure
-import { getCourseByIdFromDb, getPaymentSettingsFromDb, addPaymentSubmissionToDb } from '@/lib/dbUtils'; // Use Prisma-based functions
+import { type Course, type PaymentSubmission, type User, type PaymentSettings } from '@/lib/dbUtils'; 
+import { initialPaymentSettings as mockDefaultPaymentSettings } from '@/data/mockData'; 
+import { getCourseByIdFromDb, getPaymentSettingsFromDb, addPaymentSubmissionToDb } from '@/lib/dbUtils'; 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -124,11 +124,11 @@ export default function CheckoutPage() {
       setIsLoadingCourse(true);
 
       const [settingsFromDb, courseFromDb] = await Promise.all([
-        getPaymentSettingsFromDb(), // Use Prisma-based function
-        getCourseByIdFromDb(courseId) // Use Prisma-based function
+        getPaymentSettingsFromDb(), 
+        getCourseByIdFromDb(courseId) 
       ]);
 
-      setPaymentSettings(settingsFromDb || (mockDefaultPaymentSettings as PaymentSettings)); // Use default if null
+      setPaymentSettings(settingsFromDb || (mockDefaultPaymentSettings as PaymentSettings)); 
       setIsLoadingSettings(false);
 
       setCurrentCourse(courseFromDb);
@@ -179,16 +179,16 @@ export default function CheckoutPage() {
 
     setIsSubmitting(true);
 
-    const submissionData: Omit<PaymentSubmission, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'submittedAt' | 'reviewedAt' | 'adminNotes' | 'user' | 'course'> = { // Prisma type expects relations to be connect objects or IDs
+    const submissionData: Omit<PaymentSubmission, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'submittedAt' | 'reviewedAt' | 'adminNotes' | 'user' | 'course'> = {
       userId: user.id,
       courseId: currentCourse.id,
       amount: currentCourse.price,
       currency: currentCourse.currency || 'USD',
-      screenshotUrl: screenshotPreviewUrl, // This is base64 for now
+      screenshotUrl: screenshotPreviewUrl, 
     };
 
     try {
-      await addPaymentSubmissionToDb(submissionData); // Use Prisma-based function
+      await addPaymentSubmissionToDb(submissionData); 
       toast({ title: t.paymentSubmitted, description: t.paymentSubmittedDesc });
       router.push(`/courses/${courseId}`);
     } catch (error) {

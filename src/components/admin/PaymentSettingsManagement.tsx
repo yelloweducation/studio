@@ -2,7 +2,7 @@
 "use client";
 import React, { useState, useEffect, type FormEvent } from 'react';
 import { type PaymentSettings } from '@/lib/dbUtils'; // Use Prisma type from dbUtils
-import { initialPaymentSettings as mockDefaultSettings } from '@/data/mockData'; // Keep for default structure
+// Removed: import { initialPaymentSettings as mockDefaultSettings } from '@/data/mockData';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,8 +12,17 @@ import { Settings, Save, Banknote, UserCircle, ClipboardList, Loader2 } from 'lu
 import { useToast } from '@/hooks/use-toast';
 import { getPaymentSettingsFromDb, savePaymentSettingsToDb } from '@/lib/dbUtils'; // Use Prisma-based functions
 
+const defaultPaymentSettings: PaymentSettings = {
+  id: 'global', // Prisma needs an id for upsert if it doesn't exist
+  bankName: null,
+  accountNumber: null,
+  accountHolderName: null,
+  additionalInstructions: null,
+  updatedAt: new Date(), // Prisma will manage this, but good for type consistency
+};
+
 export default function PaymentSettingsManagement() {
-  const [settings, setSettings] = useState<PaymentSettings>(mockDefaultSettings as PaymentSettings); // Cast for initial state
+  const [settings, setSettings] = useState<PaymentSettings>(defaultPaymentSettings);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
@@ -21,11 +30,11 @@ export default function PaymentSettingsManagement() {
   useEffect(() => {
     const loadSettings = async () => {
       setIsLoading(true);
-      const dbSettings = await getPaymentSettingsFromDb(); // Use Prisma-based function
+      const dbSettings = await getPaymentSettingsFromDb(); 
       if (dbSettings) {
         setSettings(dbSettings);
       } else {
-        setSettings(mockDefaultSettings as PaymentSettings); // Fallback if no settings exist yet
+        setSettings(defaultPaymentSettings); 
       }
       setIsLoading(false);
     };
@@ -34,21 +43,20 @@ export default function PaymentSettingsManagement() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setSettings(prev => ({ ...prev, [name]: value === '' ? null : value } as PaymentSettings)); // Allow null for optional fields
+    setSettings(prev => ({ ...prev, [name]: value === '' ? null : value } as PaymentSettings)); 
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
     try {
-      // The `id` field is managed by Prisma (upsert uses 'global') and `updatedAt` is auto by Prisma
       const dataToSave: Omit<PaymentSettings, 'id' | 'updatedAt'> = {
           bankName: settings.bankName || null,
           accountNumber: settings.accountNumber || null,
           accountHolderName: settings.accountHolderName || null,
           additionalInstructions: settings.additionalInstructions || null,
       };
-      await savePaymentSettingsToDb(dataToSave); // Use Prisma-based function
+      await savePaymentSettingsToDb(dataToSave); 
       toast({
         title: "Settings Saved",
         description: "Your payment configuration has been updated.",

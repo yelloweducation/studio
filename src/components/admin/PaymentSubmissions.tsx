@@ -20,13 +20,11 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { getPaymentSubmissionsFromDb, updatePaymentSubmissionInDb, getCourseByIdFromDb } from '@/lib/dbUtils'; // Updated to use dbUtils
-import { getAllUsersFromPrisma as getAllUsersFromDb } from '@/lib/authUtils'; // Assuming user fetching is similar
+import { getPaymentSubmissionsFromDb, updatePaymentSubmissionInDb } from '@/lib/dbUtils'; // Updated to use Prisma dbUtils
+// Note: getAllUsersFromDb is now part of authUtils, no need to import directly if submissions include user details
 
 export default function PaymentSubmissions() {
   const [submissions, setSubmissions] = useState<PaymentSubmission[]>([]);
-  const [allUsers, setAllUsers] = useState<User[]>([]);
-  // We don't need allCourses here if the submission already includes basic course info or title
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
@@ -38,13 +36,8 @@ export default function PaymentSubmissions() {
     const loadData = async () => {
       setIsLoading(true);
       try {
-        // PaymentSubmissions from dbUtils should now include user and course details if defined in Prisma schema relations
-        const [submissionsFromDb, usersFromDb] = await Promise.all([
-          getPaymentSubmissionsFromDb(),
-          getAllUsersFromDb(),
-        ]);
+        const submissionsFromDb = await getPaymentSubmissionsFromDb();
         setSubmissions(submissionsFromDb);
-        setAllUsers(usersFromDb); // Still useful if submission doesn't directly embed all user details
       } catch (error) {
         console.error("Failed to load data for payment submissions:", error);
         toast({ variant: "destructive", title: "Error", description: "Failed to load payment submission data." });
@@ -54,14 +47,12 @@ export default function PaymentSubmissions() {
     loadData();
   }, [toast]);
 
-  const getUserName = (userId: string) => allUsers.find(u => u.id === userId)?.name || 'Unknown User';
-  // For course title, Prisma's include in getPaymentSubmissionsFromDb should provide it if relation is set up
+  const getUserName = (submission: PaymentSubmission) => submission.user?.name || 'Unknown User';
   const getCourseTitle = (submission: PaymentSubmission) => submission.course?.title || 'Unknown Course';
 
   const handleUpdateStatus = async (submissionId: string, newStatus: PaymentSubmissionStatus, notes?: string) => {
     setIsUpdating(true);
     try {
-      // Prisma expects Date objects for date fields
       await updatePaymentSubmissionInDb(submissionId, { status: newStatus, adminNotes: notes, reviewedAt: new Date() });
       setSubmissions(prev => prev.map(sub => 
         sub.id === submissionId 
@@ -143,7 +134,7 @@ export default function PaymentSubmissions() {
               <TableBody>
                 {submissions.map((sub) => (
                   <TableRow key={sub.id}>
-                    <TableCell className="font-medium">{sub.user?.name || getUserName(sub.userId)}</TableCell>
+                    <TableCell className="font-medium">{getUserName(sub)}</TableCell>
                     <TableCell>{getCourseTitle(sub)}</TableCell>
                     <TableCell className="text-right">{sub.amount.toFixed(2)} {sub.currency}</TableCell>
                     <TableCell>{sub.submittedAt ? new Date(sub.submittedAt).toLocaleDateString() : 'N/A'}</TableCell>
@@ -174,7 +165,7 @@ export default function PaymentSubmissions() {
             <DialogHeader>
               <DialogTitle>Review Payment Submission</DialogTitle>
               <DialogDescription>
-                Review details for {getCourseTitle(editingSubmission)} by {editingSubmission.user?.name || getUserName(editingSubmission.userId)}.
+                Review details for {getCourseTitle(editingSubmission)} by {getUserName(editingSubmission)}.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto pr-2">

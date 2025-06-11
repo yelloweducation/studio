@@ -3,8 +3,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { type Course, type Module, type Lesson, type Enrollment } from '@/lib/dbUtils'; // Use Prisma types from dbUtils
-import { getCourseByIdFromDb, getEnrollmentForUserAndCourseFromDb, updateEnrollmentProgressInDb, createEnrollmentInDb } from '@/lib/dbUtils'; // Use Prisma-based functions
+import { type Course, type Module, type Lesson, type Enrollment } from '@/lib/dbUtils'; 
+import { getCourseByIdFromDb, getEnrollmentForUserAndCourseFromDb, updateEnrollmentProgressInDb, createEnrollmentInDb } from '@/lib/dbUtils'; 
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -92,14 +92,14 @@ export default function LessonViewerPage() {
         setIsLoading(false);
         return;
       }
-      const courseData = await getCourseByIdFromDb(courseId); // Use Prisma-based function
+      const courseData = await getCourseByIdFromDb(courseId); 
       setCurrentCourse(courseData);
 
       if (user && courseData) {
-        let enrollment = await getEnrollmentForUserAndCourseFromDb(user.id, courseId); // Use Prisma-based function
+        let enrollment = await getEnrollmentForUserAndCourseFromDb(user.id, courseId); 
         if (!enrollment) {
           if (courseData.price === 0 || courseData.price === null) { 
-             enrollment = await createEnrollmentInDb(user.id, courseId); // Use Prisma-based function
+             enrollment = await createEnrollmentInDb(user.id, courseId); 
              if (enrollment) toast({ title: t.enrollmentCreated });
           }
         }
@@ -140,7 +140,7 @@ export default function LessonViewerPage() {
 
     if (newProgress > (currentEnrollment.progress || 0)) {
         try {
-            await updateEnrollmentProgressInDb(currentEnrollment.id, newProgress); // Use Prisma-based function
+            await updateEnrollmentProgressInDb(currentEnrollment.id, newProgress); 
             setCurrentEnrollment(prev => prev ? { ...prev, progress: newProgress } : null);
             if (newProgress < 100) {
                 // toast({ title: t.progressUpdated, description: `Progress: ${newProgress}%` });
@@ -167,7 +167,7 @@ export default function LessonViewerPage() {
     }
     try {
         if (currentEnrollment.progress < 100) {
-            await updateEnrollmentProgressInDb(currentEnrollment.id, 100); // Use Prisma-based function
+            await updateEnrollmentProgressInDb(currentEnrollment.id, 100); 
             setCurrentEnrollment(prev => prev ? { ...prev, progress: 100 } : null);
         }
         toast({ title: "Course Completed!", description: "Congratulations on finishing the course." });
