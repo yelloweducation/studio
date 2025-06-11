@@ -6,11 +6,11 @@ import {
   updateUserRoleInMock,
   addUserToMock,
   comparePassword,
-  hashPassword, 
+  // hashPassword, // No longer directly used here, done in addUserToMock
   SUPER_ADMIN_EMAIL,
   getAllUsersFromMock as getAllUsersFromMockUtil
 } from '@/lib/authUtils';
-import type { User as MockUserType, Role as PrismaRoleType } from '@/lib/authUtils';
+import type { User as MockUserType, Role as PrismaRoleType } from '@/lib/authUtils'; // Use internal MockUserType
 
 const LoginInputSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -29,34 +29,35 @@ const UpdateRoleInputSchema = z.object({
 });
 
 
-export const serverLoginUser = async (email: string, password_from_form: string): Promise<MockUserType | null> => {
-  console.log(`[AuthActions - serverLoginUser] Attempting login for email: ${email}, password_from_form (prefix): ${password_from_form.substring(0,3)}... (length: ${password_from_form.length})`);
-  const validation = LoginInputSchema.safeParse({ email, password: password_from_form });
+export const serverLoginUser = async (email_from_form_raw: string, password_from_form: string): Promise<MockUserType | null> => {
+  const email_from_form = email_from_form_raw.toLowerCase(); // Normalize email for lookup
+  console.log(`[AuthActions - serverLoginUser] Attempting login for email: ${email_from_form}, password_from_form (prefix): ${password_from_form.substring(0,3)}... (length: ${password_from_form.length})`);
+  
+  const validation = LoginInputSchema.safeParse({ email: email_from_form, password: password_from_form });
   if (!validation.success) {
     console.error("[AuthActions - serverLoginUser] Server-side login input validation failed:", validation.error.flatten().fieldErrors);
     return null;
   }
 
-  const validatedEmail = validation.data.email;
+  const validatedEmail = validation.data.email; // Already lowercased
   const validatedPassword = validation.data.password;
 
-  const user = findUserByEmailFromMock(validatedEmail);
+  const user = await findUserByEmailFromMock(validatedEmail); // Uses in-memory store
 
   if (user) {
     console.log(`[AuthActions - serverLoginUser] User found for ${validatedEmail}. ID: ${user.id}. Stored hash (prefix): ${user.passwordHash?.substring(0,10)}...`);
     
     let isMatch = false;
-
-    // The temporary bypass logic has been removed.
-    // Always use bcrypt.compare for password verification.
+    
     console.log(`[AuthActions - serverLoginUser] Proceeding with bcrypt.compare for user ${validatedEmail}.`);
-    isMatch = await comparePassword(validatedPassword, user.passwordHash || '');
+    isMatch = await comparePassword(validatedPassword, user.passwordHash || ''); // Passwords are now compared against the in-memory hashed password.
         
     console.log(`[AuthActions - serverLoginUser] Final isMatch result for ${validatedEmail}: ${isMatch}`);
 
     if (isMatch) {
       console.log(`[AuthActions - serverLoginUser] Password match for user ID: ${user.id}. Login successful.`);
-      const { passwordHash, ...userWithoutPasswordHash } = user; // Exclude passwordHash from returned user object
+      // @ts-ignore // passwordHash exists on MockUserType in authUtils
+      const { passwordHash, ...userWithoutPasswordHash } = user; 
       return userWithoutPasswordHash as MockUserType;
     } else {
       console.log(`[AuthActions - serverLoginUser] Password mismatch for user ID: ${user.id}.`);
@@ -67,7 +68,8 @@ export const serverLoginUser = async (email: string, password_from_form: string)
   return null;
 };
 
-export const serverRegisterUser = async (name: string, email: string, password_param: string): Promise<MockUserType | null> => {
+export const serverRegisterUser = async (name: string, email_raw: string, password_param: string): Promise<MockUserType | null> => {
+  const email = email_raw.toLowerCase(); // Normalize email
   console.log(`[AuthActions - serverRegisterUser] Attempting registration for email: ${email}, name: ${name}, password_param (prefix): ${password_param.substring(0,3)}... (length: ${password_param.length})`);
   const validation = RegisterInputSchema.safeParse({ name, email, password: password_param });
   if (!validation.success) {
@@ -76,20 +78,23 @@ export const serverRegisterUser = async (name: string, email: string, password_p
     throw new Error(errorMessages || "Invalid registration data. Please check your inputs.");
   }
 
-  const existingUser = findUserByEmailFromMock(validation.data.email);
+  // findUserByEmailFromMock now checks the in-memory store
+  const existingUser = await findUserByEmailFromMock(validation.data.email);
   if (existingUser) {
     console.error(`[AuthActions - serverRegisterUser] User already exists with email: ${validation.data.email}.`);
     throw new Error("UserAlreadyExists");
   }
 
   try {
+    // addUserToMock now adds to in-memory store and hashes password
     const newUser = await addUserToMock({
       name: validation.data.name,
-      email: validation.data.email,
+      email: validation.data.email, // Use validated (potentially lowercased) email
       role: validation.data.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase() ? 'ADMIN' : 'STUDENT',
     }, validation.data.password); 
 
     console.log(`[AuthActions - serverRegisterUser] Registration successful for: ${newUser.email}, ID: ${newUser.id}. Hash stored (prefix): ${newUser.passwordHash.substring(0,10)}...`);
+    // @ts-ignore
     const { passwordHash, ...userWithoutPasswordHash } = newUser;
     return userWithoutPasswordHash as MockUserType;
   } catch (error) {
@@ -103,9 +108,10 @@ export const serverRegisterUser = async (name: string, email: string, password_p
 
 
 export async function getAllUsersServerAction(): Promise<MockUserType[]> {
-  console.log("[AuthActions - getAllUsersServerAction] Fetching all users.");
-  const users = getAllUsersFromMockUtil();
+  console.log("[AuthActions - getAllUsersServerAction] Fetching all users from in-memory store.");
+  const users = await getAllUsersFromMockUtil(); // Fetches from in-memory store
   return users.map(user => {
+    // @ts-ignore
     const { passwordHash, ...userWithoutPasswordHash } = user;
     return userWithoutPasswordHash as MockUserType;
   });
@@ -125,9 +131,11 @@ export async function updateUserRoleServerAction(userId: string, newRole: Prisma
       throw new Error("InvalidRole");
   }
   try {
-    const updatedUser = updateUserRoleInMock(validation.data.userId, validation.data.newRole as 'student' | 'admin');
+    // updateUserRoleInMock now updates the in-memory store
+    const updatedUser = await updateUserRoleInMock(validation.data.userId, validation.data.newRole as 'student' | 'admin');
     if (updatedUser) {
       console.log(`[AuthActions - updateUserRoleServerAction] Role updated successfully for user ID: ${userId} to ${newRole}`);
+      // @ts-ignore
       const { passwordHash, ...userWithoutPasswordHash } = updatedUser;
       return userWithoutPasswordHash as MockUserType;
     } else {
@@ -139,3 +147,5 @@ export async function updateUserRoleServerAction(userId: string, newRole: Prisma
     throw error;
   }
 }
+
+    
