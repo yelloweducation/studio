@@ -1,144 +1,195 @@
 
 "use client";
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { ImageIcon, Save } from 'lucide-react';
+import { ImageIcon, Save, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { courses as initialCourses, type Course } from '@/data/mockData';
-import { videos as initialVideos, type Video } from '@/data/mockData';
-import { initialCategoriesData, type Category } from '@/data/mockData'; // Corrected import
+import { type Course, type Video, type Category, type LearningPath } from '@/data/mockData';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
+import { 
+  getCoursesFromFirestore, updateCourseInFirestore,
+  getVideosFromFirestore, updateVideoInFirestore,
+  getCategoriesFromFirestore, updateCategoryInFirestore,
+  getLearningPathsFromFirestore, updateLearningPathInFirestore
+} from '@/lib/firestoreUtils';
 
 export default function ImageManagement() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [videos, setVideos] = useState<Video[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [learningPaths, setLearningPaths] = useState<LearningPath[]>([]);
 
-  const [isCoursesLoaded, setIsCoursesLoaded] = useState(false);
-  const [isVideosLoaded, setIsVideosLoaded] = useState(false);
-  const [isCategoriesLoaded, setIsCategoriesLoaded] = useState(false);
-
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState<Record<string, boolean>>({}); // To track saving state per item
   const { toast } = useToast();
 
-  // Load Courses
   useEffect(() => {
-    const storedCourses = localStorage.getItem('adminCourses');
-    if (storedCourses) {
+    const loadAllData = async () => {
+      setIsLoading(true);
       try {
-        setCourses(JSON.parse(storedCourses) as Course[]);
-      } catch (e) {
-        console.error("Failed to parse courses from localStorage for image management", e);
-        setCourses(initialCourses);
+        const [dbCourses, dbVideos, dbCategories, dbLearningPaths] = await Promise.all([
+          getCoursesFromFirestore(),
+          getVideosFromFirestore(),
+          getCategoriesFromFirestore(),
+          getLearningPathsFromFirestore(),
+        ]);
+        setCourses(dbCourses);
+        setVideos(dbVideos);
+        setCategories(dbCategories);
+        setLearningPaths(dbLearningPaths);
+      } catch (error) {
+        console.error("Error loading data for Image Management:", error);
+        toast({ variant: "destructive", title: "Error Loading Data", description: "Could not fetch all items for image management." });
       }
-    } else {
-      setCourses(initialCourses);
-    }
-    setIsCoursesLoaded(true);
-  }, []);
+      setIsLoading(false);
+    };
+    loadAllData();
+  }, [toast]);
 
-  // Load Videos
-  useEffect(() => {
-    const storedVideos = localStorage.getItem('adminVideos');
-    if (storedVideos) {
-      try {
-        setVideos(JSON.parse(storedVideos) as Video[]);
-      } catch (e) {
-        console.error("Failed to parse videos from localStorage for image management", e);
-        setVideos(initialVideos);
-      }
-    } else {
-      setVideos(initialVideos);
-    }
-    setIsVideosLoaded(true);
-  }, []);
-
-  // Load Categories
-  useEffect(() => {
-    const storedCategories = localStorage.getItem('adminCategories');
-    if (storedCategories) {
-      try {
-        setCategories(JSON.parse(storedCategories) as Category[]);
-      } catch (e) {
-        console.error("Failed to parse categories from localStorage for image management", e);
-        setCategories(initialCategoriesData);
-      }
-    } else {
-      setCategories(initialCategoriesData);
-    }
-    setIsCategoriesLoaded(true);
-  }, []);
-
-
-  const handleCourseImageChange = (courseId: string, field: 'imageUrl' | 'dataAiHint', value: string) => {
-    setCourses(prev => prev.map(c => c.id === courseId ? { ...c, [field]: value } : c));
+  const handleFieldChange = <T extends { id: string }>(
+    setStateFunc: React.Dispatch<React.SetStateAction<T[]>>,
+    itemId: string,
+    field: keyof T,
+    value: string
+  ) => {
+    setStateFunc(prevItems =>
+      prevItems.map(item =>
+        item.id === itemId ? { ...item, [field]: value } : item
+      )
+    );
   };
 
-  const handleSaveCourseImage = (courseId: string) => {
-    const courseToSave = courses.find(c => c.id === courseId);
-    if (courseToSave) {
-      const currentStoredCourses = localStorage.getItem('adminCourses');
-      let allCourses: Course[] = [];
-      if (currentStoredCourses) {
-        try {
-          allCourses = JSON.parse(currentStoredCourses);
-        } catch (e) { allCourses = initialCourses; }
-      } else {
-        allCourses = initialCourses;
-      }
-      const updatedCourses = allCourses.map(c => c.id === courseId ? courseToSave : c);
-      localStorage.setItem('adminCourses', JSON.stringify(updatedCourses));
-      toast({ title: "Course Image Updated", description: `Image details for "${courseToSave.title}" saved.` });
-    }
-  };
-  
-  const handleVideoThumbnailChange = (videoId: string, field: 'thumbnailUrl' | 'dataAiHint', value: string) => {
-    setVideos(prev => prev.map(v => v.id === videoId ? { ...v, [field]: value } : v));
-  };
+  const handleSaveItemImage = async (
+    itemType: 'course' | 'video' | 'category' | 'learningPath',
+    itemId: string
+  ) => {
+    setIsSaving(prev => ({ ...prev, [itemId]: true }));
+    let itemToSave: Course | Video | Category | LearningPath | undefined;
+    let updateFunction: (id: string, data: Partial<any>) => Promise<void>;
+    let itemName = '';
 
-  const handleSaveVideoThumbnail = (videoId: string) => {
-    const videoToSave = videos.find(v => v.id === videoId);
-    if (videoToSave) {
-      const currentStoredVideos = localStorage.getItem('adminVideos');
-      let allVideos: Video[] = [];
-       if (currentStoredVideos) {
-        try {
-          allVideos = JSON.parse(currentStoredVideos);
-        } catch (e) { allVideos = initialVideos; }
-      } else {
-        allVideos = initialVideos;
+    try {
+      switch (itemType) {
+        case 'course':
+          itemToSave = courses.find(c => c.id === itemId);
+          updateFunction = updateCourseInFirestore;
+          itemName = itemToSave?.title || 'Course';
+          break;
+        case 'video':
+          itemToSave = videos.find(v => v.id === itemId);
+          updateFunction = updateVideoInFirestore;
+          itemName = itemToSave?.title || 'Video';
+          break;
+        case 'category':
+          itemToSave = categories.find(cat => cat.id === itemId);
+          updateFunction = updateCategoryInFirestore;
+          itemName = (itemToSave as Category)?.name || 'Category';
+          break;
+        case 'learningPath':
+          itemToSave = learningPaths.find(lp => lp.id === itemId);
+          updateFunction = updateLearningPathInFirestore;
+          itemName = itemToSave?.title || 'Learning Path';
+          break;
+        default:
+          throw new Error("Invalid item type");
       }
-      const updatedVideos = allVideos.map(v => v.id === videoId ? videoToSave : v);
-      localStorage.setItem('adminVideos', JSON.stringify(updatedVideos));
-      toast({ title: "Video Thumbnail Updated", description: `Thumbnail for "${videoToSave.title}" saved.` });
+
+      if (itemToSave) {
+        // We only want to update imageUrl and dataAiHint
+        const dataToUpdate: Partial<Course | Video | Category | LearningPath> = {
+          imageUrl: itemToSave.imageUrl,
+          dataAiHint: itemToSave.dataAiHint,
+        };
+        await updateFunction(itemId, dataToUpdate);
+        toast({ title: `${itemType.charAt(0).toUpperCase() + itemType.slice(1)} Image Updated`, description: `Image details for "${itemName}" saved to Firestore.` });
+      }
+    } catch (error) {
+      toast({ variant: "destructive", title: "Save Failed", description: `Could not save image details for "${itemName}".` });
+    } finally {
+      setIsSaving(prev => ({ ...prev, [itemId]: false }));
     }
   };
 
-  const handleCategoryImageChange = (categoryId: string, field: 'imageUrl' | 'dataAiHint', value: string) => {
-    setCategories(prev => prev.map(cat => cat.id === categoryId ? { ...cat, [field]: value } : cat));
+  const renderImageForm = <T extends { id: string, title?: string, name?: string, imageUrl?: string, dataAiHint?: string }>(
+    item: T,
+    itemType: 'course' | 'video' | 'category' | 'learningPath',
+    setStateFunc: React.Dispatch<React.SetStateAction<T[]>>
+  ) => {
+    const title = item.title || item.name || 'Item';
+    const aspectClass = itemType === 'video' ? 'aspect-[9/16]' : 'aspect-video';
+    const placeholderImage = itemType === 'video' ? 'https://placehold.co/360x640.png' : 'https://placehold.co/600x400.png';
+
+    return (
+      <Card key={item.id}>
+        <form onSubmit={(e) => { e.preventDefault(); handleSaveItemImage(itemType, item.id); }}>
+          <CardHeader>
+            <CardTitle className="text-md font-semibold">{title}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-4 items-start">
+              <div className={`w-full sm:w-1/3 flex-shrink-0 ${itemType === 'video' ? 'max-w-[150px] sm:max-w-full' : ''}`}>
+                <Label htmlFor={`${itemType}ImageUrl-${item.id}`}>Current Image</Label>
+                <div className={`mt-1 w-full relative border rounded-md overflow-hidden bg-muted ${aspectClass}`}>
+                  {(item.imageUrl || placeholderImage) && (
+                    <Image src={item.imageUrl || placeholderImage} alt={title} layout="fill" objectFit="cover" key={item.imageUrl} />
+                  )}
+                </div>
+              </div>
+              <div className="w-full sm:w-2/3 space-y-4">
+                <div>
+                  <Label htmlFor={`${itemType}ImageUrlInput-${item.id}`}>Image URL</Label>
+                  <Input
+                    id={`${itemType}ImageUrlInput-${item.id}`}
+                    value={item.imageUrl || ''}
+                    onChange={e => handleFieldChange(setStateFunc, item.id, 'imageUrl' as keyof T, e.target.value)}
+                    disabled={isSaving[item.id]}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor={`${itemType}AiHint-${item.id}`}>AI Hint</Label>
+                  <Input
+                    id={`${itemType}AiHint-${item.id}`}
+                    value={item.dataAiHint || ''}
+                    onChange={e => handleFieldChange(setStateFunc, item.id, 'dataAiHint' as keyof T, e.target.value)}
+                    placeholder="e.g. education programming"
+                    disabled={isSaving[item.id]}
+                  />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Button type="submit" size="sm" disabled={isSaving[item.id]}>
+              {isSaving[item.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
+              Save {itemType.charAt(0).toUpperCase() + itemType.slice(1)} Image
+            </Button>
+          </CardFooter>
+        </form>
+      </Card>
+    );
   };
 
-  const handleSaveCategoryImage = (categoryId: string) => {
-    const categoryToSave = categories.find(cat => cat.id === categoryId);
-    if (categoryToSave) {
-      const currentStoredCategories = localStorage.getItem('adminCategories');
-      let allCategories: Category[] = [];
-      if (currentStoredCategories) {
-        try {
-          allCategories = JSON.parse(currentStoredCategories);
-        } catch (e) { allCategories = initialCategoriesData; }
-      } else {
-        allCategories = initialCategoriesData;
-      }
-      const updatedCategories = allCategories.map(cat => cat.id === categoryId ? categoryToSave : cat);
-      localStorage.setItem('adminCategories', JSON.stringify(updatedCategories));
-      toast({ title: "Category Image Updated", description: `Image details for "${categoryToSave.name}" saved.` });
-    }
-  };
-
+  if (isLoading) {
+    return (
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center text-xl md:text-2xl font-headline">
+            <ImageIcon className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Image Management
+          </CardTitle>
+          <CardDescription>Loading image data from Firestore...</CardDescription>
+        </CardHeader>
+        <CardContent className="py-10">
+          <div className="flex justify-center items-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="shadow-lg">
@@ -146,180 +197,46 @@ export default function ImageManagement() {
         <CardTitle className="flex items-center text-xl md:text-2xl font-headline">
           <ImageIcon className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Image Management
         </CardTitle>
-        <CardDescription>Manage image URLs and AI hints for various parts of the application.</CardDescription>
+        <CardDescription>Manage image URLs and AI hints. Changes are saved to Firestore.</CardDescription>
       </CardHeader>
       <CardContent>
         <ScrollArea className="h-[calc(100vh-20rem)] pr-3">
           <div className="space-y-8">
-            {/* Course Images */}
             <section>
               <h3 className="text-xl font-semibold mb-4 font-headline">Course Images</h3>
-              {isCoursesLoaded && courses.length > 0 ? (
+              {courses.length > 0 ? (
                 <div className="space-y-6">
-                  {courses.map(course => (
-                    <Card key={course.id}>
-                      <form onSubmit={(e) => { e.preventDefault(); handleSaveCourseImage(course.id); }}>
-                        <CardHeader>
-                          <CardTitle className="text-md font-semibold">{course.title}</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div className="flex flex-col sm:flex-row gap-4 items-start">
-                             <div className="w-full sm:w-1/3 flex-shrink-0">
-                                <Label htmlFor={`courseImageUrl-${course.id}`}>Current Image</Label>
-                                <div className="mt-1 aspect-video w-full relative border rounded-md overflow-hidden bg-muted">
-                                {(course.imageUrl || 'https://placehold.co/600x400.png') && (
-                                    <Image src={course.imageUrl || 'https://placehold.co/600x400.png'} alt={course.title} layout="fill" objectFit="cover" key={course.imageUrl}/>
-                                )}
-                                </div>
-                            </div>
-                            <div className="w-full sm:w-2/3 space-y-4">
-                                <div>
-                                    <Label htmlFor={`courseImageUrlInput-${course.id}`}>Image URL</Label>
-                                    <Input 
-                                        id={`courseImageUrlInput-${course.id}`} 
-                                        value={course.imageUrl || ''} 
-                                        onChange={e => handleCourseImageChange(course.id, 'imageUrl', e.target.value)} 
-                                    />
-                                </div>
-                                <div>
-                                    <Label htmlFor={`courseAiHint-${course.id}`}>AI Hint</Label>
-                                    <Input 
-                                        id={`courseAiHint-${course.id}`} 
-                                        value={course.dataAiHint || ''} 
-                                        onChange={e => handleCourseImageChange(course.id, 'dataAiHint', e.target.value)} 
-                                        placeholder="e.g. education programming"
-                                    />
-                                </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                        <CardFooter>
-                          <Button type="submit" size="sm">
-                            <Save className="mr-2 h-4 w-4"/> Save Course Image
-                          </Button>
-                        </CardFooter>
-                      </form>
-                    </Card>
-                  ))}
+                  {courses.map(course => renderImageForm(course, 'course', setCourses))}
                 </div>
-              ) : (
-                <p className="text-muted-foreground">{isCoursesLoaded ? 'No courses found. Add courses in "Manage Courses" tab.' : 'Loading courses...'}</p>
-              )}
+              ) : (<p className="text-muted-foreground">No courses found.</p>)}
             </section>
 
-            {/* Video Thumbnails */}
             <section>
               <h3 className="text-xl font-semibold mb-4 font-headline">Video Thumbnails</h3>
-              {isVideosLoaded && videos.length > 0 ? (
+              {videos.length > 0 ? (
                 <div className="space-y-6">
-                  {videos.map(video => (
-                    <Card key={video.id}>
-                      <form onSubmit={(e) => {e.preventDefault(); handleSaveVideoThumbnail(video.id);}}>
-                        <CardHeader>
-                          <CardTitle className="text-md font-semibold">{video.title}</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div className="flex flex-col sm:flex-row gap-4 items-start">
-                            <div className="w-full sm:w-1/3 flex-shrink-0">
-                                <Label htmlFor={`videoThumbnailUrl-${video.id}`}>Current Thumbnail</Label>
-                                <div className="mt-1 aspect-[9/16] w-full max-w-[150px] sm:max-w-full relative border rounded-md overflow-hidden bg-muted">
-                                {(video.thumbnailUrl || 'https://placehold.co/360x640.png') && (
-                                    <Image src={video.thumbnailUrl || 'https://placehold.co/360x640.png'} alt={video.title} layout="fill" objectFit="cover" key={video.thumbnailUrl}/>
-                                )}
-                                </div>
-                            </div>
-                             <div className="w-full sm:w-2/3 space-y-4">
-                                <div>
-                                    <Label htmlFor={`videoThumbnailUrlInput-${video.id}`}>Thumbnail URL</Label>
-                                    <Input 
-                                        id={`videoThumbnailUrlInput-${video.id}`} 
-                                        value={video.thumbnailUrl || ''} 
-                                        onChange={e => handleVideoThumbnailChange(video.id, 'thumbnailUrl', e.target.value)}
-                                    />
-                                </div>
-                                <div>
-                                    <Label htmlFor={`videoAiHint-${video.id}`}>AI Hint</Label>
-                                    <Input 
-                                        id={`videoAiHint-${video.id}`} 
-                                        value={video.dataAiHint || ''} 
-                                        onChange={e => handleVideoThumbnailChange(video.id, 'dataAiHint', e.target.value)} 
-                                        placeholder="e.g. tech tutorial"
-                                    />
-                                </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                        <CardFooter>
-                          <Button type="submit" size="sm">
-                            <Save className="mr-2 h-4 w-4"/> Save Video Thumbnail
-                          </Button>
-                        </CardFooter>
-                      </form>
-                    </Card>
-                  ))}
+                  {videos.map(video => renderImageForm(video, 'video', setVideos))}
                 </div>
-              ) : (
-                <p className="text-muted-foreground">{isVideosLoaded ? 'No videos found. Add videos in "Manage Videos" tab.' : 'Loading videos...'}</p>
-              )}
+              ) : (<p className="text-muted-foreground">No videos found.</p>)}
             </section>
 
-            {/* Category Images */}
             <section>
               <h3 className="text-xl font-semibold mb-4 font-headline">Category Images</h3>
-              {isCategoriesLoaded && categories.length > 0 ? (
+              {categories.length > 0 ? (
                 <div className="space-y-6">
-                  {categories.map(category => (
-                    <Card key={category.id}>
-                      <form onSubmit={(e) => { e.preventDefault(); handleSaveCategoryImage(category.id); }}>
-                        <CardHeader>
-                          <CardTitle className="text-md font-semibold">{category.name}</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div className="flex flex-col sm:flex-row gap-4 items-start">
-                            <div className="w-full sm:w-1/3 flex-shrink-0">
-                              <Label htmlFor={`categoryImageUrl-${category.id}`}>Current Image</Label>
-                              <div className="mt-1 aspect-[4/3] w-full relative border rounded-md overflow-hidden bg-muted">
-                                {(category.imageUrl || 'https://placehold.co/200x150.png') && (
-                                  <Image src={category.imageUrl || 'https://placehold.co/200x150.png'} alt={category.name} layout="fill" objectFit="cover" key={category.imageUrl} data-ai-hint={category.dataAiHint || 'category placeholder'} />
-                                )}
-                              </div>
-                            </div>
-                            <div className="w-full sm:w-2/3 space-y-4">
-                              <div>
-                                <Label htmlFor={`categoryImageUrlInput-${category.id}`}>Image URL</Label>
-                                <Input
-                                  id={`categoryImageUrlInput-${category.id}`}
-                                  value={category.imageUrl || ''}
-                                  onChange={e => handleCategoryImageChange(category.id, 'imageUrl', e.target.value)}
-                                  placeholder="https://example.com/image.png"
-                                />
-                              </div>
-                              <div>
-                                <Label htmlFor={`categoryAiHintInput-${category.id}`}>AI Hint</Label>
-                                <Input
-                                  id={`categoryAiHintInput-${category.id}`}
-                                  value={category.dataAiHint || ''}
-                                  onChange={e => handleCategoryImageChange(category.id, 'dataAiHint', e.target.value)}
-                                  placeholder="e.g. technology abstract"
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                        <CardFooter>
-                          <Button type="submit" size="sm">
-                            <Save className="mr-2 h-4 w-4" /> Save Category Image
-                          </Button>
-                        </CardFooter>
-                      </form>
-                    </Card>
-                  ))}
+                  {categories.map(category => renderImageForm(category, 'category', setCategories))}
                 </div>
-              ) : (
-                <p className="text-muted-foreground">{isCategoriesLoaded ? 'No categories found. Add categories in "Manage Categories" tab.' : 'Loading categories...'}</p>
-              )}
+              ) : (<p className="text-muted-foreground">No categories found.</p>)}
             </section>
 
+            <section>
+              <h3 className="text-xl font-semibold mb-4 font-headline">Learning Path Images</h3>
+              {learningPaths.length > 0 ? (
+                <div className="space-y-6">
+                  {learningPaths.map(lp => renderImageForm(lp, 'learningPath', setLearningPaths))}
+                </div>
+              ) : (<p className="text-muted-foreground">No learning paths found.</p>)}
+            </section>
           </div>
         </ScrollArea>
       </CardContent>

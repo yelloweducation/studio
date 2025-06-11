@@ -1,31 +1,24 @@
 
 "use client";
 import React, { useState, useEffect } from 'react';
-import { videos as mockVideos, type Video } from '@/data/mockData'; 
+import { type Video } from '@/data/mockData'; 
 import VideoCard from '@/components/videos/VideoCard';
 import { Loader2 } from 'lucide-react';
-import VideoPageHeader from '@/components/layout/VideoPageHeader'; // New Header
+import VideoPageHeader from '@/components/layout/VideoPageHeader';
+import { getVideosFromFirestore } from '@/lib/firestoreUtils'; // Import Firestore utility
 
 export default function VideosPage() {
   const [allFeedVideos, setAllFeedVideos] = useState<Video[]>([]);
   const [isLoadingFeedVideos, setIsLoadingFeedVideos] = useState(true);
 
   useEffect(() => {
-    let videosToUse: Video[] = [];
-    try {
-        const storedVideosString = localStorage.getItem('adminVideos');
-        if (storedVideosString) {
-            const parsed = JSON.parse(storedVideosString);
-            videosToUse = Array.isArray(parsed) ? parsed : mockVideos;
-        } else {
-            videosToUse = mockVideos;
-        }
-    } catch (error) {
-        console.error("Error loading videos from localStorage for feed:", error);
-        videosToUse = mockVideos;
-    }
-    setAllFeedVideos(videosToUse); 
-    setIsLoadingFeedVideos(false);
+    const fetchVideos = async () => {
+      setIsLoadingFeedVideos(true);
+      const videosFromDb = await getVideosFromFirestore();
+      setAllFeedVideos(videosFromDb);
+      setIsLoadingFeedVideos(false);
+    };
+    fetchVideos();
   }, []);
 
   return (
@@ -48,7 +41,6 @@ export default function VideosPage() {
           <p className="text-muted-foreground">No videos available at the moment.</p>
         </div>
       )}
-      {/* VideoPageFooter removed from here */}
     </div>
   );
 }

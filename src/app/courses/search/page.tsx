@@ -1,5 +1,4 @@
 
-// This directive applies to the module, making SearchCoursesClientLogic a client component.
 "use client"; 
 
 import React, { useState, useEffect, Suspense, lazy, type FormEvent } from 'react';
@@ -9,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import CourseCard from '@/components/courses/CourseCard';
 import CategoryCard from '@/components/categories/CategoryCard';
-import { courses as defaultMockCourses, type Course, initialCategoriesData as defaultMockCategories, type Category, type LearningPath, initialLearningPaths } from '@/data/mockData';
+import { type Course, type Category, type LearningPath } from '@/data/mockData';
+import { getCoursesFromFirestore, getCategoriesFromFirestore, getLearningPathsFromFirestore } from '@/lib/firestoreUtils'; // Firestore imports
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { Search, X, LayoutGrid, GraduationCap, Lightbulb, Star, Milestone, Send, Loader2, AlertTriangle, ListFilter } from 'lucide-react';
@@ -18,15 +18,13 @@ import { Badge } from '@/components/ui/badge';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { getQuickRecommendations, type QuickRecommendationInput, type QuickRecommendationOutput } from '@/ai/flows/quick-recommendation-flow';
 import * as LucideIcons from 'lucide-react';
-import { useLanguage, type Language } from '@/contexts/LanguageContext'; // Added
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const CareerAdviceChatbox = lazy(() => import('@/components/ai/CareerAdviceChatbox'));
 
-const isValidLucideIcon = (iconName: string): iconName is keyof typeof LucideIcons => {
-  return iconName in LucideIcons;
+const isValidLucideIcon = (iconName: string | undefined): iconName is keyof typeof LucideIcons => {
+  return typeof iconName === 'string' && iconName in LucideIcons;
 };
-
-const LEARNING_PATHS_KEY = 'adminLearningPaths';
 
 const searchPageTranslations = {
   en: {
@@ -53,36 +51,35 @@ const searchPageTranslations = {
     viewPath: "View Path"
   },
   my: {
-    searchKeywordLabel: "သော့ချက်စာလုံးဖြင့် ရှာပါ", // Search by keyword
-    searchKeywordPlaceholder: "ဥပမာ - JavaScript, Data Science...", // e.g., JavaScript, Data Science...
-    filterCategoryLabel: "အမျိုးအစားအလိုက် စစ်ထုတ်ပါ", // Filter by category
-    allCategories: "အမျိုးအစားအားလုံး", // All Categories
-    clearFilters: "စစ်ထုတ်မှုများ ဖယ်ရှားရန်", // Clear Filters
-    featuredCourses: "အထူးပြု အတန်းများ", // Featured Courses
-    quickSuggestions: "အမြန် အကြံပြုချက်များ", // Quick Suggestions
-    quickSuggestionsDesc: "သင်၏ စိတ်ဝင်စားမှုကို ပြောပြပါ၊ အတန်းတစ်ခု အကြံပြုပေးပါမည်!", // Tell us your interest, and we'll suggest a course!
-    quickSuggestionsInputPlaceholder: "ဥပမာ - 'web အတွက် python လေ့လာရန်'", // e.g., 'learn python for web'
-    getSuggestion: "အကြံပြုချက်ရယူပါ", // Get Suggestion
-    quickRecsIdeas: "ဤတွင် အကြံဉာဏ်အချို့ရှိပါသည်:", // Here are some ideas:
-    noQuickRecsFound: "\"{query}\" အတွက် သီးခြားအကြံပြုချက်များ မတွေ့ပါ။ ကျယ်ပြန့်သော စကားလုံးကို စမ်းကြည့်ပါ သို့မဟုတ် အောက်တွင် ရှာဖွေပါ။", // No specific recommendations found for "{query}". Try a broader term or browse below!
-    popularTopics: "ရှာဖွေမှုများသောအတန်းများ", // Popular Topics -> Courses with high attendance (updated)
-    browseCategories: "အမျိုးအစားများ ကြည့်ရှုရန်", // Browse Categories
-    noCategoriesAvailable: "အမျိုးအစားများ မရှိသေးပါ", // No Categories Available
-    noCategoriesDesc: "အမျိုးအစားများ ထည့်သွင်းပြီးနောက် ဤနေရာတွင် ပေါ်လာပါမည်။", // Categories will appear here once added.
-    availableCourses: "တက်ရောက်နိုင်သောအတန်းများ", // Available Courses
-    noCoursesFound: "အတန်းများ မတွေ့ပါ", // No Courses Found
-    noCoursesDesc: "သင်၏ ရှာဖွေရေး စကားလုံးများ သို့မဟုတ် အမျိုးအစား စစ်ထုတ်မှုများကို ချိန်ညှိကြည့်ပါ။", // Try adjusting your search terms or category filters.
-    exploreLearningPaths: "ပညာရေးလမ်းကြောင်းများ", // Explore Learning Paths
-    viewPath: "လမ်းကြောင်းကြည့်ရန်" // View Path
+    searchKeywordLabel: "သော့ချက်စာလုံးဖြင့် ရှာပါ",
+    searchKeywordPlaceholder: "ဥပမာ - JavaScript, Data Science...",
+    filterCategoryLabel: "အမျိုးအစားအလိုက် စစ်ထုတ်ပါ",
+    allCategories: "အမျိုးအစားအားလုံး",
+    clearFilters: "စစ်ထုတ်မှုများ ဖယ်ရှားရန်",
+    featuredCourses: "အထူးပြု အတန်းများ",
+    quickSuggestions: "အမြန် အကြံပြုချက်များ",
+    quickSuggestionsDesc: "သင်၏ စိတ်ဝင်စားမှုကို ပြောပြပါ၊ အတန်းတစ်ခု အကြံပြုပေးပါမည်!",
+    quickSuggestionsInputPlaceholder: "ဥပမာ - 'web အတွက် python လေ့လာရန်'",
+    getSuggestion: "အကြံပြုချက်ရယူပါ",
+    quickRecsIdeas: "ဤတွင် အကြံဉာဏ်အချို့ရှိပါသည်:",
+    noQuickRecsFound: "\"{query}\" အတွက် သီးခြားအကြံပြုချက်များ မတွေ့ပါ။ ကျယ်ပြန့်သော စကားလုံးကို စမ်းကြည့်ပါ သို့မဟုတ် အောက်တွင် ရှာဖွေပါ။",
+    popularTopics: "ရှာဖွေမှုများသောအတန်းများ",
+    browseCategories: "အမျိုးအစားများ ကြည့်ရှုရန်",
+    noCategoriesAvailable: "အမျိုးအစားများ မရှိသေးပါ",
+    noCategoriesDesc: "အမျိုးအစားများ ထည့်သွင်းပြီးနောက် ဤနေရာတွင် ပေါ်လာပါမည်။",
+    availableCourses: "တက်ရောက်နိုင်သောအတန်းများ",
+    noCoursesFound: "အတန်းများ မတွေ့ပါ",
+    noCoursesDesc: "သင်၏ ရှာဖွေရေး စကားလုံးများ သို့မဟုတ် အမျိုးအစား စစ်ထုတ်မှုများကို ချိန်ညှိကြည့်ပါ။",
+    exploreLearningPaths: "ပညာရေးလမ်းကြောင်းများ",
+    viewPath: "လမ်းကြောင်းကြည့်ရန်"
   }
 };
-
 
 function SearchCoursesClientLogic() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { language } = useLanguage(); // Added
-  const t = searchPageTranslations[language]; // Added
+  const { language } = useLanguage();
+  const t = searchPageTranslations[language];
   
   const initialQuery = searchParams.get('query') || '';
   const initialCategory = searchParams.get('category') || 'all';
@@ -90,9 +87,9 @@ function SearchCoursesClientLogic() {
   const [searchTerm, setSearchTerm] = useState(initialQuery);
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [displayedCourses, setDisplayedCourses] = useState<Course[]>([]);
-  const [isLoading, setIsLoading] = useState(true); 
+  const [isLoadingData, setIsLoadingData] = useState(true); 
 
-  const [availableCourses, setAvailableCourses] = useState<Course[]>([]);
+  const [allFetchedCourses, setAllFetchedCourses] = useState<Course[]>([]);
   const [availableCategories, setAvailableCategories] = useState<Category[]>([]);
   const [featuredCourses, setFeaturedCourses] = useState<Course[]>([]);
   const [learningPaths, setLearningPaths] = useState<LearningPath[]>([]);
@@ -112,60 +109,32 @@ function SearchCoursesClientLogic() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-
   useEffect(() => {
-    setIsLoading(true);
-    let coursesToUse: Course[] = [];
-    let categoriesToUse: Category[] = [];
-    let learningPathsToUse: LearningPath[] = [];
+    const loadData = async () => {
+      setIsLoadingData(true);
+      try {
+        const [coursesFromDb, categoriesFromDb, learningPathsFromDb] = await Promise.all([
+          getCoursesFromFirestore(),
+          getCategoriesFromFirestore(),
+          getLearningPathsFromFirestore()
+        ]);
+        
+        setAllFetchedCourses(coursesFromDb);
+        setFeaturedCourses(coursesFromDb.filter(c => c.isFeatured));
+        
+        const uniqueCourseCategories = Array.from(new Set(coursesFromDb.map(c => c.category))).filter(Boolean) as string[];
+        setPopularTopics(uniqueCourseCategories);
+        
+        setAvailableCategories(categoriesFromDb);
+        setLearningPaths(learningPathsFromDb.slice(0, 3)); // Show top 3 or implement pagination
 
-    try {
-      const storedCoursesString = localStorage.getItem('adminCourses');
-      if (storedCoursesString) {
-        const parsed = JSON.parse(storedCoursesString);
-        coursesToUse = Array.isArray(parsed) ? parsed : defaultMockCourses;
-      } else {
-        coursesToUse = defaultMockCourses;
+      } catch (error) {
+        console.error("Error loading data from Firestore:", error);
+        // Optionally, set an error state to display to the user
       }
-    } catch (error) {
-      console.error("Error loading courses from localStorage:", error);
-      coursesToUse = defaultMockCourses;
-    }
-    setAvailableCourses(coursesToUse);
-    setFeaturedCourses(coursesToUse.filter(c => c.isFeatured));
-    
-    const uniqueCategories = Array.from(new Set(coursesToUse.map(c => c.category))).filter(Boolean) as string[];
-    setPopularTopics(uniqueCategories);
-
-
-    try {
-      const storedCategoriesString = localStorage.getItem('adminCategories');
-      if (storedCategoriesString) {
-        const parsed = JSON.parse(storedCategoriesString);
-        categoriesToUse = Array.isArray(parsed) ? parsed : defaultMockCategories;
-      } else {
-        categoriesToUse = defaultMockCategories;
-      }
-    } catch (error) {
-      console.error("Error loading categories from localStorage:", error);
-      categoriesToUse = defaultMockCategories;
-    }
-    setAvailableCategories(categoriesToUse);
-
-    try {
-      const storedLearningPaths = localStorage.getItem(LEARNING_PATHS_KEY);
-      if (storedLearningPaths) {
-        const parsed = JSON.parse(storedLearningPaths);
-        learningPathsToUse = Array.isArray(parsed) ? parsed : initialLearningPaths;
-      } else {
-        learningPathsToUse = initialLearningPaths;
-      }
-    } catch (error) {
-      console.error("Error loading learning paths from localStorage:", error);
-      learningPathsToUse = initialLearningPaths;
-    }
-    setLearningPaths(learningPathsToUse.slice(0, 3)); 
-
+      setIsLoadingData(false);
+    };
+    loadData();
   }, []);
 
   useEffect(() => {
@@ -174,9 +143,9 @@ function SearchCoursesClientLogic() {
   }, [initialQuery, initialCategory]);
 
   useEffect(() => {
-    setIsLoading(true); 
+    if (isLoadingData) return; // Don't filter until data is loaded
 
-    let filtered = [...availableCourses];
+    let filtered = [...allFetchedCourses];
 
     if (searchTerm) {
       filtered = filtered.filter(course =>
@@ -191,26 +160,16 @@ function SearchCoursesClientLogic() {
     }
 
     setDisplayedCourses(filtered);
-    setIsLoading(false);
 
     const params = new URLSearchParams(searchParams.toString());
-    if (searchTerm) {
-      params.set('query', searchTerm);
-    } else {
-      params.delete('query');
-    }
-    if (selectedCategory && selectedCategory !== 'all') {
-      params.set('category', selectedCategory);
-    } else {
-      params.delete('category');
-    }
+    if (searchTerm) params.set('query', searchTerm); else params.delete('query');
+    if (selectedCategory && selectedCategory !== 'all') params.set('category', selectedCategory); else params.delete('category');
     
     const newQueryString = params.toString();
     if (newQueryString !== searchParams.toString().replace(/\+/g, '%20')) { 
         router.replace(`/courses/search${newQueryString ? `?${newQueryString}` : ''}`, { scroll: false });
     }
-  }, [searchTerm, selectedCategory, availableCourses, router, searchParams]);
-
+  }, [searchTerm, selectedCategory, allFetchedCourses, router, searchParams, isLoadingData]);
 
   const handleClearFilters = () => {
     setSearchTerm('');
@@ -225,14 +184,14 @@ function SearchCoursesClientLogic() {
   const handleQuickRecSubmit = async (e?: FormEvent) => {
     if (e) e.preventDefault();
     const interest = quickRecInput.trim();
-    if (!interest || availableCourses.length === 0) return;
+    if (!interest || allFetchedCourses.length === 0) return;
 
     setIsQuickRecLoading(true);
     setQuickRecError(null);
     setQuickRecs([]);
 
     try {
-      const coursesForAI = availableCourses.map(c => ({
+      const coursesForAI = allFetchedCourses.map(c => ({
         id: c.id,
         title: c.title,
         description: c.description || '',
@@ -248,6 +207,10 @@ function SearchCoursesClientLogic() {
       setIsQuickRecLoading(false);
     }
   };
+  
+  if (isLoadingData && displayedCourses.length === 0) { // Show initial skeleton only if truly loading AND no courses yet
+      return <SearchPageInitialSkeleton />;
+  }
 
   return (
     <div className="space-y-4 md:space-y-6 pt-0">
@@ -388,14 +351,13 @@ function SearchCoursesClientLogic() {
         </section>
       )}
 
-
       <section className="py-4 md:py-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl md:text-2xl font-headline font-semibold flex items-center">
             <LayoutGrid className="mr-2 h-6 w-6 text-primary" /> {t.browseCategories}
           </h2>
         </div>
-        {isLoading && availableCategories.length === 0 ? ( 
+        {isLoadingData && availableCategories.length === 0 ? ( 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="bg-card rounded-lg shadow-md">
@@ -427,7 +389,7 @@ function SearchCoursesClientLogic() {
          <h2 className="text-xl md:text-2xl font-headline font-semibold mb-4 md:mb-6 mt-4 md:mt-8 flex items-center">
             <GraduationCap className="mr-2 h-6 w-6 text-primary" /> {t.availableCourses}
         </h2>
-        {isLoading && displayedCourses.length === 0 ? ( 
+        {isLoadingData && displayedCourses.length === 0 ? ( 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {[1, 2, 3, 4, 5, 6].map(i => (
               <Card key={i} className="flex flex-col overflow-hidden shadow-lg">
@@ -481,7 +443,7 @@ function SearchCoursesClientLogic() {
                         <Card className="group h-full flex flex-col shadow-lg hover:shadow-xl transition-shadow duration-150 cursor-pointer overflow-hidden">
                              {path.imageUrl && (
                                 <div className="relative w-full aspect-video bg-muted">
-                                    <img src={path.imageUrl} alt={path.title} className="w-full h-full object-cover" data-ai-hint={path.dataAiHint || 'learning path journey'} />
+                                    <Image src={path.imageUrl} alt={path.title} layout="fill" objectFit="cover" data-ai-hint={path.dataAiHint || 'learning path journey'} />
                                 </div>
                             )}
                             <CardHeader>
@@ -503,7 +465,6 @@ function SearchCoursesClientLogic() {
           </div>
         </section>
       )}
-
 
       <section className="w-full mt-8 md:mt-12 mb-8">
         <Suspense fallback={
@@ -527,7 +488,6 @@ function SearchCoursesClientLogic() {
 }
 
 function SearchPageInitialSkeleton() {
-  // This skeleton does not need translation as it's a loading state
   return (
     <div className="space-y-4 md:space-y-6 pt-0"> 
       <section className="pb-4 md:pb-6 border-b">

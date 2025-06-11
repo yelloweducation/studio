@@ -2,17 +2,16 @@
 "use client";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/hooks/useAuth";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"; 
-import { BookUser, BookMarked, History, GraduationCap } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"; 
+import { BookUser, BookMarked, History, GraduationCap, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import CourseCard from "@/components/courses/CourseCard"; 
-import { courses as mockCourses, enrollments as initialEnrollments, type Course, type Enrollment } from "@/data/mockData";
+import { type Course, type Enrollment } from "@/data/mockData";
+import { getEnrollmentsByUserId, getCourseByIdFromFirestore } from "@/lib/firestoreUtils";
 import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useLanguage, type Language } from '@/contexts/LanguageContext'; // Added
-
-const USER_ENROLLMENTS_KEY = 'userEnrollmentsData';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const studentDashboardTranslations = {
   en: {
@@ -26,71 +25,46 @@ const studentDashboardTranslations = {
     student: "Student"
   },
   my: {
-    welcome: "ကြိုဆိုပါတယ်", // Kyo So Ba Deh
-    description: "ဤသည်မှာ သင်၏ကိုယ်ပိုင်သင်ယူမှု ဒက်ရှ်ဘုတ်ဖြစ်သည်။", // This is your personal learning dashboard.
-    myEnrolledCourses: "ကျွန်ုပ်၏ စာရင်းသွင်းထားသော အတန်းများ", // My Enrolled Courses
-    learningActivity: "သင်ယူမှု လှုပ်ရှားမှု", // Learning Activity
-    exploreCourses: "အတန်းများ ရှာဖွေရန်", // Explore Courses
-    noCoursesYet: "သင်သည် မည်သည့်အတန်းမှ စာရင်းမသွင်းရသေးပါ။", // You haven't enrolled in any courses yet.
+    welcome: "ကြိုဆိုပါတယ်",
+    description: "ဤသည်မှာ သင်၏ကိုယ်ပိုင်သင်ယူမှု ဒက်ရှ်ဘုတ်ဖြစ်သည်။",
+    myEnrolledCourses: "ကျွန်ုပ်၏ စာရင်းသွင်းထားသော အတန်းများ",
+    learningActivity: "သင်ယူမှု လှုပ်ရှားမှု",
+    exploreCourses: "အတန်းများ ရှာဖွေရန်",
+    noCoursesYet: "သင်သည် မည်သည့်အတန်းမှ စာရင်းမသွင်းရသေးပါ။",
     activityPlaceholder: "သင်၏ မကြာသေးမီက သင်ယူမှု လှုပ်ရှားမှုများကို ဤနေရာတွင် ပြသပါမည်။ (ပြီးဆုံးမှု တိုးတက်မှုကို အတန်းအလိုက် ခြေရာခံသည်)။",
-    student: "ကျောင်းသား" // Student
+    student: "ကျောင်းသား"
   }
 };
 
 export default function StudentDashboardPage() {
   const { user } = useAuth();
-  const { language } = useLanguage(); // Added
-  const t = studentDashboardTranslations[language]; // Added
+  const { language } = useLanguage();
+  const t = studentDashboardTranslations[language];
   const [enrolledCoursesDetails, setEnrolledCoursesDetails] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (user) {
-      setIsLoading(true);
-      let userEnrollments: Enrollment[] = [];
-      let allCourses: Course[] = [];
-
-      try {
-        const storedCoursesString = localStorage.getItem('adminCourses');
-        if (storedCoursesString) {
-          const parsedCourses = JSON.parse(storedCoursesString) as Course[];
-          allCourses = Array.isArray(parsedCourses) ? parsedCourses : mockCourses;
-        } else {
-          allCourses = mockCourses;
+    const fetchEnrolledCourses = async () => {
+      if (user) {
+        setIsLoading(true);
+        try {
+          const userEnrollments = await getEnrollmentsByUserId(user.id);
+          const coursesDataPromises = userEnrollments.map(async (enrollment) => {
+            return await getCourseByIdFromFirestore(enrollment.courseId);
+          });
+          const coursesResults = await Promise.all(coursesDataPromises);
+          setEnrolledCoursesDetails(coursesResults.filter(course => course !== null) as Course[]);
+        } catch (error) {
+          console.error("Error fetching enrolled courses from Firestore:", error);
+          setEnrolledCoursesDetails([]); // Set to empty on error
         }
-      } catch (error) {
-        console.error("Error loading courses for student dashboard:", error);
-        allCourses = mockCourses;
+        setIsLoading(false);
+      } else {
+        setEnrolledCoursesDetails([]);
+        setIsLoading(false);
       }
-      
-      try {
-        const storedEnrollments = localStorage.getItem(USER_ENROLLMENTS_KEY);
-        if (storedEnrollments) {
-          userEnrollments = JSON.parse(storedEnrollments) as Enrollment[];
-           if (!Array.isArray(userEnrollments)) { 
-            userEnrollments = JSON.parse(JSON.stringify(initialEnrollments));
-          }
-        } else {
-          userEnrollments = JSON.parse(JSON.stringify(initialEnrollments));
-          localStorage.setItem(USER_ENROLLMENTS_KEY, JSON.stringify(userEnrollments));
-        }
-      } catch (error) {
-        console.error("Error handling enrollments in localStorage for student dashboard:", error);
-        userEnrollments = JSON.parse(JSON.stringify(initialEnrollments));
-      }
-
-      const currentUserEnrollments = userEnrollments.filter(e => e.userId === user.id);
-      
-      const coursesData = currentUserEnrollments.map(enrollment => {
-        return allCourses.find(course => course.id === enrollment.courseId);
-      }).filter(course => course !== undefined) as Course[];
-      
-      setEnrolledCoursesDetails(coursesData);
-      setIsLoading(false);
-    } else {
-      setEnrolledCoursesDetails([]);
-      setIsLoading(false);
-    }
+    };
+    fetchEnrolledCourses();
   }, [user]);
 
 
@@ -157,6 +131,7 @@ export default function StudentDashboardPage() {
                     <p className="text-center text-muted-foreground">
                         {t.activityPlaceholder}
                     </p>
+                    {/* Future: Display a list or chart of recent activity/progress from enrollments */}
                 </CardContent>
             </Card>
         </section>

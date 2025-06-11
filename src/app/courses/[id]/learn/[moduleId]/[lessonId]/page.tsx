@@ -3,18 +3,18 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { courses as defaultMockCourses, enrollments as initialEnrollments, type Course, type Module, type Lesson, type Enrollment } from '@/data/mockData';
+import { type Course, type Module, type Lesson, type Enrollment } from '@/data/mockData';
+import { getCourseByIdFromFirestore, getEnrollmentForUserAndCourse, updateEnrollmentProgressInFirestore, createEnrollmentInFirestore } from '@/lib/firestoreUtils';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChevronLeft, ChevronRight, CheckCircle, ListChecks, AlertTriangle, Home } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CheckCircle, ListChecks, AlertTriangle, Home, Loader2 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { getEmbedUrl } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
-import { useLanguage, type Language } from '@/contexts/LanguageContext'; // Added
-
-const USER_ENROLLMENTS_KEY = 'userEnrollmentsData';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useToast } from '@/hooks/use-toast';
 
 const lessonViewerTranslations = {
   en: {
@@ -29,7 +29,10 @@ const lessonViewerTranslations = {
     noVideoOrImage: "No video or image preview available.",
     previous: "Previous",
     next: "Next",
-    finishModule: "Finish Module"
+    finishModule: "Finish Module",
+    finishCourse: "Finish Course & Mark as Complete", // New
+    enrollmentCreated: "Enrollment started!",
+    progressUpdated: "Progress updated!"
   },
   my: {
     backToCourse: "{title} သို့ ပြန်သွားရန်",
@@ -43,34 +46,36 @@ const lessonViewerTranslations = {
     noVideoOrImage: "ဗီဒီယို သို့မဟုတ် ပုံ အကြိုကြည့်ရှုရန် မရှိပါ။",
     previous: "ယခင်",
     next: "နောက်တစ်ခု",
-    finishModule: "အခန်းပြီးပါပြီ"
+    finishModule: "အခန်းပြီးပါပြီ",
+    finishCourse: "သင်တန်းပြီးဆုံးကြောင်း မှတ်သားပါ", // New
+    enrollmentCreated: "စာရင်းသွင်းခြင်း စတင်ပါပြီ!",
+    progressUpdated: "တိုးတက်မှု အပ်ဒိတ်လုပ်ပြီးပါပြီ!"
   }
 };
 
 export default function LessonViewerPage() {
   const params = useParams();
   const router = useRouter();
-  const { user } = useAuth(); 
-  const { language } = useLanguage(); // Added
-  const t = lessonViewerTranslations[language]; // Added
+  const { user, isAuthenticated } = useAuth(); 
+  const { language } = useLanguage();
+  const t = lessonViewerTranslations[language];
+  const { toast } = useToast();
 
   const courseId = params.id as string;
   const moduleId = params.moduleId as string;
   const lessonId = params.lessonId as string;
 
   const [isLoading, setIsLoading] = useState(true);
-  const [activeCourses, setActiveCourses] = useState<Course[]>([]);
+  const [currentCourse, setCurrentCourse] = useState<Course | null>(null);
+  const [currentEnrollment, setCurrentEnrollment] = useState<Enrollment | null>(null);
   
-  const currentCourse = useMemo(() => activeCourses.find(c => c.id === courseId), [activeCourses, courseId]);
   const currentModule = useMemo(() => currentCourse?.modules.find(m => m.id === moduleId), [currentCourse, moduleId]);
   const currentLesson = useMemo(() => currentModule?.lessons.find(l => l.id === lessonId), [currentModule, lessonId]);
 
   const { previousLesson, nextLesson, moduleLessons, lessonIndex, totalLessonsInModule } = useMemo(() => {
     if (!currentModule || !currentLesson) return { moduleLessons: [], lessonIndex: -1, totalLessonsInModule: 0 };
-
     const lessons = currentModule.lessons || [];
     const currentIndex = lessons.findIndex(l => l.id === lessonId);
-
     return {
       previousLesson: currentIndex > 0 ? lessons[currentIndex - 1] : null,
       nextLesson: currentIndex < lessons.length - 1 ? lessons[currentIndex + 1] : null,
@@ -81,74 +86,103 @@ export default function LessonViewerPage() {
   }, [currentModule, lessonId, currentLesson]);
 
   useEffect(() => {
-    setIsLoading(true);
-    let coursesToUse: Course[] = [];
-    try {
-      const storedCoursesString = localStorage.getItem('adminCourses');
-      if (storedCoursesString) {
-        const parsedCourses = JSON.parse(storedCoursesString) as Course[];
-        if (Array.isArray(parsedCourses)) {
-          coursesToUse = parsedCourses;
-        } else {
-          console.warn("adminCourses in localStorage was not an array for LessonViewer, using default mock courses.");
-          coursesToUse = defaultMockCourses;
-        }
-      } else {
-        coursesToUse = defaultMockCourses;
+    const fetchData = async () => {
+      setIsLoading(true);
+      if (!courseId) {
+        setIsLoading(false);
+        return;
       }
-    } catch (error) {
-      console.error("Error loading courses from localStorage for LessonViewer:", error);
-      coursesToUse = defaultMockCourses;
-    }
-    setActiveCourses(coursesToUse);
-    setIsLoading(false);
-  }, []);
+      const courseData = await getCourseByIdFromFirestore(courseId);
+      setCurrentCourse(courseData);
 
-  const handleFinishModule = () => {
-    if (!user || !courseId) {
+      if (user && courseData) {
+        let enrollment = await getEnrollmentForUserAndCourse(user.id, courseId);
+        if (!enrollment) {
+          // Auto-enroll if not enrolled (common for free courses or if access is granted)
+          // Or this could be handled on the course detail page before navigating here
+          if (courseData.price === 0 || courseData.price === undefined) { // Example: auto-enroll for free courses
+             enrollment = await createEnrollmentInFirestore(user.id, courseId);
+             if (enrollment) toast({ title: t.enrollmentCreated });
+          }
+        }
+        setCurrentEnrollment(enrollment);
+      }
+      setIsLoading(false);
+    };
+    fetchData();
+  }, [courseId, user, toast, t.enrollmentCreated]);
+
+
+  const markLessonCompleted = async () => {
+    if (!user || !currentEnrollment || !currentCourse || !currentModule || !currentLesson) return;
+
+    const totalLessonsInCourse = currentCourse.modules.reduce((acc, mod) => acc + (mod.lessons?.length || 0), 0);
+    if (totalLessonsInCourse === 0) return; // Avoid division by zero
+
+    // Calculate overall progress based on number of lessons completed
+    // This is a simplified progress calculation. A more robust one would track individual lesson completion.
+    // For now, we'll assume completing a lesson means progress towards the next distinct lesson.
+    // Let's find the global index of the current lesson across all modules.
+    let globalLessonIndex = 0;
+    let lessonFound = false;
+    for (const mod of currentCourse.modules) {
+        for (const les of mod.lessons) {
+            if (les.id === currentLesson.id) {
+                lessonFound = true;
+                break;
+            }
+            globalLessonIndex++;
+        }
+        if (lessonFound) break;
+    }
+    
+    // If current lesson is the last lesson in the course, progress is 100%.
+    // Otherwise, progress is based on the next lesson's position.
+    let newProgress = 0;
+    if (globalLessonIndex >= totalLessonsInCourse -1) { // Current lesson is the last one
+        newProgress = 100;
+    } else {
+        newProgress = Math.round(((globalLessonIndex + 1) / totalLessonsInCourse) * 100);
+    }
+    newProgress = Math.min(newProgress, 100); // Cap at 100
+
+    if (newProgress > (currentEnrollment.progress || 0)) {
+        try {
+            await updateEnrollmentProgressInFirestore(currentEnrollment.id, newProgress);
+            setCurrentEnrollment(prev => prev ? { ...prev, progress: newProgress } : null);
+            if (newProgress < 100) {
+                // toast({ title: t.progressUpdated, description: `Progress: ${newProgress}%` });
+            }
+        } catch (error) {
+            console.error("Failed to update progress:", error);
+            toast({ variant: "destructive", title: "Error", description: "Could not update progress." });
+        }
+    }
+  };
+
+ useEffect(() => {
+    if (isAuthenticated && currentLesson) {
+      markLessonCompleted();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentLesson, isAuthenticated]); // Rerun when lesson changes and user is authenticated
+
+
+  const handleFinishCourse = async () => {
+    if (!user || !currentEnrollment || !currentCourse) {
       router.push(`/courses/${courseId}`);
       return;
     }
-
-    let currentEnrollments: Enrollment[] = [];
     try {
-      const storedEnrollments = localStorage.getItem(USER_ENROLLMENTS_KEY);
-      if (storedEnrollments) {
-        currentEnrollments = JSON.parse(storedEnrollments) as Enrollment[];
-        if (!Array.isArray(currentEnrollments)) {
-            currentEnrollments = JSON.parse(JSON.stringify(initialEnrollments)); 
+        if (currentEnrollment.progress < 100) {
+            await updateEnrollmentProgressInFirestore(currentEnrollment.id, 100);
+            setCurrentEnrollment(prev => prev ? { ...prev, progress: 100 } : null);
         }
-      } else {
-        currentEnrollments = JSON.parse(JSON.stringify(initialEnrollments)); 
-      }
+        toast({ title: "Course Completed!", description: "Congratulations on finishing the course." });
+        router.push(`/courses/${courseId}`);
     } catch (error) {
-      console.error("Error reading enrollments from localStorage:", error);
-      currentEnrollments = JSON.parse(JSON.stringify(initialEnrollments)); 
+        toast({ variant: "destructive", title: "Error", description: "Could not mark course as complete." });
     }
-
-    const existingEnrollmentIndex = currentEnrollments.findIndex(
-      (e) => e.userId === user.id && e.courseId === courseId
-    );
-
-    if (existingEnrollmentIndex > -1) {
-      currentEnrollments[existingEnrollmentIndex].progress = 100;
-    } else {
-      currentEnrollments.push({
-        id: `enroll${Date.now()}`,
-        userId: user.id,
-        courseId: courseId,
-        progress: 100,
-        enrolledDate: new Date().toISOString().split('T')[0],
-      });
-    }
-
-    try {
-      localStorage.setItem(USER_ENROLLMENTS_KEY, JSON.stringify(currentEnrollments));
-    } catch (error) {
-        console.error("Error saving enrollments to localStorage:", error);
-    }
-    
-    router.push(`/courses/${courseId}`);
   };
 
 
@@ -282,6 +316,11 @@ export default function LessonViewerPage() {
                         {lesson.id === lessonId ? (
                           <CheckCircle className="mr-2 h-4 w-4 text-primary flex-shrink-0" />
                         ) : (
+                          // Check if this lesson is 'completed' based on overall progress (simple check)
+                          // A more accurate check would involve individual lesson completion status in Firestore
+                          currentEnrollment && currentEnrollment.progress >= (((moduleLessons.slice(0, idx + 1).length) / totalLessonsInModule) * 100) ?
+                          <CheckCircle className="mr-2 h-4 w-4 text-green-500 flex-shrink-0" />
+                          :
                           <div className="w-4 h-4 border-2 border-muted-foreground/50 rounded-full mr-2 flex-shrink-0"></div>
                         )}
                         <span className="truncate">{idx + 1}. {lesson.title}</span>
@@ -312,8 +351,8 @@ export default function LessonViewerPage() {
             </Link>
           </Button>
         ) : (
-           <Button onClick={handleFinishModule} variant="default">
-              {t.finishModule} <CheckCircle className="ml-2 h-4 w-4" />
+           <Button onClick={handleFinishCourse} variant="default">
+              {t.finishCourse} <CheckCircle className="ml-2 h-4 w-4" />
           </Button>
         )}
       </div>

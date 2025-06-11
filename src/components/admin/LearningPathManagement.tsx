@@ -1,13 +1,13 @@
 
 "use client";
-import { useState, useEffect, type FormEvent, type ChangeEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import Image from 'next/image';
-import { initialLearningPaths, type LearningPath, courses as initialCoursesData, type Course } from '@/data/mockData';
+import { initialLearningPaths_DEPRECATED_USE_FIRESTORE as initialLearningPaths, type LearningPath, courses_DEPRECATED_USE_FIRESTORE as initialCoursesData, type Course } from '@/data/mockData';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Edit3, Trash2, BookOpenCheck, Milestone, Info, Image as ImageIcon, ListChecks } from 'lucide-react';
+import { PlusCircle, Edit3, Trash2, BookOpenCheck, Milestone, Info, Image as ImageIcon, ListChecks, Loader2 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import {
@@ -23,24 +23,24 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import * as LucideIcons from 'lucide-react';
+import { getLearningPathsFromFirestore, addLearningPathToFirestore, updateLearningPathInFirestore, deleteLearningPathFromFirestore, getCoursesFromFirestore } from '@/lib/firestoreUtils';
 
-const isValidLucideIcon = (iconName: string): iconName is keyof typeof LucideIcons => {
-  return iconName in LucideIcons;
+const isValidLucideIcon = (iconName: string | undefined): iconName is keyof typeof LucideIcons => {
+  return typeof iconName === 'string' && iconName in LucideIcons;
 };
-
-const LEARNING_PATHS_KEY = 'adminLearningPaths';
-const ADMIN_COURSES_KEY = 'adminCourses';
 
 const LearningPathForm = ({
   path,
   allCourses,
   onSubmit,
   onCancel,
+  isSubmitting,
 }: {
   path?: LearningPath;
   allCourses: Course[];
-  onSubmit: (data: LearningPath) => void;
+  onSubmit: (data: Omit<LearningPath, 'id'>) => Promise<void>;
   onCancel: () => void;
+  isSubmitting: boolean;
 }) => {
   const [title, setTitle] = useState(path?.title || '');
   const [description, setDescription] = useState(path?.description || '');
@@ -55,15 +55,13 @@ const LearningPathForm = ({
     );
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!title || !description) {
-        // Basic validation, can be expanded with react-hook-form later
         alert("Title and Description are required.");
         return;
     }
-    onSubmit({
-      id: path?.id || `lp-${Date.now()}`,
+    await onSubmit({
       title,
       description,
       icon,
@@ -81,16 +79,16 @@ const LearningPathForm = ({
         <div className="space-y-4">
           <div>
             <Label htmlFor="lp-title">Learning Path Title</Label>
-            <Input id="lp-title" value={title} onChange={e => setTitle(e.target.value)} required />
+            <Input id="lp-title" value={title} onChange={e => setTitle(e.target.value)} required disabled={isSubmitting}/>
           </div>
           <div>
             <Label htmlFor="lp-description">Description</Label>
-            <Textarea id="lp-description" value={description} onChange={e => setDescription(e.target.value)} required rows={3} />
+            <Textarea id="lp-description" value={description} onChange={e => setDescription(e.target.value)} required rows={3} disabled={isSubmitting}/>
           </div>
           <div>
             <Label htmlFor="lp-icon">Lucide Icon Name</Label>
             <div className="relative">
-                <Input id="lp-icon" value={icon} onChange={e => setIcon(e.target.value)} placeholder="e.g., Milestone, TrendingUp" className="pl-8"/>
+                <Input id="lp-icon" value={icon} onChange={e => setIcon(e.target.value)} placeholder="e.g., Milestone, TrendingUp" className="pl-8" disabled={isSubmitting}/>
                 <IconComponent className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             </div>
             <p className="text-xs text-muted-foreground mt-1">Enter a valid Lucide icon name. Defaults to 'Milestone'.</p>
@@ -98,7 +96,7 @@ const LearningPathForm = ({
           <div>
             <Label htmlFor="lp-imageUrl">Path Image URL</Label>
             <div className="relative">
-                <Input id="lp-imageUrl" value={imageUrl} onChange={e => setImageUrl(e.target.value)} className="pl-8"/>
+                <Input id="lp-imageUrl" value={imageUrl} onChange={e => setImageUrl(e.target.value)} className="pl-8" disabled={isSubmitting}/>
                 <ImageIcon className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             </div>
             {imageUrl && (
@@ -110,7 +108,7 @@ const LearningPathForm = ({
           <div>
             <Label htmlFor="lp-dataAiHint">Image AI Hint</Label>
             <div className="relative">
-                <Input id="lp-dataAiHint" value={dataAiHint} onChange={e => setDataAiHint(e.target.value)} placeholder="e.g. career journey" className="pl-8"/>
+                <Input id="lp-dataAiHint" value={dataAiHint} onChange={e => setDataAiHint(e.target.value)} placeholder="e.g. career journey" className="pl-8" disabled={isSubmitting}/>
                 <Info className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             </div>
           </div>
@@ -124,6 +122,7 @@ const LearningPathForm = ({
                     id={`course-${course.id}`}
                     checked={selectedCourseIds.includes(course.id)}
                     onCheckedChange={(checked) => handleCourseSelection(course.id, checked as boolean)}
+                    disabled={isSubmitting}
                     />
                     <Label htmlFor={`course-${course.id}`} className="text-sm font-normal">
                     {course.title}
@@ -136,9 +135,12 @@ const LearningPathForm = ({
       </ScrollArea>
       <DialogFooter className="pt-6 border-t">
         <DialogClose asChild>
-          <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>Cancel</Button>
         </DialogClose>
-        <Button type="submit">{path ? 'Save Changes' : 'Add Learning Path'}</Button>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+          {path ? 'Save Changes' : 'Add Learning Path'}
+        </Button>
       </DialogFooter>
     </form>
   );
@@ -149,60 +151,62 @@ export default function LearningPathManagement() {
   const [allCourses, setAllCourses] = useState<Course[]>([]);
   const [editingPath, setEditingPath] = useState<LearningPath | undefined>(undefined);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [isSubmittingForm, setIsSubmittingForm] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Load learning paths
-    const storedPaths = localStorage.getItem(LEARNING_PATHS_KEY);
-    if (storedPaths) {
-      try {
-        setLearningPaths(JSON.parse(storedPaths));
-      } catch (e) {
-        console.error("Failed to parse learning paths:", e);
-        setLearningPaths(initialLearningPaths);
-      }
-    } else {
-      setLearningPaths(initialLearningPaths);
-    }
-
-    // Load courses for selection
-    const storedCourses = localStorage.getItem(ADMIN_COURSES_KEY);
-    if (storedCourses) {
-      try {
-        setAllCourses(JSON.parse(storedCourses));
-      } catch (e) {
-        console.error("Failed to parse courses for LP management:", e);
-        setAllCourses(initialCoursesData);
-      }
-    } else {
-      setAllCourses(initialCoursesData);
-    }
-    setIsDataLoaded(true);
+    const loadData = async () => {
+      setIsLoadingData(true);
+      const [pathsFromDb, coursesFromDb] = await Promise.all([
+        getLearningPathsFromFirestore(),
+        getCoursesFromFirestore() // Fetch courses for selection
+      ]);
+      setLearningPaths(pathsFromDb);
+      setAllCourses(coursesFromDb);
+      setIsLoadingData(false);
+    };
+    loadData();
   }, []);
 
-  useEffect(() => {
-    if (isDataLoaded) {
-      localStorage.setItem(LEARNING_PATHS_KEY, JSON.stringify(learningPaths));
+  const handleAddPath = async (data: Omit<LearningPath, 'id'>) => {
+    setIsSubmittingForm(true);
+    try {
+      const newPath = await addLearningPathToFirestore(data);
+      setLearningPaths(prev => [newPath, ...prev].sort((a, b) => a.title.localeCompare(b.title)));
+      closeForm();
+      toast({ title: "Learning Path Added", description: `"${data.title}" created.` });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error Adding Path", description: "Could not add learning path." });
+    } finally {
+      setIsSubmittingForm(false);
     }
-  }, [learningPaths, isDataLoaded]);
-
-  const handleAddPath = (data: LearningPath) => {
-    setLearningPaths(prev => [data, ...prev]);
-    closeForm();
-    toast({ title: "Learning Path Added", description: `"${data.title}" created.` });
   };
 
-  const handleEditPath = (data: LearningPath) => {
-    setLearningPaths(prev => prev.map(p => (p.id === data.id ? data : p)));
-    closeForm();
-    toast({ title: "Learning Path Updated", description: `"${data.title}" updated.` });
+  const handleEditPath = async (data: Omit<LearningPath, 'id'>) => {
+    if (!editingPath || !editingPath.id) return;
+    setIsSubmittingForm(true);
+    try {
+      await updateLearningPathInFirestore(editingPath.id, data);
+      setLearningPaths(prev => prev.map(p => (p.id === editingPath.id ? { ...p, ...data, id: editingPath.id! } : p)).sort((a,b) => a.title.localeCompare(b.title)));
+      closeForm();
+      toast({ title: "Learning Path Updated", description: `"${data.title}" updated.` });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error Updating Path", description: "Could not update learning path." });
+    } finally {
+      setIsSubmittingForm(false);
+    }
   };
 
-  const handleDeletePath = (pathId: string) => {
+  const handleDeletePath = async (pathId: string) => {
     const pathToDelete = learningPaths.find(p => p.id === pathId);
-    setLearningPaths(prev => prev.filter(p => p.id !== pathId));
-    toast({ title: "Learning Path Deleted", description: `"${pathToDelete?.title}" deleted.`, variant: "destructive" });
+    try {
+      await deleteLearningPathFromFirestore(pathId);
+      setLearningPaths(prev => prev.filter(p => p.id !== pathId));
+      toast({ title: "Learning Path Deleted", description: `"${pathToDelete?.title}" deleted.`, variant: "destructive" });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error Deleting Path", description: "Could not delete learning path." });
+    }
   };
 
   const openForm = (path?: LearningPath) => {
@@ -221,7 +225,7 @@ export default function LearningPathManagement() {
         <CardTitle className="flex items-center text-xl md:text-2xl font-headline">
           <BookOpenCheck className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Learning Path Management
         </CardTitle>
-        <CardDescription>Create, edit, and manage guided learning paths composed of multiple courses.</CardDescription>
+        <CardDescription>Create, edit, and manage guided learning paths using Firestore. Assign courses to paths.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="mb-6 text-right">
@@ -243,12 +247,18 @@ export default function LearningPathManagement() {
                 allCourses={allCourses}
                 onSubmit={editingPath ? handleEditPath : handleAddPath}
                 onCancel={closeForm}
+                isSubmitting={isSubmittingForm}
               />
             </DialogContent>
           </Dialog>
         </div>
 
-        {learningPaths.length > 0 ? (
+        {isLoadingData ? (
+          <div className="flex justify-center items-center py-10">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="ml-2 text-muted-foreground">Loading learning paths...</p>
+          </div>
+        ) : learningPaths.length > 0 ? (
           <ul className="space-y-4">
             {learningPaths.map(path => {
               const IconComponent = path.icon && isValidLucideIcon(path.icon) ? LucideIcons[path.icon] as React.ElementType : LucideIcons.Milestone;
@@ -296,7 +306,7 @@ export default function LearningPathManagement() {
             })}
           </ul>
         ) : (
-          <p className="text-center text-muted-foreground py-4">No learning paths created yet. Add some!</p>
+          <p className="text-center text-muted-foreground py-4">No learning paths found in Firestore. Add some!</p>
         )}
       </CardContent>
     </Card>

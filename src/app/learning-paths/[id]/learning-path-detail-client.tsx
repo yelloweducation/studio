@@ -1,22 +1,19 @@
 
 "use client";
 import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation'; // useParams can be removed if pathId is a prop
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { initialLearningPaths, courses as defaultMockCourses, type LearningPath, type Course } from '@/data/mockData';
+import { type LearningPath, type Course } from '@/data/mockData';
+import { getLearningPathsFromFirestore, getCoursesFromFirestore } from '@/lib/firestoreUtils'; // Import Firestore utils
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChevronLeft, AlertTriangle, Home, BookOpenCheck, BookMarked, ArrowRight } from 'lucide-react';
+import { ChevronLeft, AlertTriangle, Home, BookOpenCheck, BookMarked, ArrowRight, Loader2 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
-// Metadata is no longer handled here
 
-const LEARNING_PATHS_KEY = 'adminLearningPaths';
-const ADMIN_COURSES_KEY = 'adminCourses';
-
-const isValidLucideIcon = (iconName: string): iconName is keyof typeof LucideIcons => {
-  return iconName in LucideIcons;
+const isValidLucideIcon = (iconName: string | undefined): iconName is keyof typeof LucideIcons => {
+  return typeof iconName === 'string' && iconName in LucideIcons;
 };
 
 interface LearningPathDetailClientProps {
@@ -31,41 +28,35 @@ export default function LearningPathDetailClient({ pathId }: LearningPathDetailC
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    setIsLoading(true);
-    let currentPath: LearningPath | undefined;
-    let allPaths: LearningPath[] = [];
-    let allCourses: Course[] = [];
-
-    try {
-      const storedPaths = localStorage.getItem(LEARNING_PATHS_KEY);
-      if (storedPaths) {
-        allPaths = JSON.parse(storedPaths) as LearningPath[];
-      } else {
-        allPaths = initialLearningPaths;
+    const fetchPathData = async () => {
+      if (!pathId) {
+        setIsLoading(false);
+        return;
       }
-      currentPath = allPaths.find(p => p.id === pathId);
-      setLearningPath(currentPath || null);
-    } catch (error) {
-      console.error("Error loading learning path:", error);
-      setLearningPath(null);
-    }
-
-    if (currentPath) {
+      setIsLoading(true);
+      
       try {
-        const storedCourses = localStorage.getItem(ADMIN_COURSES_KEY);
-        if (storedCourses) {
-          allCourses = JSON.parse(storedCourses) as Course[];
+        // Fetch all learning paths and find the current one
+        const allPaths = await getLearningPathsFromFirestore();
+        const currentPath = allPaths.find(p => p.id === pathId);
+        setLearningPath(currentPath || null);
+
+        if (currentPath && currentPath.courseIds.length > 0) {
+          // Fetch all courses and filter by IDs in the current path
+          const allCourses = await getCoursesFromFirestore();
+          const coursesForPath = allCourses.filter(course => currentPath.courseIds.includes(course.id));
+          setPathCourses(coursesForPath);
         } else {
-          allCourses = defaultMockCourses;
+          setPathCourses([]);
         }
-        const coursesForPath = allCourses.filter(course => currentPath?.courseIds.includes(course.id));
-        setPathCourses(coursesForPath);
       } catch (error) {
-        console.error("Error loading courses for learning path:", error);
+        console.error("Error fetching learning path data from Firestore:", error);
+        setLearningPath(null);
         setPathCourses([]);
       }
-    }
-    setIsLoading(false);
+      setIsLoading(false);
+    };
+    fetchPathData();
   }, [pathId]);
 
   if (isLoading) {
@@ -78,12 +69,9 @@ export default function LearningPathDetailClient({ pathId }: LearningPathDetailC
             <Skeleton className="h-20 w-full" /> {/* Path Image/Icon Area */}
             <Skeleton className="h-6 w-1/2 mt-2" /> {/* Path Description Line 1 */}
           </CardHeader>
-          <CardContent>
-            <Skeleton className="h-8 w-1/3 mb-3" /> {/* "Courses in this path" title */}
-            <div className="space-y-3">
-              {[1, 2].map(i => (
-                <Skeleton key={i} className="h-20 w-full rounded-lg" />
-              ))}
+          <CardContent className="py-10">
+            <div className="flex justify-center items-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           </CardContent>
         </Card>

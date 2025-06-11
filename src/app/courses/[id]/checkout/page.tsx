@@ -5,19 +5,16 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image'; 
 import { useAuth } from '@/hooks/useAuth';
-import { courses as defaultMockCourses, users as mockUsers, type Course, type PaymentSubmission, type User, initialPaymentSettings, type PaymentSettings } from '@/data/mockData';
+import { type Course, type PaymentSubmission, type User, type PaymentSettings, initialPaymentSettings } from '@/data/mockData';
+import { getCourseByIdFromFirestore, getPaymentSettingsFromFirestore, addPaymentSubmissionToFirestore } from '@/lib/firestoreUtils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { ChevronLeft, AlertTriangle, ShoppingCart, UploadCloud, Info, ArrowRight, Home, Banknote, UserCircle as UserCircleIcon, ClipboardList, FileImage } from 'lucide-react';
+import { ChevronLeft, AlertTriangle, ShoppingCart, UploadCloud, Info, ArrowRight, Home, Banknote, UserCircle as UserCircleIcon, ClipboardList, FileImage, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useLanguage, type Language } from '@/contexts/LanguageContext'; // Added
-
-const USER_PAYMENT_SUBMISSIONS_KEY = 'adminPaymentSubmissions';
-const PAYMENT_SETTINGS_KEY = 'adminPaymentSettingsData';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const checkoutPageTranslations = {
   en: {
@@ -107,8 +104,8 @@ export default function CheckoutPage() {
   const router = useRouter();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const { toast } = useToast();
-  const { language } = useLanguage(); // Added
-  const t = checkoutPageTranslations[language]; // Added
+  const { language } = useLanguage();
+  const t = checkoutPageTranslations[language];
 
   const courseId = params.id as string;
 
@@ -121,38 +118,22 @@ export default function CheckoutPage() {
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
 
   useEffect(() => {
-    setIsLoadingSettings(true);
-    const storedSettings = localStorage.getItem(PAYMENT_SETTINGS_KEY);
-    if (storedSettings) {
-      try {
-        setPaymentSettings(JSON.parse(storedSettings));
-      } catch (e) {
-        console.error("Failed to parse payment settings from localStorage", e);
-        setPaymentSettings(initialPaymentSettings);
-      }
-    } else {
-      setPaymentSettings(initialPaymentSettings);
-    }
-    setIsLoadingSettings(false);
+    const fetchData = async () => {
+      setIsLoadingSettings(true);
+      setIsLoadingCourse(true);
 
-    setIsLoadingCourse(true);
-    let coursesToUse: Course[] = [];
-    try {
-      const storedCoursesString = localStorage.getItem('adminCourses');
-      if (storedCoursesString) {
-        const parsedCourses = JSON.parse(storedCoursesString) as Course[];
-        coursesToUse = Array.isArray(parsedCourses) ? parsedCourses : defaultMockCourses;
-      } else {
-        coursesToUse = defaultMockCourses;
-      }
-    } catch (error) {
-      console.error("Error loading courses for checkout:", error);
-      coursesToUse = defaultMockCourses;
-    }
-    
-    const foundCourse = coursesToUse.find(c => c.id === courseId);
-    setCurrentCourse(foundCourse || null);
-    setIsLoadingCourse(false);
+      const [settingsFromDb, courseFromDb] = await Promise.all([
+        getPaymentSettingsFromFirestore(),
+        getCourseByIdFromFirestore(courseId)
+      ]);
+
+      setPaymentSettings(settingsFromDb || initialPaymentSettings); // Use initial if null
+      setIsLoadingSettings(false);
+
+      setCurrentCourse(courseFromDb);
+      setIsLoadingCourse(false);
+    };
+    fetchData();
   }, [courseId]);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -197,33 +178,22 @@ export default function CheckoutPage() {
 
     setIsSubmitting(true);
 
-    const newSubmission: PaymentSubmission = {
-      id: `ps-${Date.now()}`,
+    // In a real app, upload screenshotFile to Firebase Storage or similar, then use the URL.
+    // For this prototype, we're using the base64 data URI as the screenshotUrl.
+    const submissionData = {
       userId: user.id,
       courseId: currentCourse.id,
       amount: currentCourse.price,
       currency: currentCourse.currency || 'USD',
-      screenshotUrl: screenshotPreviewUrl, 
-      status: 'pending',
-      submittedAt: new Date().toISOString(),
+      screenshotUrl: screenshotPreviewUrl, // This is base64 for now
     };
 
     try {
-      let submissions: PaymentSubmission[] = [];
-      const storedSubmissions = localStorage.getItem(USER_PAYMENT_SUBMISSIONS_KEY);
-      if (storedSubmissions) {
-        const parsed = JSON.parse(storedSubmissions);
-        if (Array.isArray(parsed)) {
-            submissions = parsed;
-        }
-      }
-      submissions.push(newSubmission);
-      localStorage.setItem(USER_PAYMENT_SUBMISSIONS_KEY, JSON.stringify(submissions));
-      
+      await addPaymentSubmissionToFirestore(submissionData);
       toast({ title: t.paymentSubmitted, description: t.paymentSubmittedDesc });
       router.push(`/courses/${courseId}`);
     } catch (error) {
-      console.error("Error saving payment submission:", error);
+      console.error("Error saving payment submission to Firestore:", error);
       toast({ variant: "destructive", title: t.submissionFailed, description: t.submissionFailedDesc });
     } finally {
       setIsSubmitting(false);
@@ -375,7 +345,7 @@ export default function CheckoutPage() {
                   onChange={handleFileChange}
                   required
                   className="mt-1 shadow-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-                  disabled={!hasPaymentDetails}
+                  disabled={!hasPaymentDetails || isSubmitting}
               />
               {screenshotPreviewUrl && (
                 <div className="mt-3 border p-2 rounded-md inline-block bg-muted/50 shadow-sm">
@@ -387,11 +357,12 @@ export default function CheckoutPage() {
                 {t.imageUploadHelp}
               </p>
             </div>
-
           </CardContent>
           <CardFooter>
             <Button type="submit" className="w-full text-lg py-3" disabled={isSubmitting || !hasPaymentDetails || !screenshotFile}>
-              {isSubmitting ? t.submitting : (
+              {isSubmitting ? (
+                <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> {t.submitting}</>
+              ) : (
                 <>
                   {t.submitPaymentProof} <ArrowRight className="ml-2 h-5 w-5" />
                 </>

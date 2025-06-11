@@ -7,30 +7,28 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Settings, Save, Banknote, UserCircle, ClipboardList } from 'lucide-react';
+import { Settings, Save, Banknote, UserCircle, ClipboardList, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-
-const PAYMENT_SETTINGS_KEY = 'adminPaymentSettingsData';
+import { getPaymentSettingsFromFirestore, savePaymentSettingsToFirestore } from '@/lib/firestoreUtils';
 
 export default function PaymentSettingsManagement() {
   const [settings, setSettings] = useState<PaymentSettings>(initialPaymentSettings);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    const storedSettings = localStorage.getItem(PAYMENT_SETTINGS_KEY);
-    if (storedSettings) {
-      try {
-        setSettings(JSON.parse(storedSettings));
-      } catch (e) {
-        console.error("Failed to parse payment settings from localStorage", e);
-        setSettings(initialPaymentSettings); // Fallback to initial if parsing fails
+    const loadSettings = async () => {
+      setIsLoading(true);
+      const firestoreSettings = await getPaymentSettingsFromFirestore();
+      if (firestoreSettings) {
+        setSettings(firestoreSettings);
+      } else {
+        setSettings(initialPaymentSettings); // Fallback or if no settings exist yet
       }
-    } else {
-      // If nothing in localStorage, use initial and optionally save them
-      // localStorage.setItem(PAYMENT_SETTINGS_KEY, JSON.stringify(initialPaymentSettings));
-    }
-    setIsLoaded(true);
+      setIsLoading(false);
+    };
+    loadSettings();
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -38,27 +36,38 @@ export default function PaymentSettingsManagement() {
     setSettings(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    localStorage.setItem(PAYMENT_SETTINGS_KEY, JSON.stringify(settings));
-    toast({
-      title: "Settings Saved",
-      description: "Your payment configuration has been updated.",
-    });
+    setIsSaving(true);
+    try {
+      await savePaymentSettingsToFirestore(settings);
+      toast({
+        title: "Settings Saved",
+        description: "Your payment configuration has been updated in Firestore.",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Save Failed",
+        description: "Could not save payment settings. Please try again.",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  if (!isLoaded) {
+  if (isLoading) {
     return (
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center text-xl md:text-2xl font-headline">
             <Settings className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Payment Configuration
           </CardTitle>
-          <CardDescription>Loading payment settings...</CardDescription>
+          <CardDescription>Loading payment settings from Firestore...</CardDescription>
         </CardHeader>
-        <CardContent className="animate-pulse">
-          <div className="space-y-4">
-            {[1,2,3,4].map(i => <div key={i} className="h-10 bg-muted rounded-md"></div>)}
+        <CardContent className="py-10">
+          <div className="flex justify-center items-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         </CardContent>
       </Card>
@@ -72,7 +81,7 @@ export default function PaymentSettingsManagement() {
           <Settings className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Payment Configuration
         </CardTitle>
         <CardDescription>
-          Set up the bank details and instructions for manual payments. This information will be shown to users on the checkout page.
+          Set up the bank details and instructions for manual payments. This data is stored in Firestore.
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
@@ -87,6 +96,7 @@ export default function PaymentSettingsManagement() {
               value={settings.bankName || ''}
               onChange={handleChange}
               placeholder="e.g., KBZ Bank"
+              disabled={isSaving}
             />
           </div>
           <div>
@@ -99,6 +109,7 @@ export default function PaymentSettingsManagement() {
               value={settings.accountNumber || ''}
               onChange={handleChange}
               placeholder="e.g., 1234567890123"
+              disabled={isSaving}
             />
           </div>
           <div>
@@ -111,6 +122,7 @@ export default function PaymentSettingsManagement() {
               value={settings.accountHolderName || ''}
               onChange={handleChange}
               placeholder="e.g., Daw Mya Mya"
+              disabled={isSaving}
             />
           </div>
           <div>
@@ -124,13 +136,15 @@ export default function PaymentSettingsManagement() {
               onChange={handleChange}
               placeholder="e.g., Please include your User ID or Course Name in the payment reference. Payments are typically verified within 24 hours."
               rows={4}
+              disabled={isSaving}
             />
              <p className="text-xs text-muted-foreground mt-1">These instructions will be displayed to the user on the checkout page.</p>
           </div>
         </CardContent>
         <CardFooter>
-          <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md hover:shadow-sm active:translate-y-px transition-all duration-150">
-            <Save className="mr-2 h-5 w-5" /> Save Payment Settings
+          <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md hover:shadow-sm active:translate-y-px transition-all duration-150" disabled={isSaving}>
+            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-5 w-5" />}
+            Save Payment Settings
           </Button>
         </CardFooter>
       </form>

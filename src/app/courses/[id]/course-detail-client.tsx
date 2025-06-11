@@ -1,19 +1,20 @@
 
 "use client";
-import React, { useState, useEffect, useMemo, type ReactNode } from 'react';
-import { useRouter } from 'next/navigation'; // useParams is removed as courseId is a prop
+import React, { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { courses as mockDataCourses, enrollments as initialEnrollments, paymentSubmissions as initialPaymentSubmissions, type Course, type Module, type Lesson, type User, type Enrollment, type PaymentSubmission, type PaymentSubmissionStatus, type Quiz } from '@/data/mockData'; // Added Quiz type
+import { type Course, type Module, type Lesson, type User, type Enrollment, type PaymentSubmission, type PaymentSubmissionStatus, type Quiz } from '@/data/mockData';
+import { getCourseByIdFromFirestore, getPaymentSubmissionsFromFirestore, getEnrollmentForUserAndCourse, createEnrollmentInFirestore } from '@/lib/firestoreUtils';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChevronLeft, BookOpenText, PlayCircle, Lock, CheckCircle, AlertTriangle, Clock, ExternalLink, ArrowRight, Home, ShoppingCart, BadgeDollarSign, Hourglass, ListChecks, Users as TargetAudienceIcon, ShieldCheck, Timer, FileQuestion, Edit3 as PracticeQuizIcon, CheckSquare as GradedQuizIcon } from 'lucide-react'; // Added quiz icons
+import { ChevronLeft, BookOpenText, PlayCircle, Lock, CheckCircle, AlertTriangle, Clock, ExternalLink, ArrowRight, Home, ShoppingCart, BadgeDollarSign, Hourglass, ListChecks, Users as TargetAudienceIcon, ShieldCheck, Timer, FileQuestion, Edit3 as PracticeQuizIcon, CheckSquare as GradedQuizIcon } from 'lucide-react';
 import { getEmbedUrl } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { useLanguage, type Language } from '@/contexts/LanguageContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface CompletionInfo {
   isCompleted: boolean;
@@ -23,9 +24,6 @@ interface PaymentInfo {
   status: PaymentSubmissionStatus | null;
   submission?: PaymentSubmission;
 }
-
-const USER_ENROLLMENTS_KEY = 'userEnrollmentsData';
-const USER_PAYMENT_SUBMISSIONS_KEY = 'adminPaymentSubmissions';
 
 const courseDetailTranslations = {
   en: {
@@ -123,9 +121,6 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
   const { language } = useLanguage();
   const t = courseDetailTranslations[language];
 
-  const [allAppCourses, setAllAppCourses] = useState<Course[]>([]);
-  const [areAppCoursesLoaded, setAreAppCoursesLoaded] = useState(false);
-
   const [currentCourse, setCurrentCourse] = useState<Course | null>(null);
   const [firstLessonPath, setFirstLessonPath] = useState<string | null>(null);
   const [completionInfo, setCompletionInfo] = useState<CompletionInfo | null>(null);
@@ -133,140 +128,73 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
   const [isLoadingPage, setIsLoadingPage] = useState(true);
 
   useEffect(() => {
-    let coursesToUse: Course[] = [];
-    try {
-      const storedCoursesString = localStorage.getItem('adminCourses');
-      if (storedCoursesString) {
-        const parsedCourses = JSON.parse(storedCoursesString) as Course[];
-        if (Array.isArray(parsedCourses)) {
-            coursesToUse = parsedCourses;
+    const fetchCourseData = async () => {
+      if (!courseId) {
+        setIsLoadingPage(false);
+        return;
+      }
+      setIsLoadingPage(true);
+      setCurrentCourse(null);
+      setFirstLessonPath(null);
+
+      const courseFromDb = await getCourseByIdFromFirestore(courseId);
+      setCurrentCourse(courseFromDb);
+
+      if (courseFromDb?.modules?.[0]?.lessons?.[0]) {
+        setFirstLessonPath(`/courses/${courseFromDb.id}/learn/${courseFromDb.modules[0].id}/${courseFromDb.modules[0].lessons[0].id}`);
+      } else {
+        setFirstLessonPath(null);
+      }
+      // Note: isLoadingPage will be set to false in the second useEffect after auth and user-specific data is processed.
+    };
+    fetchCourseData();
+  }, [courseId]);
+
+  useEffect(() => {
+    const fetchUserSpecificData = async () => {
+      if (authLoading || !currentCourse) { // Wait for auth and course to be loaded
+        if (!currentCourse && !isLoadingPage) { // If course loading failed, don't proceed
+             // setIsLoadingPage(false) is already handled if currentCourse is null after fetch
+        } else if (authLoading) {
+            // Still waiting for auth, keep loading page
+        }
+        return;
+      }
+      
+      setIsLoadingPage(true); // Ensure loading state until all data is processed
+
+      if (isAuthenticated && user) {
+        const enrollment = await getEnrollmentForUserAndCourse(user.id, currentCourse.id);
+        if (enrollment) {
+          setCompletionInfo({ isCompleted: enrollment.progress === 100, progress: enrollment.progress });
         } else {
-            console.warn("adminCourses in localStorage was not an array, using default mock courses.");
-            coursesToUse = mockDataCourses;
+          setCompletionInfo({ isCompleted: false, progress: 0 });
+          // Optionally, create an enrollment record if the course is free or payment approved (handled later)
+          // For now, just indicates no existing enrollment.
+        }
+
+        if (currentCourse.price && currentCourse.price > 0) {
+          const allSubmissions = await getPaymentSubmissionsFromFirestore(); // Consider filtering by userId on backend if possible
+          const userSubmission = allSubmissions.find(s => s.userId === user.id && s.courseId === currentCourse.id);
+          setPaymentInfo({ status: userSubmission?.status || null, submission: userSubmission });
+        } else {
+          setPaymentInfo({ status: null }); // Free course
         }
       } else {
-        coursesToUse = mockDataCourses;
+        // Not authenticated or no user
+        setCompletionInfo({ isCompleted: false, progress: 0 });
+        setPaymentInfo({ status: null });
       }
-    } catch (error) {
-      console.error("Error loading courses from localStorage for CourseDetail:", error);
-      coursesToUse = mockDataCourses;
-    }
-    setAllAppCourses(coursesToUse);
-    setAreAppCoursesLoaded(true);
-  }, []);
-
-  useEffect(() => {
-    setIsLoadingPage(true);
-    setCurrentCourse(null);
-    setFirstLessonPath(null);
-
-    if (!areAppCoursesLoaded) {
-      return;
-    }
-    if (!courseId) {
       setIsLoadingPage(false);
-      return;
-    }
+    };
 
-    const foundCourse = allAppCourses.find(c => c.id === courseId);
-    setCurrentCourse(foundCourse || null);
-
-    if (foundCourse?.modules?.[0]?.lessons?.[0]) {
-      setFirstLessonPath(`/courses/${foundCourse.id}/learn/${foundCourse.modules[0].id}/${foundCourse.modules[0].lessons[0].id}`);
-    } else {
-      setFirstLessonPath(null);
-    }
-  }, [courseId, allAppCourses, areAppCoursesLoaded]);
-
-  useEffect(() => {
-    setIsLoadingPage(true);
-    setCompletionInfo(null);
-    setPaymentInfo(null);
-
-    if (authLoading || !areAppCoursesLoaded) {
-      return;
-    }
-
-    if (!courseId) {
-      setIsLoadingPage(false);
-      return;
-    }
-
-    if (courseId && !currentCourse && areAppCoursesLoaded) {
-      setIsLoadingPage(false);
-      return;
-    }
-
-    if (currentCourse) {
-        if (isAuthenticated && user) {
-            let userEnrollments: Enrollment[] = [];
-            try {
-                const storedEnrollments = localStorage.getItem(USER_ENROLLMENTS_KEY);
-                if (storedEnrollments) {
-                    const parsedEnrollments = JSON.parse(storedEnrollments);
-                    if(Array.isArray(parsedEnrollments)){
-                        userEnrollments = parsedEnrollments as Enrollment[];
-                    } else {
-                        localStorage.setItem(USER_ENROLLMENTS_KEY, JSON.stringify(initialEnrollments));
-                        userEnrollments = JSON.parse(JSON.stringify(initialEnrollments));
-                    }
-                } else {
-                    localStorage.setItem(USER_ENROLLMENTS_KEY, JSON.stringify(initialEnrollments));
-                    userEnrollments = JSON.parse(JSON.stringify(initialEnrollments));
-                }
-            } catch (error) {
-                localStorage.setItem(USER_ENROLLMENTS_KEY, JSON.stringify(initialEnrollments));
-                userEnrollments = JSON.parse(JSON.stringify(initialEnrollments));
-            }
-
-            const enrollment = userEnrollments.find(e => e.userId === user.id && e.courseId === currentCourse.id);
-            if (enrollment) {
-                setCompletionInfo({ isCompleted: enrollment.progress === 100, progress: enrollment.progress });
-            } else {
-                setCompletionInfo({ isCompleted: false, progress: 0 });
-            }
-
-            if (currentCourse.price && currentCourse.price > 0) {
-                let allSubmissions: PaymentSubmission[] = [];
-                try {
-                    const storedSubmissions = localStorage.getItem(USER_PAYMENT_SUBMISSIONS_KEY);
-                    if (storedSubmissions) {
-                         const parsedSubmissions = JSON.parse(storedSubmissions);
-                         if (Array.isArray(parsedSubmissions)) {
-                            allSubmissions = parsedSubmissions as PaymentSubmission[];
-                         } else {
-                            localStorage.setItem(USER_PAYMENT_SUBMISSIONS_KEY, JSON.stringify(initialPaymentSubmissions));
-                            allSubmissions = JSON.parse(JSON.stringify(initialPaymentSubmissions));
-                         }
-                    } else {
-                        localStorage.setItem(USER_PAYMENT_SUBMISSIONS_KEY, JSON.stringify(initialPaymentSubmissions));
-                        allSubmissions = JSON.parse(JSON.stringify(initialPaymentSubmissions));
-                    }
-                } catch (error) {
-                     localStorage.setItem(USER_PAYMENT_SUBMISSIONS_KEY, JSON.stringify(initialPaymentSubmissions));
-                    allSubmissions = JSON.parse(JSON.stringify(initialPaymentSubmissions));
-                }
-                const userSubmission = allSubmissions.find(s => s.userId === user.id && s.courseId === currentCourse.id);
-                setPaymentInfo({ status: userSubmission?.status || null, submission: userSubmission });
-            } else {
-                setPaymentInfo({ status: null });
-            }
-
-        } else {
-             setCompletionInfo({ isCompleted: false, progress: 0 });
-             setPaymentInfo({ status: null });
-        }
-    }
-
-    setIsLoadingPage(false);
-
-  }, [user, isAuthenticated, authLoading, currentCourse, courseId, areAppCoursesLoaded]);
+    fetchUserSpecificData();
+  }, [user, isAuthenticated, authLoading, currentCourse, toast, isLoadingPage]);
 
 
   const renderCTAButton = () => {
     if (!currentCourse) return null;
 
-    // Check if user is enrolled and payment is approved OR if the course is free
     const canAccessContent = (paymentInfo?.status === 'approved') || (!currentCourse.price || currentCourse.price <= 0);
 
     if (currentCourse.price && currentCourse.price > 0) {
@@ -319,8 +247,8 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
                     <p className="text-sm text-blue-600 dark:text-blue-400">{t.paymentSubmittedDesc}</p>
                 </div>
             );
-        } else {
-             if (!firstLessonPath && !(currentCourse.modules && currentCourse.modules.length > 0)) {
+        } else { // Includes null status (not submitted yet) or 'rejected'
+             if (!currentCourse.modules || currentCourse.modules.length === 0 || !firstLessonPath) {
                 return (
                     <div className="flex flex-col items-center text-center p-4 bg-muted rounded-lg shadow">
                         <AlertTriangle className="w-12 h-12 text-amber-500 mb-2" />
@@ -356,7 +284,7 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
       );
     }
 
-    if (!firstLessonPath) {
+    if (!firstLessonPath) { // Handles case where course is free but has no content
          return (
             <div className="flex flex-col items-center text-center p-4 bg-muted rounded-lg shadow">
                 <AlertTriangle className="w-12 h-12 text-amber-500 mb-2" />
@@ -375,8 +303,7 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
     );
   };
 
-
-  if (isLoadingPage || authLoading) {
+  if (isLoadingPage || authLoading) { // Keep authLoading in condition
     return (
       <div className="max-w-4xl mx-auto py-4 md:py-8 space-y-6">
         <Skeleton className="h-8 w-1/4" />
@@ -401,7 +328,7 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
           <div className="md:col-span-1 space-y-6 md:sticky md:top-24">
             <Card>
                 <CardHeader><Skeleton className="h-8 w-3/4" /> </CardHeader>
-                <CardContent><Skeleton className="h-12 w-full py-3" /></CardContent> {/* Adjusted skeleton height */}
+                <CardContent><Skeleton className="h-12 w-full py-3" /></CardContent>
                  <CardFooter><Skeleton className="h-4 w-1/2 mx-auto" /></CardFooter>
             </Card>
             <Card>
@@ -445,7 +372,6 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
 
   const { title, description, category, instructor, modules, imageUrl, dataAiHint, price, currency, learningObjectives, targetAudience, prerequisites, estimatedTimeToComplete, quizzes } = currentCourse;
   const canAccessContent = (paymentInfo?.status === 'approved') || (!price || price <= 0);
-
 
   return (
     <div className="max-w-4xl mx-auto py-4 md:py-8">
@@ -587,8 +513,6 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
               </CardContent>
             </Card>
           )}
-
-
         </div>
 
         <div className="md:col-span-1 space-y-6 md:sticky md:top-24">
@@ -665,4 +589,3 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
     </div>
   );
 }
-

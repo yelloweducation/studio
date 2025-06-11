@@ -1,12 +1,12 @@
 
 "use client";
 import { useState, useEffect, type FormEvent } from 'react';
-import { videos as initialVideos, type Video } from '@/data/mockData';
+import { videos_DEPRECATED_USE_FIRESTORE as initialVideos, type Video } from '@/data/mockData'; // Kept for potential seeding logic
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Edit3, Trash2, Video as VideoIcon, Link as LinkIcon } from 'lucide-react';
+import { PlusCircle, Edit3, Trash2, Video as VideoIcon, Link as LinkIcon, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -20,15 +20,19 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
+import { getVideosFromFirestore, addVideoToFirestore, updateVideoInFirestore, deleteVideoFromFirestore } from '@/lib/firestoreUtils';
+import { Label } from '../ui/label';
 
 const VideoForm = ({
   video,
   onSubmit,
-  onCancel
+  onCancel,
+  isSubmitting
 }: {
   video?: Video,
-  onSubmit: (data: Video) => void,
-  onCancel: () => void
+  onSubmit: (data: Omit<Video, 'id'>) => Promise<void>,
+  onCancel: () => void,
+  isSubmitting: boolean
 }) => {
   const [title, setTitle] = useState(video?.title || '');
   const [description, setDescription] = useState(video?.description || '');
@@ -36,18 +40,17 @@ const VideoForm = ({
   const [embedUrl, setEmbedUrl] = useState(video?.embedUrl || '');
   const [dataAiHint, setDataAiHint] = useState(video?.dataAiHint || 'video content');
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const videoData: Video = {
-      id: video?.id || `video${Date.now()}`,
+    const videoData: Omit<Video, 'id'> = {
       title,
       description,
       thumbnailUrl,
       embedUrl,
       dataAiHint,
-      videoUrl: video?.videoUrl || '', // Keep existing or empty, not actively used for iframe embeds
+      videoUrl: video?.videoUrl || '', 
     };
-    onSubmit(videoData);
+    await onSubmit(videoData);
   };
 
   return (
@@ -55,16 +58,16 @@ const VideoForm = ({
       <ScrollArea className="h-[60vh] sm:h-[70vh] pr-4">
         <div className="space-y-4">
           <div>
-            <label htmlFor="title" className="block text-sm font-medium text-foreground mb-1">Title</label>
-            <Input id="title" value={title} onChange={e => setTitle(e.target.value)} required />
+            <Label htmlFor="title">Title</Label>
+            <Input id="title" value={title} onChange={e => setTitle(e.target.value)} required disabled={isSubmitting}/>
           </div>
           <div>
-            <label htmlFor="description" className="block text-sm font-medium text-foreground mb-1">Description</label>
-            <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} required />
+            <Label htmlFor="description">Description</Label>
+            <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} required disabled={isSubmitting}/>
           </div>
           <div>
-            <label htmlFor="thumbnailUrl" className="block text-sm font-medium text-foreground mb-1">Thumbnail URL (for fallback)</label>
-            <Input id="thumbnailUrl" value={thumbnailUrl} onChange={e => setThumbnailUrl(e.target.value)} />
+            <Label htmlFor="thumbnailUrl">Thumbnail URL (for fallback)</Label>
+            <Input id="thumbnailUrl" value={thumbnailUrl} onChange={e => setThumbnailUrl(e.target.value)} disabled={isSubmitting}/>
             {thumbnailUrl && (
               <div className="mt-2 relative w-32 aspect-[9/16] border rounded overflow-hidden">
                 <Image src={thumbnailUrl} alt="Thumbnail preview" layout="fill" objectFit="cover" />
@@ -72,7 +75,7 @@ const VideoForm = ({
             )}
           </div>
           <div>
-            <label htmlFor="embedUrl" className="block text-sm font-medium text-foreground mb-1">Video Embed URL (YouTube or TikTok)</label>
+            <Label htmlFor="embedUrl">Video Embed URL (YouTube or TikTok)</Label>
             <div className="relative">
                 <Input 
                     id="embedUrl" 
@@ -80,22 +83,24 @@ const VideoForm = ({
                     onChange={e => setEmbedUrl(e.target.value)} 
                     placeholder="e.g., https://www.youtube.com/watch?v=..."
                     className="pl-8"
+                    disabled={isSubmitting}
                 />
                 <LinkIcon className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             </div>
             <p className="text-xs text-muted-foreground mt-1">Enter the standard watch URL for YouTube or video URL for TikTok.</p>
           </div>
           <div>
-            <label htmlFor="dataAiHint" className="block text-sm font-medium text-foreground mb-1">Thumbnail AI Hint (keywords)</label>
-            <Input id="dataAiHint" value={dataAiHint} onChange={e => setDataAiHint(e.target.value)} placeholder="e.g. tech tutorial"/>
+            <Label htmlFor="dataAiHint">Thumbnail AI Hint (keywords)</Label>
+            <Input id="dataAiHint" value={dataAiHint} onChange={e => setDataAiHint(e.target.value)} placeholder="e.g. tech tutorial" disabled={isSubmitting}/>
           </div>
         </div>
       </ScrollArea>
       <DialogFooter className="pt-6 border-t">
         <DialogClose asChild>
-          <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>Cancel</Button>
         </DialogClose>
-        <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90">
+        <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90" disabled={isSubmitting}>
+          {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           {video ? 'Save Changes' : 'Add Video'}
         </Button>
       </DialogFooter>
@@ -108,50 +113,58 @@ export default function VideoManagement() {
   const [videos, setVideos] = useState<Video[]>([]);
   const [editingVideo, setEditingVideo] = useState<Video | undefined>(undefined);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [isSubmittingForm, setIsSubmittingForm] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    const storedVideosString = localStorage.getItem('adminVideos');
-    if (storedVideosString) {
-      try {
-        const parsedVideos = JSON.parse(storedVideosString) as Video[];
-        setVideos(parsedVideos);
-      } catch (e) {
-        console.error("Failed to parse adminVideos from localStorage", e);
-        setVideos(initialVideos);
-      }
-    } else {
-      setVideos(initialVideos);
-    }
-    setIsDataLoaded(true);
+    const loadVideos = async () => {
+      setIsLoadingData(true);
+      const firestoreVideos = await getVideosFromFirestore();
+      setVideos(firestoreVideos);
+      setIsLoadingData(false);
+    };
+    loadVideos();
   }, []);
 
-  useEffect(() => {
-    if (isDataLoaded) {
-      localStorage.setItem('adminVideos', JSON.stringify(videos));
+  const handleAddVideo = async (data: Omit<Video, 'id'>) => {
+    setIsSubmittingForm(true);
+    try {
+      const newVideo = await addVideoToFirestore(data);
+      setVideos(prev => [newVideo, ...prev].sort((a, b) => (b.createdAt as any) - (a.createdAt as any) || 0));
+      closeForm();
+      toast({ title: "Video Added", description: `${data.title} has been successfully added.` });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error Adding Video", description: "Could not add video. Please try again."});
+    } finally {
+      setIsSubmittingForm(false);
     }
-  }, [videos, isDataLoaded]);
-
-
-  const handleAddVideo = (data: Video) => {
-    setVideos(prev => [{ ...data, id: data.id || `video${Date.now()}` }, ...prev]);
-    setIsFormOpen(false);
-    setEditingVideo(undefined);
-    toast({ title: "Video Added", description: `${data.title} has been successfully added.` });
   };
 
-  const handleEditVideo = (data: Video) => {
-    setVideos(prev => prev.map(v => v.id === data.id ? data : v));
-    setEditingVideo(undefined);
-    setIsFormOpen(false);
-    toast({ title: "Video Updated", description: `${data.title} has been successfully updated.` });
+  const handleEditVideo = async (data: Omit<Video, 'id'>) => {
+    if (!editingVideo || !editingVideo.id) return;
+    setIsSubmittingForm(true);
+    try {
+      await updateVideoInFirestore(editingVideo.id, data);
+      setVideos(prev => prev.map(v => v.id === editingVideo.id ? { ...v, ...data, id: editingVideo.id! } : v).sort((a,b) => (b.createdAt as any) - (a.createdAt as any) || 0));
+      closeForm();
+      toast({ title: "Video Updated", description: `${data.title} has been successfully updated.` });
+    } catch (error) {
+       toast({ variant: "destructive", title: "Error Updating Video", description: "Could not update video. Please try again."});
+    } finally {
+      setIsSubmittingForm(false);
+    }
   };
 
-  const handleDeleteVideo = (videoId: string) => {
+  const handleDeleteVideo = async (videoId: string) => {
     const videoToDelete = videos.find(v => v.id === videoId);
-    setVideos(prev => prev.filter(v => v.id !== videoId));
-    toast({ title: "Video Deleted", description: `${videoToDelete?.title} has been deleted.`, variant: "destructive" });
+    try {
+      await deleteVideoFromFirestore(videoId);
+      setVideos(prev => prev.filter(v => v.id !== videoId));
+      toast({ title: "Video Deleted", description: `${videoToDelete?.title} has been deleted.`, variant: "destructive" });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error Deleting Video", description: "Could not delete video. Please try again."});
+    }
   };
 
   const openForm = (video?: Video) => {
@@ -170,7 +183,7 @@ export default function VideoManagement() {
         <CardTitle className="flex items-center text-xl md:text-2xl font-headline">
           <VideoIcon className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Video Management
         </CardTitle>
-        <CardDescription>Add, edit, or delete videos for the Reels feed. Provide YouTube or TikTok URLs for embedding.</CardDescription>
+        <CardDescription>Add, edit, or delete videos for the Reels feed using Firestore. Provide YouTube or TikTok URLs for embedding.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="mb-6 text-right">
@@ -180,7 +193,7 @@ export default function VideoManagement() {
                 <PlusCircle className="mr-2 h-5 w-5" /> Add New Video
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-xl"> {/* Adjusted width */}
+            <DialogContent className="sm:max-w-xl">
               <DialogHeader className="pb-4">
                 <DialogTitle className="font-headline text-xl md:text-2xl">{editingVideo ? 'Edit Video' : 'Add New Video'}</DialogTitle>
                 <DialogDescription>
@@ -191,12 +204,18 @@ export default function VideoManagement() {
                 video={editingVideo}
                 onSubmit={editingVideo ? handleEditVideo : handleAddVideo}
                 onCancel={closeForm}
+                isSubmitting={isSubmittingForm}
               />
             </DialogContent>
           </Dialog>
         </div>
-
-        {videos.length > 0 ? (
+        
+        {isLoadingData ? (
+          <div className="flex justify-center items-center py-10">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="ml-2 text-muted-foreground">Loading videos...</p>
+          </div>
+        ) : videos.length > 0 ? (
           <ul className="space-y-4">
             {videos.map(video => (
               <li key={video.id} className="p-3 sm:p-4 border rounded-lg bg-card flex flex-col gap-3 sm:flex-row sm:items-center shadow-sm hover:shadow-md transition-shadow">
@@ -242,7 +261,7 @@ export default function VideoManagement() {
             ))}
           </ul>
         ) : (
-          <p className="text-center text-muted-foreground py-4">No videos available. Add some!</p>
+          <p className="text-center text-muted-foreground py-4">No videos found in Firestore. Add some!</p>
         )}
       </CardContent>
     </Card>
