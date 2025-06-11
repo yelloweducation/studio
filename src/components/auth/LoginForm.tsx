@@ -38,8 +38,12 @@ export function LoginForm() {
         toast({ title: "Login Successful", description: `Welcome back, ${user.name}!` });
         if (user.role === 'admin') {
           router.push('/dashboard/admin');
-        } else {
+        } else if (user.role === 'student') {
           router.push('/dashboard/student');
+        } else {
+          // Fallback for any unexpected roles
+          console.warn(`User ${user.name} logged in with an unexpected role: ${user.role}. Redirecting to home.`);
+          router.push('/');
         }
       } else {
         toast({ variant: "destructive", title: "Login Failed", description: "Invalid email or password." });
