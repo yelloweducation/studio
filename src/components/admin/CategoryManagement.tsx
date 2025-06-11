@@ -2,8 +2,7 @@
 "use client";
 import { useState, useEffect, type FormEvent } from 'react';
 import Image from 'next/image';
-// Removed initialCategories import, will fetch from Firestore or show empty
-import { type Category } from '@/data/mockData';
+import type { Category } from '@/lib/dbUtils'; // Updated import path for type
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,11 +21,11 @@ import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import * as LucideIcons from 'lucide-react';
 import { 
-  getCategoriesFromFirestore, 
-  addCategoryToFirestore, 
-  updateCategoryInFirestore, 
-  deleteCategoryFromFirestore 
-} from '@/lib/firestoreUtils'; // Updated import path
+  getCategoriesFromDb, 
+  addCategoryToDb, 
+  updateCategoryInDb, 
+  deleteCategoryFromDb 
+} from '@/lib/dbUtils'; // Updated import path for functions
 
 const isValidLucideIcon = (iconName: string | undefined): iconName is keyof typeof LucideIcons => {
   return typeof iconName === 'string' && iconName in LucideIcons;
@@ -36,30 +35,30 @@ const CategoryForm = ({
   category,
   onSubmit,
   onCancel,
-  isSubmitting // Added for loading state
+  isSubmitting
 }: {
   category?: Category,
-  onSubmit: (data: Omit<Category, 'id'>) => Promise<void>, // onSubmit now likely async
+  onSubmit: (data: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>,
   onCancel: () => void,
   isSubmitting: boolean
 }) => {
   const [name, setName] = useState(category?.name || '');
   const [imageUrl, setImageUrl] = useState(category?.imageUrl || 'https://placehold.co/200x150.png');
   const [dataAiHint, setDataAiHint] = useState(category?.dataAiHint || 'category default');
-  const [iconName, setIconName] = useState(category?.iconName || 'Shapes'); // Changed from icon to iconName
+  const [iconName, setIconName] = useState(category?.iconName || 'Shapes');
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const categoryData: Omit<Category, 'id'> = { // id will be assigned by Firestore or in the handler
+    const categoryData: Omit<Category, 'id' | 'createdAt' | 'updatedAt'> = {
       name,
-      imageUrl,
-      dataAiHint,
-      iconName, // Changed from icon
+      imageUrl: imageUrl || null, // Ensure null if empty
+      dataAiHint: dataAiHint || null,
+      iconName: iconName || null,
     };
     await onSubmit(categoryData);
   };
 
-  const IconComponent = isValidLucideIcon(iconName) ? LucideIcons[iconName] as React.ElementType : LucideIcons.Shapes;
+  const IconComponent = isValidLucideIcon(iconName || undefined) ? LucideIcons[iconName as keyof typeof LucideIcons] as React.ElementType : LucideIcons.Shapes;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -75,7 +74,7 @@ const CategoryForm = ({
           <div>
             <label htmlFor="imageUrl" className="block text-sm font-medium text-foreground mb-1">Image URL</label>
             <div className="relative">
-              <Input id="imageUrl" value={imageUrl} onChange={e => setImageUrl(e.target.value)} className="pl-8" disabled={isSubmitting}/>
+              <Input id="imageUrl" value={imageUrl || ''} onChange={e => setImageUrl(e.target.value)} className="pl-8" disabled={isSubmitting}/>
               <ImageIcon className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             </div>
             {imageUrl && (
@@ -87,14 +86,14 @@ const CategoryForm = ({
           <div>
             <label htmlFor="dataAiHint" className="block text-sm font-medium text-foreground mb-1">Image AI Hint</label>
              <div className="relative">
-                <Input id="dataAiHint" value={dataAiHint} onChange={e => setDataAiHint(e.target.value)} placeholder="e.g. technology learning" className="pl-8" disabled={isSubmitting}/>
+                <Input id="dataAiHint" value={dataAiHint || ''} onChange={e => setDataAiHint(e.target.value)} placeholder="e.g. technology learning" className="pl-8" disabled={isSubmitting}/>
                 <Info className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             </div>
           </div>
           <div>
             <label htmlFor="iconName" className="block text-sm font-medium text-foreground mb-1">Lucide Icon Name</label>
              <div className="relative">
-                <Input id="iconName" value={iconName} onChange={e => setIconName(e.target.value)} placeholder="e.g. Globe, BrainCircuit" className="pl-8" disabled={isSubmitting}/>
+                <Input id="iconName" value={iconName || ''} onChange={e => setIconName(e.target.value)} placeholder="e.g. Globe, BrainCircuit" className="pl-8" disabled={isSubmitting}/>
                  <IconComponent className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
              </div>
             <p className="text-xs text-muted-foreground mt-1">Enter a valid Lucide icon name (e.g., Globe, Code, BarChart). See Lucide React docs for options. Defaults to 'Shapes' if invalid.</p>
@@ -125,18 +124,18 @@ export default function CategoryManagement() {
   useEffect(() => {
     const loadCategories = async () => {
       setIsLoadingData(true);
-      const firestoreCategories = await getCategoriesFromFirestore();
-      setCategories(firestoreCategories);
+      const dbCategories = await getCategoriesFromDb();
+      setCategories(dbCategories);
       setIsLoadingData(false);
     };
     loadCategories();
   }, []);
 
-  const handleAddCategory = async (data: Omit<Category, 'id'>) => {
+  const handleAddCategory = async (data: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>) => {
     setIsSubmittingForm(true);
     try {
-      const newCategory = await addCategoryToFirestore(data);
-      setCategories(prev => [newCategory, ...prev]); // Optimistically update UI, or re-fetch
+      const newCategory = await addCategoryToDb(data);
+      setCategories(prev => [newCategory, ...prev].sort((a, b) => a.name.localeCompare(b.name)));
       closeForm();
       toast({ title: "Category Added", description: `${data.name} has been successfully added.` });
     } catch (error) {
@@ -146,13 +145,12 @@ export default function CategoryManagement() {
     }
   };
 
-  const handleEditCategory = async (data: Omit<Category, 'id'>) => {
+  const handleEditCategory = async (data: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>) => {
     if (!editingCategory || !editingCategory.id) return;
     setIsSubmittingForm(true);
     try {
-      await updateCategoryInFirestore(editingCategory.id, data);
-      // Optimistically update UI or re-fetch:
-      setCategories(prev => prev.map(c => c.id === editingCategory.id ? { ...c, ...data, id: editingCategory.id } : c));
+      const updatedCategory = await updateCategoryInDb(editingCategory.id, data);
+      setCategories(prev => prev.map(c => c.id === updatedCategory.id ? updatedCategory : c).sort((a,b) => a.name.localeCompare(b.name)));
       closeForm();
       toast({ title: "Category Updated", description: `${data.name} has been successfully updated.` });
     } catch (error) {
@@ -165,7 +163,7 @@ export default function CategoryManagement() {
   const handleDeleteCategory = async (categoryId: string) => {
     const categoryToDelete = categories.find(c => c.id === categoryId);
     try {
-      await deleteCategoryFromFirestore(categoryId);
+      await deleteCategoryFromDb(categoryId);
       setCategories(prev => prev.filter(c => c.id !== categoryId));
       toast({ title: "Category Deleted", description: `${categoryToDelete?.name} has been deleted.`, variant: "destructive" });
     } catch (error) {
@@ -189,7 +187,7 @@ export default function CategoryManagement() {
         <CardTitle className="flex items-center text-xl md:text-2xl font-headline">
           <Shapes className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Category Management
         </CardTitle>
-        <CardDescription>Add, edit, or delete course categories. Data is stored in Firestore.</CardDescription>
+        <CardDescription>Add, edit, or delete course categories. Data is stored in your Postgres database via Prisma.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="mb-6 text-right">
@@ -224,8 +222,7 @@ export default function CategoryManagement() {
         ) : categories.length > 0 ? (
           <ul className="space-y-4">
             {categories.map(category => {
-              // Ensure iconName is used here, and it's a string
-              const IconComponent = isValidLucideIcon(category.iconName) ? LucideIcons[category.iconName] as React.ElementType : LucideIcons.Shapes;
+              const IconComponent = isValidLucideIcon(category.iconName || undefined) ? LucideIcons[category.iconName as keyof typeof LucideIcons] as React.ElementType : LucideIcons.Shapes;
               return (
               <li key={category.id} className="p-3 sm:p-4 border rounded-lg bg-card flex flex-col gap-3 sm:flex-row sm:items-center shadow-sm hover:shadow-md transition-shadow">
                 {category.imageUrl && (
@@ -254,7 +251,7 @@ export default function CategoryManagement() {
                       <DialogHeader>
                         <DialogTitle>Confirm Deletion</DialogTitle>
                         <DialogDescription>
-                          Are you sure you want to delete the category "{category.name}"? This action cannot be undone.
+                          Are you sure you want to delete the category "{category.name}"? This action cannot be undone and might affect courses linked to it.
                         </DialogDescription>
                       </DialogHeader>
                       <DialogFooter className="pt-2">
@@ -273,7 +270,7 @@ export default function CategoryManagement() {
             })}
           </ul>
         ) : (
-          <p className="text-center text-muted-foreground py-4">No categories found in Firestore. Add some!</p>
+          <p className="text-center text-muted-foreground py-4">No categories found in the database. Add some!</p>
         )}
       </CardContent>
     </Card>

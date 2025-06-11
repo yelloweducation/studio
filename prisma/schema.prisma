@@ -1,20 +1,236 @@
-# Firebase Project Configuration
-# Get these values from your Firebase project settings (Project settings > General > Your apps > Firebase SDK snippet > Config)
-# Ensure these are also set in your Netlify deployment environment variables.
-NEXT_PUBLIC_FIREBASE_API_KEY="your_firebase_api_key"
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="your_firebase_auth_domain"
-NEXT_PUBLIC_FIREBASE_PROJECT_ID="your_firebase_project_id"
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="your_firebase_storage_bucket"
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="your_firebase_messaging_sender_id"
-NEXT_PUBLIC_FIREBASE_APP_ID="your_firebase_app_id"
-NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID="your_firebase_measurement_id" # Optional, for Analytics
 
-# Site URL (ensure this matches your deployed site's URL)
-NEXT_PUBLIC_SITE_URL="http://localhost:9002" # Change to your actual Netlify URL in production
+generator client {
+  provider = "prisma-client-js"
+}
 
-# No GOOGLE_API_KEY needed if Genkit/AI features are removed.
-# GOOGLE_API_KEY="your_google_ai_api_key_for_genkit" # Only if using Genkit
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
 
-# DATABASE_URL for Prisma (PostgreSQL) - This is NOT needed if solely using Firebase Firestore.
-# When using Netlify Dev with Netlify Database (Neon), Netlify CLI injects NETLIFY_DATABASE_URL.
-# DATABASE_URL=${NETLIFY_DATABASE_URL}
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  passwordHash  String // In a real app, this should be securely hashed
+  role          Role      @default(STUDENT)
+  enrollments   Enrollment[]
+  paymentSubmissions PaymentSubmission[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("users")
+}
+
+enum Role {
+  STUDENT
+  ADMIN
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  imageUrl    String?
+  dataAiHint  String?
+  iconName    String?
+  courses     Course[] @relation("CategoryToCourse") // One-to-many relation
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("categories")
+}
+
+model Course {
+  id                      String    @id @default(cuid())
+  title                   String
+  description             String    @db.Text
+  categoryId              String? // Foreign key for Category
+  category                Category? @relation("CategoryToCourse", fields: [categoryId], references: [id])
+  categoryNameCache       String // Denormalized category name for easier querying if not always joining
+  instructor              String
+  imageUrl                String?
+  dataAiHint              String?
+  price                   Float?    @default(0)
+  currency                String?   @default("USD")
+  isFeatured              Boolean   @default(false)
+  learningObjectives      String[]  @default([])
+  targetAudience          String?
+  prerequisites           String[]  @default([])
+  estimatedTimeToComplete String?
+  modules                 Module[]
+  quizzes                 Quiz[]
+  enrollments             Enrollment[]
+  paymentSubmissions      PaymentSubmission[]
+  learningPaths           LearningPathCourse[] // Many-to-many relation through LearningPathCourse
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  @@map("courses")
+}
+
+model Module {
+  id        String   @id @default(cuid())
+  title     String
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons   Lesson[]
+  order     Int? // For ordering modules within a course
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("modules")
+}
+
+model Lesson {
+  id          String   @id @default(cuid())
+  title       String
+  duration    String?
+  description String?  @db.Text
+  embedUrl    String?
+  imageUrl    String?
+  moduleId    String
+  module      Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  order       Int? // For ordering lessons within a module
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("lessons")
+}
+
+model Quiz {
+  id            String     @id @default(cuid())
+  title         String
+  quizType      QuizType   @default(PRACTICE)
+  courseId      String
+  course        Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  questions     Question[]
+  passingScore  Int? // Percentage
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@map("quizzes")
+}
+
+enum QuizType {
+  PRACTICE
+  GRADED
+}
+
+model Question {
+  id              String   @id @default(cuid())
+  text            String   @db.Text
+  quizId          String
+  quiz            Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  options         Option[]
+  correctOptionId String? // Store the ID of the correct option
+  points          Int?
+  order           Int?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("questions")
+}
+
+model Option {
+  id          String   @id @default(cuid())
+  text        String
+  questionId  String
+  question    Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  // isCorrect   Boolean  @default(false) // Alternatively, store correctOptionId on Question
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("options")
+}
+
+
+model Video {
+  id            String   @id @default(cuid())
+  title         String
+  description   String   @db.Text
+  thumbnailUrl  String?
+  embedUrl      String?  // For YouTube, TikTok embeds
+  videoUrl      String?  // Original field, maybe for direct file links if ever needed
+  dataAiHint    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("videos")
+}
+
+model LearningPath {
+  id          String               @id @default(cuid())
+  title       String
+  description String               @db.Text
+  icon        String?
+  imageUrl    String?
+  dataAiHint  String?
+  courses     LearningPathCourse[] // Many-to-many relation through LearningPathCourse
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  @@map("learning_paths")
+}
+
+// Join table for many-to-many relationship between LearningPath and Course
+model LearningPathCourse {
+  learningPathId String
+  learningPath   LearningPath @relation(fields: [learningPathId], references: [id], onDelete: Cascade)
+  courseId       String
+  course         Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  order          Int? // Optional: for ordering courses within a path
+
+  @@id([learningPathId, courseId])
+  @@map("learning_path_courses")
+}
+
+model Enrollment {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId      String
+  course        Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progress      Int      @default(0) // Percentage
+  enrolledDate  DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, courseId]) // Ensure a user can only enroll in a course once
+  @@map("enrollments")
+}
+
+model PaymentSubmission {
+  id              String                 @id @default(cuid())
+  userId          String
+  user            User                   @relation(fields: [userId], references: [id])
+  courseId        String
+  course          Course                 @relation(fields: [courseId], references: [id])
+  amount          Float
+  currency        String
+  screenshotUrl   String
+  status          PaymentSubmissionStatus @default(PENDING)
+  submittedAt     DateTime               @default(now())
+  reviewedAt      DateTime?
+  adminNotes      String?                @db.Text
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  @@map("payment_submissions")
+}
+
+enum PaymentSubmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model PaymentSettings {
+  id                      String    @id @default("global") // Singleton pattern for global settings
+  bankName                String?
+  accountNumber           String?
+  accountHolderName       String?
+  additionalInstructions  String?   @db.Text
+  updatedAt               DateTime  @updatedAt
+
+  @@map("payment_settings")
+}

@@ -6,14 +6,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { DatabaseZap, BookText, FolderKanban, VideoIcon, Users, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { 
-  seedCoursesToFirestore, 
-  seedCategoriesToFirestore, 
-  seedVideosToFirestore, 
-  seedLearningPathsToFirestore 
-} from '@/lib/firestoreUtils';
-import { seedInitialUsersToFirestore } from '@/lib/authUtils';
+  seedCoursesToDb, 
+  seedCategoriesToDb, 
+  seedVideosToDb, 
+  seedLearningPathsToDb,
+  seedPaymentSettingsToDb // Added for payment settings
+} from '@/lib/dbUtils'; // Updated to use Prisma-based dbUtils
+import { seedInitialUsersToPrisma } from '@/lib/authUtils'; // Updated to use Prisma-based authUtils
 
-type SeedOperation = 'courses' | 'categories' | 'videos' | 'learningPaths' | 'users';
+type SeedOperation = 'courses' | 'categories' | 'videos' | 'learningPaths' | 'users' | 'paymentSettings';
 
 export default function DataSeeding() {
   const [loadingStates, setLoadingStates] = useState<Record<SeedOperation, boolean>>({
@@ -22,6 +23,7 @@ export default function DataSeeding() {
     videos: false,
     learningPaths: false,
     users: false,
+    paymentSettings: false,
   });
   const { toast } = useToast();
 
@@ -29,23 +31,28 @@ export default function DataSeeding() {
     setLoadingStates(prev => ({ ...prev, [operation]: true }));
     let result: { successCount: number; errorCount: number; skippedCount: number } | undefined;
     let operationName = operation.charAt(0).toUpperCase() + operation.slice(1);
+    if (operation === 'paymentSettings') operationName = 'Payment Settings';
+
 
     try {
       switch (operation) {
         case 'courses':
-          result = await seedCoursesToFirestore();
+          result = await seedCoursesToDb();
           break;
         case 'categories':
-          result = await seedCategoriesToFirestore();
+          result = await seedCategoriesToDb();
           break;
         case 'videos':
-          result = await seedVideosToFirestore();
+          result = await seedVideosToDb();
           break;
         case 'learningPaths':
-          result = await seedLearningPathsToFirestore();
+          result = await seedLearningPathsToDb();
           break;
         case 'users':
-          result = await seedInitialUsersToFirestore();
+          result = await seedInitialUsersToPrisma();
+          break;
+        case 'paymentSettings':
+          result = await seedPaymentSettingsToDb();
           break;
         default:
           throw new Error("Invalid seed operation");
@@ -54,7 +61,7 @@ export default function DataSeeding() {
       if (result) {
         toast({
           title: `${operationName} Seeding Complete`,
-          description: `Successfully seeded: ${result.successCount}, Skipped (already exist): ${result.skippedCount}, Errors: ${result.errorCount}.`,
+          description: `Successfully seeded: ${result.successCount}, Skipped (already exist/no change): ${result.skippedCount}, Errors: ${result.errorCount}.`,
           duration: 7000,
         });
       }
@@ -70,22 +77,23 @@ export default function DataSeeding() {
   };
 
   const seedButtons = [
-    { operation: 'courses' as SeedOperation, label: 'Seed Courses', Icon: BookText },
     { operation: 'categories' as SeedOperation, label: 'Seed Categories', Icon: FolderKanban },
+    { operation: 'courses' as SeedOperation, label: 'Seed Courses (Basic)', Icon: BookText },
     { operation: 'videos' as SeedOperation, label: 'Seed Videos', Icon: VideoIcon },
     { operation: 'learningPaths' as SeedOperation, label: 'Seed Learning Paths', Icon: DatabaseZap },
     { operation: 'users' as SeedOperation, label: 'Seed Initial Users', Icon: Users },
+    { operation: 'paymentSettings' as SeedOperation, label: 'Seed Payment Settings', Icon: DatabaseZap }, // Added button
   ];
 
   return (
     <Card className="shadow-lg">
       <CardHeader>
         <CardTitle className="flex items-center text-xl md:text-2xl font-headline">
-          <DatabaseZap className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Firestore Data Seeding
+          <DatabaseZap className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Database Seeding (PostgreSQL)
         </CardTitle>
         <CardDescription>
-          Populate your Firestore database with initial mock data. This is useful for new setups or testing.
-          Existing documents with the same IDs will be skipped to prevent data loss.
+          Populate your PostgreSQL database with initial mock data using Prisma. This is useful for new setups or testing.
+          Existing documents with the same IDs (or unique constraints like email for users) will typically be skipped.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -113,7 +121,7 @@ export default function DataSeeding() {
           </Card>
         ))}
          <p className="text-xs text-muted-foreground text-center pt-4">
-            Note: Seeding users will only add the mock admin and student if they don't already exist by email. Other data types check by ID.
+            Note: Seeding courses may only create basic course entries; complex relations like modules/lessons might require more detailed seed scripts or manual setup for now.
         </p>
       </CardContent>
     </Card>
