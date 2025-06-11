@@ -47,16 +47,24 @@ export default function StudentDashboardPage() {
     const fetchEnrolledCourses = async () => {
       if (user) {
         setIsLoading(true);
+        console.log("[StudentDashboard] Fetching enrollments for user:", user.id);
         try {
           const userEnrollments = await getEnrollmentsByUserIdFromDb(user.id);
-          const coursesData = userEnrollments.map(enrollment => enrollment.course).filter(course => course !== null) as Course[];
+          console.log("[StudentDashboard] Fetched userEnrollments:", userEnrollments);
+          
+          const coursesData = userEnrollments
+            .map(enrollment => enrollment.course) // enrollment.course can be Course | undefined
+            .filter(Boolean) as Course[]; // filter(Boolean) removes null/undefined, then cast
+          
+          console.log("[StudentDashboard] Processed coursesData to display:", coursesData);
           setEnrolledCoursesDetails(coursesData);
         } catch (error) {
-          console.error("Error fetching enrolled courses from database:", error);
+          console.error("[StudentDashboard] Error fetching enrolled courses from database:", error);
           setEnrolledCoursesDetails([]);
         }
         setIsLoading(false);
       } else {
+        console.log("[StudentDashboard] No user, clearing enrolled courses details.");
         setEnrolledCoursesDetails([]);
         setIsLoading(false);
       }
