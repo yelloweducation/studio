@@ -1,6 +1,5 @@
 
-import { z } from 'zod'; // Added Zod for input validation
-import {
+import { 
   users as mockUsers,
   courses_DEPRECATED_USE_FIRESTORE as mockCourses, // Use the deprecated name as it was used before
   initialCategoriesData as mockCategories,
@@ -34,8 +33,8 @@ import {
 import { seedInitialUsersToLocalStorage } from './authUtils'; // For seeding users
 
 // Re-export types for convenience in components
-export type {
-    Category, Course, Module, Lesson, Quiz, Question, Option,
+export type { 
+    Category, Course, Module, Lesson, Quiz, Question, Option, 
     Video, LearningPath, PaymentSettings, PaymentSubmission, Enrollment, User,
     PaymentSubmissionStatus, QuizType
 };
@@ -71,11 +70,11 @@ export const getCategoriesFromDb = async (): Promise<Category[]> => {
   return Promise.resolve(getStoredData('adminCategories', mockCategories));
 };
 export const addCategoryToDb = async (categoryData: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>): Promise<Category> => {
-  const newCategory: Category = {
-    id: `cat-${Date.now()}`,
-    ...categoryData,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+  const newCategory: Category = { 
+    id: `cat-${Date.now()}`, 
+    ...categoryData, 
+    createdAt: new Date().toISOString(), 
+    updatedAt: new Date().toISOString() 
   };
   const categories = getStoredData('adminCategories', mockCategories);
   categories.push(newCategory);
@@ -166,7 +165,7 @@ export const updateCourseInDb = async (courseId: string, courseData: Partial<Omi
   if (index === -1) throw new Error("Course not found");
 
   const { categoryName, modulesData, quizzesData, ...mainCourseData } = courseData;
-
+  
   const updatedCourseData = {
     ...courses[index],
     ...mainCourseData,
@@ -234,11 +233,11 @@ export const getVideosFromDb = async (): Promise<Video[]> => {
   return Promise.resolve(getStoredData('adminVideos', mockVideos));
 };
 export const addVideoToDb = async (videoData: Omit<Video, 'id' | 'createdAt' | 'updatedAt'>): Promise<Video> => {
-  const newVideo: Video = {
-    id: `vid-${Date.now()}`,
-    ...videoData,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+  const newVideo: Video = { 
+    id: `vid-${Date.now()}`, 
+    ...videoData, 
+    createdAt: new Date().toISOString(), 
+    updatedAt: new Date().toISOString() 
   };
   const videos = getStoredData('adminVideos', mockVideos);
   videos.unshift(newVideo); // Add to the beginning
@@ -276,12 +275,12 @@ export const getLearningPathsFromDb = async (): Promise<LearningPath[]> => {
 };
 export const addLearningPathToDb = async (pathData: Omit<LearningPath, 'id' | 'createdAt' | 'updatedAt'> & { courseIdsToConnect?: string[] }): Promise<LearningPath> => {
   const { courseIdsToConnect, ...restData } = pathData;
-  const newPath: LearningPath = {
-    id: `lp-${Date.now()}`,
-    ...restData,
-    courseIds: courseIdsToConnect || [],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+  const newPath: LearningPath = { 
+    id: `lp-${Date.now()}`, 
+    ...restData, 
+    courseIds: courseIdsToConnect || [], 
+    createdAt: new Date().toISOString(), 
+    updatedAt: new Date().toISOString() 
   };
   const paths = getStoredData('adminLearningPaths', mockLearningPaths);
   paths.push(newPath);
@@ -293,11 +292,11 @@ export const updateLearningPathInDb = async (pathId: string, pathData: Partial<O
   const index = paths.findIndex(p => p.id === pathId);
   if (index === -1) throw new Error("Learning Path not found");
   const { courseIdsToConnect, ...restData } = pathData;
-  paths[index] = {
-    ...paths[index],
-    ...restData,
-    courseIds: courseIdsToConnect !== undefined ? courseIdsToConnect : paths[index].courseIds,
-    updatedAt: new Date().toISOString()
+  paths[index] = { 
+    ...paths[index], 
+    ...restData, 
+    courseIds: courseIdsToConnect !== undefined ? courseIdsToConnect : paths[index].courseIds, 
+    updatedAt: new Date().toISOString() 
   };
   saveStoredData('adminLearningPaths', paths);
   return Promise.resolve(paths[index]);
@@ -321,17 +320,6 @@ export const savePaymentSettingsToDb = async (settingsData: Omit<PaymentSettings
 };
 
 // --- PaymentSubmission ---
-const AddPaymentSubmissionInputSchema = z.object({
-  userId: z.string().min(1, "User ID is required"),
-  courseId: z.string().min(1, "Course ID is required"),
-  amount: z.number().positive("Amount must be positive"),
-  currency: z.string().min(2, "Currency code is required"), // e.g., USD, MMK
-  screenshotUrl: z.string().refine(val => val.startsWith('data:image/'), {
-    message: "Screenshot URL must be a valid data URI for an image."
-  }),
-});
-type AddPaymentSubmissionInput = z.infer<typeof AddPaymentSubmissionInputSchema>;
-
 export const getPaymentSubmissionsFromDb = async (): Promise<PaymentSubmission[]> => {
   const submissions = getStoredData('paymentSubmissions', mockPaymentSubmissions);
   const allUsers = getStoredData('managedUsers', mockUsers); // Assuming users are in localStorage too
@@ -346,18 +334,10 @@ export const getPaymentSubmissionsFromDb = async (): Promise<PaymentSubmission[]
   })).sort((a,b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()));
 };
 
-export const addPaymentSubmissionToDb = async (submissionData: AddPaymentSubmissionInput): Promise<PaymentSubmission> => {
-  // Validate input data
-  const validationResult = AddPaymentSubmissionInputSchema.safeParse(submissionData);
-  if (!validationResult.success) {
-    console.error("Invalid payment submission data:", validationResult.error.flatten());
-    throw new Error(`Invalid payment submission data: ${validationResult.error.flatten().fieldErrors}`);
-  }
-  const validatedData = validationResult.data;
-
+export const addPaymentSubmissionToDb = async (submissionData: Omit<PaymentSubmission, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'submittedAt' | 'reviewedAt' | 'adminNotes'> & { userId: string, courseId: string }): Promise<PaymentSubmission> => {
   const newSubmission: PaymentSubmission = {
     id: `ps-${Date.now()}`,
-    ...validatedData,
+    ...submissionData,
     status: 'pending',
     submittedAt: new Date().toISOString(),
     createdAt: new Date().toISOString(),
@@ -372,8 +352,8 @@ export const updatePaymentSubmissionInDb = async (submissionId: string, dataToUp
   let submissions = getStoredData('paymentSubmissions', mockPaymentSubmissions);
   const index = submissions.findIndex(s => s.id === submissionId);
   if (index === -1) throw new Error("Payment Submission not found");
-  submissions[index] = {
-    ...submissions[index],
+  submissions[index] = { 
+    ...submissions[index], 
     status: dataToUpdate.status,
     adminNotes: dataToUpdate.adminNotes || submissions[index].adminNotes,
     reviewedAt: dataToUpdate.reviewedAt?.toISOString() || new Date().toISOString(),
@@ -425,7 +405,7 @@ export const getEnrollmentsByUserIdFromDb = async (userId: string): Promise<Enro
 // Quiz Data Persistence (Example for CourseForm - saveQuizWithQuestionsToDb)
 // This is complex to fully replicate without a DB. We'll store quizzes as part of the course in localStorage.
 export const saveQuizWithQuestionsToDb = async (
-    courseId: string,
+    courseId: string, 
     quizData: Quiz & { questionsToUpsert?: any[], questionIdsToDelete?: string[] }
 ): Promise<Quiz> => {
     let courses = getStoredData('adminCourses', mockCourses);
@@ -436,7 +416,7 @@ export const saveQuizWithQuestionsToDb = async (
     if (!course.quizzes) course.quizzes = [];
 
     const quizIndex = course.quizzes.findIndex(q => q.id === quizData.id);
-
+    
     const newQuizStructure: Quiz = {
         id: quizData.id || `quiz-${Date.now()}`,
         title: quizData.title,
@@ -465,7 +445,7 @@ export const saveQuizWithQuestionsToDb = async (
     } else {
         course.quizzes.push(newQuizStructure);
     }
-
+    
     courses[courseIndex] = course;
     saveStoredData('adminCourses', courses);
     return Promise.resolve(newQuizStructure);
