@@ -22,12 +22,18 @@ const CareerAdviceOutputSchema = z.object({
 export type CareerAdviceOutput = z.infer<typeof CareerAdviceOutputSchema>;
 
 export async function getCareerAdvice(input: CareerAdviceInput): Promise<CareerAdviceOutput> {
+  console.log('[getCareerAdvice] Invoked with input query:', input.query);
   try {
-    return await careerAdviceFlow(input);
+    const result = await careerAdviceFlow(input);
+    console.log('[getCareerAdvice] Successfully returned advice.');
+    return result;
   } catch (error) {
-    console.error("Error calling careerAdviceFlow from getCareerAdvice:", error);
+    console.error("[getCareerAdvice] Error calling careerAdviceFlow:", error);
+    if (error instanceof Error && error.stack) {
+        console.error("[getCareerAdvice] Stack trace:", error.stack);
+    }
     // Ensure the returned object matches the CareerAdviceOutput schema
-    return { advice: "An unexpected error occurred while trying to get career advice. Please try again later." };
+    return { advice: "An unexpected error occurred while trying to get career advice from the AI. Please check the logs or try again later." };
   }
 }
 
@@ -53,19 +59,23 @@ const careerAdviceFlow = ai.defineFlow(
     outputSchema: CareerAdviceOutputSchema,
   },
   async (input): Promise<CareerAdviceOutput> => {
+    console.log('[careerAdviceFlow] Invoked with input query:', input.query);
     try {
       const genkitResponse = await prompt(input);
       
       if (!genkitResponse || !genkitResponse.output) {
-        console.error('Genkit careerAdvicePrompt returned no output for query:', input.query);
-        return { advice: "I'm sorry, I couldn't generate advice for that query. Could you try rephrasing it or check back later?" };
+        console.error('[careerAdviceFlow] Genkit careerAdvicePrompt returned no output for query:', input.query);
+        return { advice: "I'm sorry, the AI couldn't generate advice for that query. Could you try rephrasing it or check back later?" };
       }
+      console.log('[careerAdviceFlow] Successfully generated output from AI.');
       return genkitResponse.output;
     } catch (error) {
-      console.error("Error within careerAdviceFlow execution:", error);
+      console.error("[careerAdviceFlow] Error during AI execution:", error);
+      if (error instanceof Error && error.stack) {
+        console.error("[careerAdviceFlow] Stack trace:", error.stack);
+      }
       // Ensure the returned object matches the CareerAdviceOutput schema
-      return { advice: "An error occurred while processing your career advice request. Please try again later." };
+      return { advice: "An error occurred while the AI was processing your career advice request. Please try again later." };
     }
   }
 );
-

@@ -38,13 +38,20 @@ const QuickRecommendationOutputSchema = z.object({
 export type QuickRecommendationOutput = z.infer<typeof QuickRecommendationOutputSchema>;
 
 export async function getQuickRecommendations(input: QuickRecommendationInput): Promise<QuickRecommendationOutput> {
+  console.log('[getQuickRecommendations] Invoked with user interest:', input.userInterest, 'and', input.availableCourses?.length, 'courses.');
   try {
     if (!input.availableCourses || input.availableCourses.length === 0) {
+        console.warn('[getQuickRecommendations] No available courses provided.');
         return { recommendations: [] }; // No courses to recommend from
     }
-    return await quickRecommendationFlow(input);
+    const result = await quickRecommendationFlow(input);
+    console.log('[getQuickRecommendations] Successfully returned recommendations.');
+    return result;
   } catch (error) {
-    console.error("Error calling quickRecommendationFlow:", error);
+    console.error("[getQuickRecommendations] Error calling quickRecommendationFlow:", error);
+    if (error instanceof Error && error.stack) {
+        console.error("[getQuickRecommendations] Stack trace:", error.stack);
+    }
     return { recommendations: [] }; // Return empty on error
   }
 }
@@ -75,11 +82,12 @@ const quickRecommendationFlow = ai.defineFlow(
     outputSchema: QuickRecommendationOutputSchema,
   },
   async (input): Promise<QuickRecommendationOutput> => {
+    console.log('[quickRecommendationFlow] Invoked with user interest:', input.userInterest);
     try {
       const genkitResponse = await prompt(input);
       
       if (!genkitResponse || !genkitResponse.output) {
-        console.warn('QuickRecommendationPrompt returned no output for interest:', input.userInterest);
+        console.warn('[quickRecommendationFlow] QuickRecommendationPrompt returned no output for interest:', input.userInterest);
         return { recommendations: [] };
       }
       // Ensure recommendations are drawn from provided course IDs
@@ -87,10 +95,18 @@ const quickRecommendationFlow = ai.defineFlow(
         input.availableCourses.some(course => course.id === rec.id)
       );
 
+      if (validRecommendations.length !== genkitResponse.output.recommendations.length) {
+        console.warn('[quickRecommendationFlow] AI recommended non-existent course IDs. Filtered to valid IDs.');
+      }
+      
+      console.log('[quickRecommendationFlow] Successfully generated recommendations from AI.');
       return { recommendations: validRecommendations };
 
     } catch (error) {
-      console.error("Error within quickRecommendationFlow execution:", error);
+      console.error("[quickRecommendationFlow] Error during AI execution:", error);
+      if (error instanceof Error && error.stack) {
+        console.error("[quickRecommendationFlow] Stack trace:", error.stack);
+      }
       return { recommendations: [] };
     }
   }
