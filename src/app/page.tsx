@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useState, type FormEvent, useEffect, Suspense, lazy } from 'react';
 import { useRouter } from 'next/navigation';
@@ -63,7 +62,7 @@ export default function Home() {
   
   return (
     <div className="flex flex-col items-center pb-8">
-      <section className="w-full max-w-2xl md:max-w-3xl lg:max-w-4xl text-center pt-8 mb-10">
+      <section className="w-full max-w-2xl md:max-w-3xl lg:max-w-4xl text-center pt-12 md:pt-16 lg:pt-24 mb-10">
         <div className={cn(
           "flex items-center justify-center space-x-2 lg:space-x-3 font-bold font-headline text-foreground mb-4",
           language === 'my' ? 'text-2xl sm:text-3xl lg:text-4xl' : 'text-3xl sm:text-4xl lg:text-5xl'
