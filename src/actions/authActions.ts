@@ -14,7 +14,7 @@ import type { User as MockUserType, Role as PrismaRoleType } from '@/lib/authUti
 // Define Zod schemas for input validation
 const LoginInputSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
-  password: z.string().min(1, { message: "Password cannot be empty." }),
+  password: z.string().min(1, { message: "Password cannot be empty." }), // Min 1 for Zod, actual length check elsewhere if needed
 });
 
 const RegisterInputSchema = z.object({
@@ -29,9 +29,9 @@ const UpdateRoleInputSchema = z.object({
 });
 
 
-export const serverLoginUser = async (email: string, password: string): Promise<MockUserType | null> => {
-  console.log(`[AuthActions - serverLoginUser] Attempting login for email: ${email}, password starts with: ${password.substring(0,3)}... (length: ${password.length})`);
-  const validation = LoginInputSchema.safeParse({ email, password });
+export const serverLoginUser = async (email: string, password_from_form: string): Promise<MockUserType | null> => {
+  console.log(`[AuthActions - serverLoginUser] Attempting login for email: ${email}, password_from_form starts with: ${password_from_form.substring(0,3)}... (length: ${password_from_form.length})`);
+  const validation = LoginInputSchema.safeParse({ email, password: password_from_form });
   if (!validation.success) {
     console.error("[AuthActions - serverLoginUser] Server-side login input validation failed:", validation.error.flatten().fieldErrors);
     return null;
@@ -40,20 +40,11 @@ export const serverLoginUser = async (email: string, password: string): Promise<
   const user = findUserByEmailFromMock(validation.data.email);
 
   if (user && user.passwordHash) {
-    console.log(`[AuthActions - serverLoginUser] User found (ID: ${user.id}). Comparing password. Stored hash (prefix): ${user.passwordHash.substring(0,10)}...`);
+    console.log(`[AuthActions - serverLoginUser] User found (ID: ${user.id}). Stored hash (prefix): ${user.passwordHash.substring(0,10)}...`);
     
-    let isMatch = false;
-    // !!! TEMPORARY DEBUGGING BYPASS !!!
-    // This is highly insecure and should be removed once the root cause is found.
-    if (validation.data.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase() && validation.data.password === 'superadminpass') {
-      console.warn(`[AuthActions - serverLoginUser] !!! DEBUGGING BYPASS ACTIVATED for ${SUPER_ADMIN_EMAIL} !!! Password check skipped.`);
-      isMatch = true;
-    } else {
-      console.log(`[AuthActions - serverLoginUser] Calling comparePassword with plain password (len: ${validation.data.password.length}) and stored hash (len: ${user.passwordHash.length})`);
-      isMatch = await comparePassword(validation.data.password, user.passwordHash);
-      console.log(`[AuthActions - serverLoginUser] comparePassword result: ${isMatch}`);
-    }
-    // !!! END TEMPORARY DEBUGGING BYPASS !!!
+    console.log(`[AuthActions - serverLoginUser] Calling comparePassword with plain password (len: ${validation.data.password.length}) and stored hash (len: ${user.passwordHash.length})`);
+    const isMatch = await comparePassword(validation.data.password, user.passwordHash);
+    console.log(`[AuthActions - serverLoginUser] comparePassword result: ${isMatch}`);
 
     if (isMatch) {
       console.log(`[AuthActions - serverLoginUser] Password match for user ID: ${user.id}. Login successful.`);
@@ -73,9 +64,9 @@ export const serverLoginUser = async (email: string, password: string): Promise<
   return null;
 };
 
-export const serverRegisterUser = async (name: string, email: string, password: string): Promise<MockUserType | null> => {
-  console.log(`[AuthActions - serverRegisterUser] Attempting registration for email: ${email}, name: ${name}, password starts with: ${password.substring(0,3)}... (length: ${password.length})`);
-  const validation = RegisterInputSchema.safeParse({ name, email, password });
+export const serverRegisterUser = async (name: string, email: string, password_param: string): Promise<MockUserType | null> => {
+  console.log(`[AuthActions - serverRegisterUser] Attempting registration for email: ${email}, name: ${name}, password_param starts with: ${password_param.substring(0,3)}... (length: ${password_param.length})`);
+  const validation = RegisterInputSchema.safeParse({ name, email, password: password_param });
   if (!validation.success) {
     console.error("[AuthActions - serverRegisterUser] Server-side registration input validation failed:", validation.error.flatten().fieldErrors);
     const errorMessages = Object.values(validation.error.flatten().fieldErrors).flat().join(' ');
@@ -89,11 +80,12 @@ export const serverRegisterUser = async (name: string, email: string, password: 
   }
 
   try {
+    // Pass the plain password here to addUserToMock, which will handle hashing
     const newUser = await addUserToMock({
       name: validation.data.name,
       email: validation.data.email,
       role: validation.data.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase() ? 'ADMIN' : 'STUDENT',
-    }, validation.data.password); // Pass the plain password here
+    }, validation.data.password); 
 
     console.log(`[AuthActions - serverRegisterUser] Registration successful for: ${newUser.email}, ID: ${newUser.id}. Hash stored (prefix): ${newUser.passwordHash.substring(0,10)}...`);
     // Omit passwordHash from the user object returned
@@ -101,7 +93,7 @@ export const serverRegisterUser = async (name: string, email: string, password: 
     return userWithoutPasswordHash as MockUserType;
   } catch (error) {
     console.error("[AuthActions - serverRegisterUser] Error during user registration process:", error);
-    if (error instanceof Error && (error.message === "UserAlreadyExists")) { // Should be caught above, but good practice
+    if (error instanceof Error && (error.message === "UserAlreadyExists")) {
         throw error;
     }
     throw new Error("UserCreationFailure");
@@ -128,7 +120,7 @@ export async function updateUserRoleServerAction(userId: string, newRole: Prisma
     throw new Error(errorMessages || "Invalid role update data.");
   }
 
-  if (!['STUDENT', 'ADMIN'].includes(newRole)) { // Redundant with Zod enum but good for clarity
+  if (!['STUDENT', 'ADMIN'].includes(newRole)) { 
       console.error("[AuthActions - updateUserRoleServerAction] Invalid role specified for update:", newRole);
       throw new Error("InvalidRole");
   }
