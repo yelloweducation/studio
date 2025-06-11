@@ -2,11 +2,11 @@
 "use client";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/hooks/useAuth";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"; 
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { BookUser, BookMarked, History, GraduationCap, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import CourseCard from "@/components/courses/CourseCard"; 
+import CourseCard from "@/components/courses/CourseCard";
 import { type Course, type Enrollment } from "@/lib/dbUtils"; // Use Prisma types from dbUtils
 import { getEnrollmentsByUserIdFromDb } from "@/lib/dbUtils"; // Use Prisma-based functions
 import { useState, useEffect } from "react";
@@ -48,12 +48,12 @@ export default function StudentDashboardPage() {
       if (user) {
         setIsLoading(true);
         try {
-          const userEnrollments = await getEnrollmentsByUserIdFromDb(user.id); 
+          const userEnrollments = await getEnrollmentsByUserIdFromDb(user.id);
           const coursesData = userEnrollments.map(enrollment => enrollment.course).filter(course => course !== null) as Course[];
           setEnrolledCoursesDetails(coursesData);
         } catch (error) {
           console.error("Error fetching enrolled courses from database:", error);
-          setEnrolledCoursesDetails([]); 
+          setEnrolledCoursesDetails([]);
         }
         setIsLoading(false);
       } else {
