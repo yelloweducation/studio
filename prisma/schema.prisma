@@ -1,0 +1,57 @@
+
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL") // This will use the DATABASE_URL from your .env file
+  // directUrl = env("DATABASE_URL_UNPOOLED") // Optional: For migrations or specific tasks if needed
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  imageUrl    String?
+  dataAiHint  String?
+  iconName    String?  // Stores the string name of the Lucide icon
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // If you want to link categories to courses in the future:
+  // courses     Course[]
+}
+
+// We will add other models (User, Course, Module, Lesson, Video, etc.) here later.
+// Example for Course (to be expanded):
+// model Course {
+//   id            String    @id @default(cuid())
+//   title         String
+//   description   String?
+//   categoryName  String? // Or a relation: category Category? @relation(fields: [categoryId], references: [id])
+//   categoryId    String?
+//   instructor    String?
+//   imageUrl      String?
+//   dataAiHint    String?
+//   price         Float?
+//   currency      String?
+//   isFeatured    Boolean?  @default(false)
+//   createdAt     DateTime  @default(now())
+//   updatedAt     DateTime  @updatedAt
+//   // modules       Json?     // Or define Module as a separate model
+//   // quizzes       Json?     // Or define Quiz as a separate model
+// }
+
+// Example for User (to be expanded):
+// model User {
+//   id            String    @id @default(cuid()) // Or use Firebase Auth UID if you keep Firebase Auth
+//   email         String    @unique
+//   name          String?
+//   role          String    @default("student") // e.g., "student", "admin"
+//   passwordHash  String?   // Only if not using external auth like Firebase Auth
+//   createdAt     DateTime  @default(now())
+//   updatedAt     DateTime  @updatedAt
+// }
