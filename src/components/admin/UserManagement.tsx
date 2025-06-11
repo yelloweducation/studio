@@ -2,7 +2,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { type User } from '@/data/mockData';
-import { getAllUsersFromFirestore, updateUserRoleInFirestore, findUserByEmail } from '@/lib/authUtils';
+import { getAllUsersFromFirestore, updateUserRoleInFirestore, findUserByEmail, SUPER_ADMIN_EMAIL } from '@/lib/authUtils'; // Import SUPER_ADMIN_EMAIL
 import { useAuth } from '@/hooks/useAuth';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,8 +22,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-const SUPER_ADMIN_EMAIL = 'admin@example.com'; // This should ideally be configurable
-
 export default function UserManagement() {
   const [managedUsers, setManagedUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -42,11 +40,7 @@ export default function UserManagement() {
   }, []);
 
   useEffect(() => {
-    // Determine if the current admin is the super admin
     if (currentAdminUser) {
-        // A more robust check might involve fetching the current admin's details from Firestore
-        // if `currentAdminUser` from `useAuth` doesn't reliably indicate super admin status.
-        // For now, we rely on email.
         setIsSuperAdmin(currentAdminUser.email === SUPER_ADMIN_EMAIL);
     }
   }, [currentAdminUser]);
@@ -63,12 +57,12 @@ export default function UserManagement() {
         title: "User Role Updated",
         description: `User ${updatedUsers.find(u=>u.id === targetUserId)?.name}'s role changed to ${newRole}.`,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to update user role:", error);
       toast({
         variant: "destructive",
         title: "Update Failed",
-        description: "Could not update user role. Please try again.",
+        description: error.message || "Could not update user role. Please try again.",
       });
     }
   };
@@ -173,7 +167,7 @@ export default function UserManagement() {
                       ) : user.email === SUPER_ADMIN_EMAIL ? (
                         <span className="text-xs text-muted-foreground italic">Unchangeable</span>
                       ) : (
-                        <span className="text-xs text-muted-foreground italic">N/A</span>
+                        <span className="text-xs text-muted-foreground italic">N/A (Not Super Admin)</span>
                       )}
                     </TableCell>
                   </TableRow>

@@ -1,10 +1,11 @@
 
 import type { User } from '@/data/mockData';
-import { mockUsersForSeeding } from '@/data/mockData'; // Changed from initialMockUsers
+import { mockUsersForSeeding } from '@/data/mockData';
 import { db } from './firebase';
-import { collection, query, where, getDocs, addDoc, doc, setDoc, updateDoc, serverTimestamp, writeBatch, getDoc } from 'firebase/firestore'; // Added getDoc
+import { collection, query, where, getDocs, addDoc, doc, setDoc, updateDoc, serverTimestamp, writeBatch, getDoc } from 'firebase/firestore';
 
 const AUTH_STORAGE_KEY = 'luminaLearnAuth';
+export const SUPER_ADMIN_EMAIL = 'admin@example.com'; // Define Super Admin Email
 
 export interface AuthState {
   isAuthenticated: boolean;
@@ -40,10 +41,17 @@ export const getAllUsersFromFirestore = async (): Promise<User[]> => {
 
 export const updateUserRoleInFirestore = async (userId: string, newRole: 'admin' | 'student'): Promise<void> => {
   try {
+    // Prevent changing the role of the super admin
     const userDocRef = doc(db, 'users', userId);
+    const userSnap = await getDoc(userDocRef);
+    if (userSnap.exists() && userSnap.data().email === SUPER_ADMIN_EMAIL) {
+        console.warn("Attempted to change the role of the super admin. This action is not allowed.");
+        throw new Error("Cannot change the role of the super admin.");
+    }
+
     await updateDoc(userDocRef, {
       role: newRole,
-      updatedAt: serverTimestamp() // Also update timestamp
+      updatedAt: serverTimestamp()
     });
   } catch (error) {
     console.error(`Error updating role for user ${userId} in Firestore:`, error);
@@ -102,7 +110,8 @@ export const registerUser = async (name: string, email: string, password_raw: st
   const newUserOmitId: Omit<User, 'id' | 'createdAt'> = {
     name,
     email,
-    role: 'student', // Default role
+    // New users cannot register as super admin or admin directly
+    role: email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase() ? 'admin' : 'student',
     passwordHash: password_raw, // Simplified password storage
   };
 
@@ -139,29 +148,34 @@ export const seedInitialUsersToFirestore = async (): Promise<{ successCount: num
 
   for (const user of mockUsersForSeeding) {
     try {
-      // Check by email first to prevent duplicates if IDs are not stable or for general safety
       const existingUserByEmail = await getUserByEmailFromFirestore(user.email);
       if (existingUserByEmail) {
         skippedCount++;
+        // Optionally, ensure the super admin has the 'admin' role if they already exist
+        if (user.email === SUPER_ADMIN_EMAIL && existingUserByEmail.role !== 'admin') {
+            const userRef = doc(db, 'users', existingUserByEmail.id);
+            batch.update(userRef, { role: 'admin', updatedAt: serverTimestamp() });
+            console.log(`Super admin ${user.email} role updated to admin.`);
+        }
         continue;
       }
       
-      // If using mock IDs, check if document with that ID exists
-      const userRef = doc(db, 'users', user.id);
-      const docSnap = await getDoc(userRef);
+      // Use specific ID from mock data for the super admin if provided, otherwise Firestore generates ID
+      const userRef = user.id ? doc(db, 'users', user.id) : doc(collection(db, 'users'));
+      const docSnap = await getDoc(userRef); // Check if doc with this specific ID exists if ID was provided
 
       if (!docSnap.exists()) {
         const userData = { 
             name: user.name,
             email: user.email,
-            role: user.role,
-            passwordHash: user.passwordHash, // In a real app, this would be securely hashed by Firebase Auth
+            role: user.role, // Role from mock data
+            passwordHash: user.passwordHash,
             createdAt: serverTimestamp() 
         };
         batch.set(userRef, userData);
         successCount++;
       } else {
-        skippedCount++; // Skipped because user with this ID already exists
+        skippedCount++; 
       }
     } catch (e) {
       console.error(`Error preparing to seed user ${user.email} (ID: ${user.id}):`, e);
@@ -173,7 +187,7 @@ export const seedInitialUsersToFirestore = async (): Promise<{ successCount: num
     await batch.commit();
   } catch (e) {
     console.error("Error committing user seed batch:", e);
-    errorCount += successCount; // Assume all attempted in batch failed if commit fails
+    errorCount += successCount; 
     successCount = 0;
   }
   return { successCount, errorCount, skippedCount };

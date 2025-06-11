@@ -64,7 +64,7 @@ export type User = {
   name: string;
   email: string;
   role: 'student' | 'admin';
-  passwordHash: string;
+  passwordHash: string; // In a real app, this would be a secure hash. For mock, it's plain.
   createdAt?: any;
 };
 
@@ -240,8 +240,10 @@ export const mockCoursesForSeeding: Course[] = [
 ];
 
 export const mockUsersForSeeding: User[] = [
-  { id: 'user1-seed', name: 'Student User', email: 'student@example.com', role: 'student', passwordHash: 'password123' },
-  { id: 'user2-seed', name: 'Admin User', email: 'admin@example.com', role: 'admin', passwordHash: 'adminpass' },
+  { id: 'user-super-admin-seed', name: 'Super Admin', email: 'admin@example.com', role: 'admin', passwordHash: 'superadminpass' },
+  { id: 'user-student-seed', name: 'Student User', email: 'student@example.com', role: 'student', passwordHash: 'password123' },
+  // Add more mock users if needed, e.g., a regular admin
+  // { id: 'user-admin-seed', name: 'Regular Admin', email: 'regularadmin@example.com', role: 'admin', passwordHash: 'adminpass' },
 ];
 
 export const mockVideosForSeeding: Video[] = [
