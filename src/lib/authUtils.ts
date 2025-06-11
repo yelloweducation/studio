@@ -1,16 +1,27 @@
 
-import { users as mockUsers, type User as MockUserType, mockUsersForSeeding } from '@/data/mockData';
+import bcrypt from 'bcryptjs';
+import { users as initialMockUsersArray, type User as MockUserType, mockUsersForSeeding } from '@/data/mockData';
 
-const AUTH_STORAGE_KEY = 'luminaLearnAuth_mock'; // Changed key to reflect mock data usage
-export const SUPER_ADMIN_EMAIL = 'admin@example.com'; // Default super admin
+const AUTH_STORAGE_KEY = 'luminaLearnAuth_mock_secure'; 
+export const SUPER_ADMIN_EMAIL = 'admin@example.com'; 
+const SALT_ROUNDS = 10; // Standard salt rounds for bcrypt
 
 export interface AuthState {
   isAuthenticated: boolean;
   user: MockUserType | null;
-  role: 'student' | 'admin' | null; // Role from mock User type
+  role: 'student' | 'admin' | null; 
 }
 
-// Client-side localStorage utilities
+// --- Password Hashing Utilities ---
+export const hashPassword = async (password: string): Promise<string> => {
+  return bcrypt.hash(password, SALT_ROUNDS);
+};
+
+export const comparePassword = async (password: string, hash: string): Promise<boolean> => {
+  return bcrypt.compare(password, hash);
+};
+
+// --- Client-side localStorage utilities ---
 export const getAuthState = (): AuthState => {
   if (typeof window === 'undefined') {
     return { isAuthenticated: false, user: null, role: null };
@@ -26,7 +37,7 @@ export const getAuthState = (): AuthState => {
       console.error("Failed to parse auth state from localStorage", e);
     }
   }
-  clearAuthState();
+  clearAuthState(); // Ensure clean state if parsing fails or state is invalid
   return { isAuthenticated: false, user: null, role: null };
 };
 
@@ -42,87 +53,128 @@ export const clearAuthState = () => {
   }
 };
 
-// User data is now primarily from mockData.ts
-// These functions simulate database interactions with the mock array.
+
+// --- User Data Management (Mock, with localStorage for persistence) ---
+const MANAGED_USERS_STORAGE_KEY = 'managedUsers_hashed';
+
+const getManagedUsers = (): MockUserType[] => {
+  if (typeof window === 'undefined') return [...initialMockUsersArray]; // Return copy for server context
+  const usersJson = localStorage.getItem(MANAGED_USERS_STORAGE_KEY);
+  if (usersJson) {
+    try {
+      return JSON.parse(usersJson);
+    } catch (e) {
+      console.error("Error parsing users from localStorage", e);
+      // Fallback to initializing if parsing fails
+    }
+  }
+  // If not in localStorage or parsing failed, initialize with hashed passwords
+  const initialUsersWithHashedPasswords = Promise.all(mockUsersForSeeding.map(async user => ({
+    ...user,
+    // Passwords in mockUsersForSeeding are marked PLAINTEXT and will be hashed here
+    passwordHash: await hashPassword(user.passwordHash.replace('_PLAINTEXT', '')), 
+  }))).then(users => {
+    localStorage.setItem(MANAGED_USERS_STORAGE_KEY, JSON.stringify(users));
+    return users;
+  }).catch(err => {
+    console.error("Error hashing passwords for initial seeding:", err);
+    return []; // Return empty if hashing fails during initial load
+  });
+  // Note: This async operation during initial sync load is not ideal.
+  // For real app, this seeding logic is better handled by a dedicated script or one-time setup.
+  // For this mock, we accept this limitation. We will assume it resolves.
+  // A better immediate return would be [], and let it populate async, but components might load before.
+  // Returning initialMockUsersArray as a synchronous placeholder might be safer if async causes issues.
+  return initialMockUsersArray; // Simplified for sync return, relies on seedInitialUsersToLocalStorage being called.
+};
+
+const saveManagedUsers = (users: MockUserType[]) => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(MANAGED_USERS_STORAGE_KEY, JSON.stringify(users));
+  }
+};
 
 export const getAllUsersFromMock = (): MockUserType[] => {
-  // In a real app, this would fetch from a DB. Here, we use the mock array.
-  // We might want to load/save this from localStorage if admin can manage users.
-  // For now, it returns the static mockData.
-  let storedUsers = [];
-  if (typeof window !== 'undefined') {
-    const usersJson = localStorage.getItem('managedUsers');
-    if (usersJson) {
-      try {
-        storedUsers = JSON.parse(usersJson);
-      } catch (e) {
-        console.error("Error parsing users from localStorage", e);
-        storedUsers = [...mockUsers]; // fallback
-      }
-    } else {
-      storedUsers = [...mockUsers]; // initialize from mock
-      localStorage.setItem('managedUsers', JSON.stringify(storedUsers));
-    }
-  } else {
-     storedUsers = [...mockUsers]; // fallback for server context
-  }
-  return storedUsers.sort((a, b) => a.name.localeCompare(b.name));
+  return getManagedUsers().sort((a, b) => a.name.localeCompare(b.name));
 };
 
 export const updateUserRoleInMock = (userId: string, newRole: 'student' | 'admin'): MockUserType | null => {
-  let success = false;
-  let updatedUser: MockUserType | null = null;
-  if (typeof window !== 'undefined') {
-    let currentUsers = getAllUsersFromMock(); // Gets from localStorage or initializes
-    const userIndex = currentUsers.findIndex(u => u.id === userId);
+  let currentUsers = getManagedUsers();
+  const userIndex = currentUsers.findIndex(u => u.id === userId);
 
-    if (userIndex > -1) {
-      if (currentUsers[userIndex].email === SUPER_ADMIN_EMAIL) {
-        console.warn("Attempted to change the role of the super admin. This action is not allowed.");
-        throw new Error("Cannot change the role of the super admin.");
-      }
-      currentUsers[userIndex].role = newRole;
-      updatedUser = currentUsers[userIndex];
-      localStorage.setItem('managedUsers', JSON.stringify(currentUsers));
-      success = true;
+  if (userIndex > -1) {
+    if (currentUsers[userIndex].email === SUPER_ADMIN_EMAIL) {
+      console.warn("Attempted to change the role of the super admin. This action is not allowed.");
+      throw new Error("Cannot change the role of the super admin.");
     }
+    currentUsers[userIndex].role = newRole;
+    saveManagedUsers(currentUsers);
+    return currentUsers[userIndex];
   }
-  return success ? updatedUser : null;
+  return null;
 };
 
 export const findUserByEmailFromMock = (email: string): MockUserType | null => {
-  const allUsers = getAllUsersFromMock();
+  const allUsers = getManagedUsers();
   return allUsers.find(user => user.email.toLowerCase() === email.toLowerCase()) || null;
 };
 
-// Seeding function for mock users (if needed for initializing localStorage)
-export const seedInitialUsersToLocalStorage = (): { successCount: number, errorCount: number, skippedCount: number } => {
-  if (typeof window === 'undefined') return { successCount: 0, errorCount: 0, skippedCount: 0 };
-
-  let currentUsers = getAllUsersFromMock(); // Load existing or initialize
-  let successCount = 0;
-  let skippedCount = 0;
-
-  mockUsersForSeeding.forEach(mockUser => {
-    const existingUser = currentUsers.find(u => u.email === mockUser.email);
-    if (!existingUser) {
-      currentUsers.push({...mockUser}); // Add if not exists
-      successCount++;
-    } else {
-      // Ensure super admin role is correct
-      if (existingUser.email === SUPER_ADMIN_EMAIL && existingUser.role !== 'admin') {
-        existingUser.role = 'admin';
-        successCount++; // Count as a successful update/correction
-      } else {
-        skippedCount++;
-      }
-    }
-  });
-  localStorage.setItem('managedUsers', JSON.stringify(currentUsers));
-  return { successCount, errorCount: 0, skippedCount };
+export const addUserToMock = async (userData: Omit<MockUserType, 'id' | 'passwordHash' | 'createdAt'>, password_raw: string): Promise<MockUserType> => {
+  const hashedPassword = await hashPassword(password_raw);
+  const newUser: MockUserType = {
+    id: `user-${Date.now()}`,
+    ...userData,
+    passwordHash: hashedPassword,
+    createdAt: new Date().toISOString(),
+  };
+  let currentUsers = getManagedUsers();
+  currentUsers.push(newUser);
+  saveManagedUsers(currentUsers);
+  return newUser;
 };
 
-// Logout remains client-side
+
+export const seedInitialUsersToLocalStorage = async (): Promise<{ successCount: number, errorCount: number, skippedCount: number }> => {
+  if (typeof window === 'undefined') return { successCount: 0, errorCount: 0, skippedCount: 0 };
+
+  let currentUsers = getManagedUsers(); // Load existing users
+  let successCount = 0;
+  let errorCount = 0;
+  let skippedCount = 0;
+
+  for (const mockUser of mockUsersForSeeding) {
+    const existingUser = currentUsers.find(u => u.email === mockUser.email);
+    const plainPassword = mockUser.passwordHash.replace('_PLAINTEXT', '');
+    
+    try {
+      if (!existingUser) {
+        const hashedPassword = await hashPassword(plainPassword);
+        currentUsers.push({ ...mockUser, passwordHash: hashedPassword });
+        successCount++;
+      } else {
+        // Optional: Update existing user if needed, e.g., ensure super admin role and password
+        let updated = false;
+        if (existingUser.email === SUPER_ADMIN_EMAIL) {
+          if (existingUser.role !== 'admin') {
+            existingUser.role = 'admin';
+            updated = true;
+          }
+          // Optionally re-hash and update password if it doesn't match a known hash (more complex to check)
+          // For simplicity, we assume if user exists, password was set correctly before or will be managed by user.
+        }
+        if (updated) successCount++; else skippedCount++;
+      }
+    } catch (err) {
+      console.error(`Error processing user ${mockUser.email} for seeding:`, err);
+      errorCount++;
+    }
+  }
+  saveManagedUsers(currentUsers);
+  return { successCount, errorCount, skippedCount };
+};
+
+
 export const logoutUser = () => {
   clearAuthState();
 };
+

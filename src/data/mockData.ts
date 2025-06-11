@@ -64,7 +64,7 @@ export type User = {
   name: string;
   email: string;
   role: 'student' | 'admin';
-  passwordHash: string; // In a real app, this would be a secure hash. For mock, it's plain.
+  passwordHash: string; 
   createdAt?: any;
 };
 
@@ -83,8 +83,8 @@ export type Video = {
   title: string;
   description: string;
   thumbnailUrl?: string;
-  videoUrl?: string; // This was for direct video file links, embedUrl is preferred
-  embedUrl?: string; // For YouTube, TikTok embeds
+  videoUrl?: string; 
+  embedUrl?: string; 
   dataAiHint?: string;
   createdAt?: any;
   updatedAt?: any;
@@ -153,8 +153,6 @@ export type Flashcard = {
   pronunciation?: string;
 };
 
-// --- Default Mock Data for Seeding ---
-// These arrays are intended for initial data seeding into Firestore.
 
 export const mockCoursesForSeeding: Course[] = [
   {
@@ -239,11 +237,10 @@ export const mockCoursesForSeeding: Course[] = [
   },
 ];
 
+// Passwords here are PLAINTEXT for seeding. They will be hashed by authUtils.seedInitialUsersToLocalStorage.
 export const mockUsersForSeeding: User[] = [
-  { id: 'user-super-admin-seed', name: 'Super Admin', email: 'admin@example.com', role: 'admin', passwordHash: 'superadminpass' },
-  { id: 'user-student-seed', name: 'Student User', email: 'student@example.com', role: 'student', passwordHash: 'password123' },
-  // Add more mock users if needed, e.g., a regular admin
-  // { id: 'user-admin-seed', name: 'Regular Admin', email: 'regularadmin@example.com', role: 'admin', passwordHash: 'adminpass' },
+  { id: 'user-super-admin-seed', name: 'Super Admin', email: 'admin@example.com', role: 'admin', passwordHash: 'superadminpass_PLAINTEXT' },
+  { id: 'user-student-seed', name: 'Student User', email: 'student@example.com', role: 'student', passwordHash: 'password123_PLAINTEXT' },
 ];
 
 export const mockVideosForSeeding: Video[] = [
@@ -264,8 +261,8 @@ export const mockLearningPathsForSeeding: LearningPath[] = [
     id: 'lp1-seed',
     title: 'Full-Stack Web Developer Path',
     description: 'Master front-end and back-end technologies to build complete web applications from scratch.',
-    icon: 'Milestone', // Lucide icon name
-    courseIds: ['course1', 'course2'], // Ensure these IDs match seeded course IDs
+    icon: 'Milestone', 
+    courseIds: ['course1', 'course2'], 
     imageUrl: 'https://placehold.co/300x200.png',
     dataAiHint: 'web development journey'
   },
@@ -274,21 +271,19 @@ export const mockLearningPathsForSeeding: LearningPath[] = [
     title: 'JavaScript Fundamentals',
     description: 'A focused path to build a strong foundation in JavaScript, from basics to more advanced concepts.',
     icon: 'BookOpenText',
-    courseIds: ['course2'], // Assuming 'course2' is Advanced JS. Create a basic JS course if needed.
+    courseIds: ['course2'], 
     imageUrl: 'https://placehold.co/300x200.png',
     dataAiHint: 'javascript learning'
   }
 ];
 
-// Deprecated mock data - used for initial setup or local dev if Firestore is down.
-// The application primarily uses Firestore.
+
 export const courses_DEPRECATED_USE_FIRESTORE: Course[] = mockCoursesForSeeding;
 export const defaultMockCourses = courses_DEPRECATED_USE_FIRESTORE;
 
-export const users: User[] = mockUsersForSeeding; // This is used by authUtils for mock login.
+export const users: User[] = mockUsersForSeeding; 
 
 export const enrollments_DEPRECATED_USE_FIRESTORE: Enrollment[] = [
-  // { id: 'enroll1', userId: 'user1-seed', courseId: 'course1', progress: 50, enrolledDate: '2023-01-15' },
 ];
 export const initialEnrollments = enrollments_DEPRECATED_USE_FIRESTORE;
 
@@ -310,3 +305,4 @@ export const initialPaymentSettings: PaymentSettings = {
 
 export const initialLearningPaths_DEPRECATED_USE_FIRESTORE: LearningPath[] = mockLearningPathsForSeeding;
 export const initialLearningPaths = initialLearningPaths_DEPRECATED_USE_FIRESTORE;
+
