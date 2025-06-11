@@ -380,10 +380,10 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
                 <Image
                   src={imageUrl}
                   alt={title}
-                  layout="fill"
+                  fill // Changed from layout="fill" to fill for Next 13+
                   objectFit="cover"
                   data-ai-hint={dataAiHint || 'course education'}
-                  priority
+                  priority // Added priority for LCP
                 />
               </div>
             )}

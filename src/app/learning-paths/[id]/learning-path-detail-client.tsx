@@ -119,10 +119,10 @@ export default function LearningPathDetailClient({ pathId }: LearningPathDetailC
                 <Image
                 src={learningPath.imageUrl}
                 alt={learningPath.title}
-                layout="fill"
+                fill // Changed from layout="fill"
                 objectFit="cover"
                 data-ai-hint={learningPath.dataAiHint || 'learning journey'}
-                priority
+                priority // Added priority
                 />
             </div>
         )}
@@ -148,7 +148,7 @@ export default function LearningPathDetailClient({ pathId }: LearningPathDetailC
                       <div className="flex items-center gap-3">
                         {course.imageUrl && (
                             <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-md overflow-hidden shrink-0 bg-muted">
-                                <Image src={course.imageUrl} alt={course.title} layout="fill" objectFit="cover" data-ai-hint={course.dataAiHint || 'course content'}/>
+                                <Image src={course.imageUrl} alt={course.title} fill objectFit="cover" data-ai-hint={course.dataAiHint || 'course content'}/>
                             </div>
                         )}
                         <div>
