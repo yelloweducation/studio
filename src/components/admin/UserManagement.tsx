@@ -1,12 +1,13 @@
 
 "use client";
 import React, { useState, useEffect } from 'react';
-import { type User } from '@/data/mockData';
-import { getAllUsersFromFirestore, updateUserRoleInFirestore, findUserByEmail, SUPER_ADMIN_EMAIL } from '@/lib/authUtils'; // Import SUPER_ADMIN_EMAIL
+import type { User, Role as PrismaRoleType } from '@prisma/client'; // Use Prisma types
+import { getAllUsersServerAction, updateUserRoleServerAction } from '@/actions/authActions'; // Use Server Actions
+import { SUPER_ADMIN_EMAIL } from '@/lib/authUtils'; // Import SUPER_ADMIN_EMAIL
 import { useAuth } from '@/hooks/useAuth';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users as UsersIcon, ShieldCheck, UserCheck, ArrowUpDown } from 'lucide-react';
+import { Users as UsersIcon, ShieldCheck, UserCheck, ArrowUpDown, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -32,12 +33,17 @@ export default function UserManagement() {
   useEffect(() => {
     const fetchUsers = async () => {
       setIsLoading(true);
-      const usersFromDb = await getAllUsersFromFirestore();
-      setManagedUsers(usersFromDb);
+      try {
+        const usersFromDb = await getAllUsersServerAction(); // Call Server Action
+        setManagedUsers(usersFromDb);
+      } catch (error) {
+        console.error("Error fetching users:", error);
+        toast({ variant: "destructive", title: "Fetch Failed", description: "Could not load users." });
+      }
       setIsLoading(false);
     };
     fetchUsers();
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     if (currentAdminUser) {
@@ -46,17 +52,20 @@ export default function UserManagement() {
   }, [currentAdminUser]);
 
 
-  const handleRoleChange = async (targetUserId: string, newRole: 'admin' | 'student') => {
+  const handleRoleChange = async (targetUserId: string, newRole: PrismaRoleType) => {
     try {
-      await updateUserRoleInFirestore(targetUserId, newRole);
-      const updatedUsers = managedUsers.map(u =>
-        u.id === targetUserId ? { ...u, role: newRole } : u
-      );
-      setManagedUsers(updatedUsers);
-      toast({
-        title: "User Role Updated",
-        description: `User ${updatedUsers.find(u=>u.id === targetUserId)?.name}'s role changed to ${newRole}.`,
-      });
+      const updatedUser = await updateUserRoleServerAction(targetUserId, newRole); // Call Server Action
+      if (updatedUser) {
+        setManagedUsers(prevUsers => prevUsers.map(u =>
+          u.id === targetUserId ? { ...u, role: newRole } : u
+        ));
+        toast({
+          title: "User Role Updated",
+          description: `User ${updatedUser.name}'s role changed to ${newRole}.`,
+        });
+      } else {
+        throw new Error("Update operation returned null.");
+      }
     } catch (error: any) {
       console.error("Failed to update user role:", error);
       toast({
@@ -76,10 +85,10 @@ export default function UserManagement() {
           </CardTitle>
           <CardDescription>Loading users...</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="animate-pulse space-y-2">
-            {[1,2,3].map(i => <div key={i} className="h-10 bg-muted rounded"></div>)}
-          </div>
+        <CardContent className="py-10">
+             <div className="flex justify-center items-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+             </div>
         </CardContent>
       </Card>
     );
@@ -92,7 +101,7 @@ export default function UserManagement() {
         <CardTitle className="flex items-center text-xl md:text-2xl font-headline">
             <UsersIcon className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> User Management
         </CardTitle>
-        <CardDescription>View and manage user roles. Only Super Admins can change roles.</CardDescription>
+        <CardDescription>View and manage user roles. Only Super Admins can change roles. Data is from Neon/Postgres via Prisma.</CardDescription>
       </CardHeader>
       <CardContent>
         {managedUsers.length > 0 ? (
@@ -112,14 +121,14 @@ export default function UserManagement() {
                     <TableCell className="font-medium whitespace-nowrap">{user.name}</TableCell>
                     <TableCell className="whitespace-nowrap">{user.email}</TableCell>
                     <TableCell>
-                      <Badge variant={user.role === 'admin' ? 'destructive' : 'secondary'} className="whitespace-nowrap capitalize">
-                        {user.email === SUPER_ADMIN_EMAIL ? <ShieldCheck className="mr-1.5 h-3.5 w-3.5" /> : (user.role === 'admin' ? <UserCheck className="mr-1.5 h-3.5 w-3.5" /> : null)}
-                        {user.email === SUPER_ADMIN_EMAIL ? 'Super Admin' : user.role}
+                      <Badge variant={user.role === 'ADMIN' ? 'destructive' : 'secondary'} className="whitespace-nowrap capitalize">
+                        {user.email === SUPER_ADMIN_EMAIL ? <ShieldCheck className="mr-1.5 h-3.5 w-3.5" /> : (user.role === 'ADMIN' ? <UserCheck className="mr-1.5 h-3.5 w-3.5" /> : null)}
+                        {user.email === SUPER_ADMIN_EMAIL ? 'Super Admin' : user.role.toLowerCase()}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-center whitespace-nowrap">
                       {isSuperAdmin && user.email !== SUPER_ADMIN_EMAIL ? (
-                        user.role === 'student' ? (
+                        user.role === 'STUDENT' ? (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button variant="outline" size="sm" className="hover:bg-green-500 hover:text-white border-green-500 text-green-600">
@@ -135,7 +144,7 @@ export default function UserManagement() {
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleRoleChange(user.id, 'admin')} className="bg-green-600 hover:bg-green-700">
+                                <AlertDialogAction onClick={() => handleRoleChange(user.id, 'ADMIN')} className="bg-green-600 hover:bg-green-700">
                                   Promote
                                 </AlertDialogAction>
                               </AlertDialogFooter>
@@ -157,7 +166,7 @@ export default function UserManagement() {
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleRoleChange(user.id, 'student')} className="bg-amber-600 hover:bg-amber-700">
+                                <AlertDialogAction onClick={() => handleRoleChange(user.id, 'STUDENT')} className="bg-amber-600 hover:bg-amber-700">
                                   Demote
                                 </AlertDialogAction>
                               </AlertDialogFooter>

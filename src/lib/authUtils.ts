@@ -4,26 +4,53 @@ import { mockUsersForSeeding } from '@/data/mockData';
 import prisma from '@/lib/prisma'; // Import Prisma client
 import type { User, Role } from '@prisma/client'; // Import Prisma generated types
 
-const AUTH_STORAGE_KEY = 'luminaLearnAuth_prisma'; // Changed key to avoid conflict
+const AUTH_STORAGE_KEY = 'luminaLearnAuth_prisma';
 export const SUPER_ADMIN_EMAIL = 'admin@example.com';
 
 export interface AuthState {
   isAuthenticated: boolean;
-  user: User | null; // Prisma User type
-  role: Role | null; // Prisma Role enum
+  user: User | null;
+  role: Role | null;
 }
 
-// Helper to get user by email from Prisma
-const getUserByEmailFromPrisma = async (email: string): Promise<User | null> => {
-  try {
-    return await prisma.user.findUnique({
-      where: { email },
-    });
-  } catch (error) {
-    console.error("Error fetching user by email from Prisma:", error);
-    return null;
+// --- Client-side localStorage utilities ---
+export const getAuthState = (): AuthState => {
+  if (typeof window === 'undefined') {
+    return { isAuthenticated: false, user: null, role: null };
+  }
+  const storedState = localStorage.getItem(AUTH_STORAGE_KEY);
+  if (storedState) {
+    try {
+      const parsedState = JSON.parse(storedState) as AuthState;
+      // Basic check, could be more robust (e.g., token expiry if using tokens)
+      if (parsedState.isAuthenticated && parsedState.user) {
+        return parsedState;
+      }
+    } catch (e) {
+      console.error("Failed to parse auth state from localStorage", e);
+      // Fall through to clear state
+    }
+  }
+  clearAuthState(); // Ensure invalid state is cleared
+  return { isAuthenticated: false, user: null, role: null };
+};
+
+export const saveAuthState = (authState: AuthState) => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authState));
   }
 };
+
+export const clearAuthState = () => {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+  }
+};
+// --- End Client-side localStorage utilities ---
+
+
+// --- Server-side Prisma utilities (called by Server Actions or other server code) ---
+// getUserByEmailFromPrisma is now internal to authActions.ts or could be moved to a common dbUtils if needed by many server actions.
 
 export const getAllUsersFromPrisma = async (): Promise<User[]> => {
   try {
@@ -56,86 +83,20 @@ export const updateUserRoleInPrisma = async (userId: string, newRole: Role): Pro
   }
 };
 
-export const getAuthState = (): AuthState => {
-  if (typeof window === 'undefined') {
-    return { isAuthenticated: false, user: null, role: null };
-  }
-  const storedState = localStorage.getItem(AUTH_STORAGE_KEY);
-  if (storedState) {
-    try {
-      const parsedState = JSON.parse(storedState) as AuthState;
-      if (parsedState.isAuthenticated && parsedState.user) {
-        // TODO: Potentially re-verify user against DB if session is old
-        return parsedState;
-      }
-    } catch (e) {
-      console.error("Failed to parse auth state from localStorage", e);
-      clearAuthState();
-    }
-  }
-  return { isAuthenticated: false, user: null, role: null };
-};
-
-export const saveAuthState = (authState: AuthState) => {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authState));
-  }
-};
-
-export const clearAuthState = () => {
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem(AUTH_STORAGE_KEY);
-  }
-};
-
-export const loginUser = async (email: string, password_raw: string): Promise<User | null> => {
-  const user = await getUserByEmailFromPrisma(email);
-  // IMPORTANT: This is a simplified password check.
-  // In a real app, hash passwords using bcrypt or similar.
-  if (user && user.passwordHash === password_raw) {
-    saveAuthState({ isAuthenticated: true, user, role: user.role });
-    return user;
-  }
-  clearAuthState();
-  return null;
-};
-
-export const registerUser = async (name: string, email: string, password_raw: string): Promise<User | null> => {
-  const existingUser = await getUserByEmailFromPrisma(email);
-  if (existingUser) {
-    console.error("User already exists with this email.");
-    return null;
-  }
-
-  // IMPORTANT: Hash password_raw before storing in a real app.
-  const passwordHash = password_raw; // Placeholder for actual hashing
-
-  try {
-    const newUser = await prisma.user.create({
-      data: {
-        name,
-        email,
-        passwordHash,
-        role: email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase() ? 'ADMIN' : 'STUDENT',
-      },
+export const findUserByEmailFromPrisma = async (email: string): Promise<User | null> => {
+   try {
+    return await prisma.user.findUnique({
+      where: { email },
     });
-    saveAuthState({ isAuthenticated: true, user: newUser, role: newUser.role });
-    return newUser;
   } catch (error) {
-    console.error("Error registering user in Prisma:", error);
+    console.error("Error fetching user by email from Prisma:", error);
     return null;
   }
 };
+// --- End Server-side Prisma utilities ---
 
-export const logoutUser = () => {
-  clearAuthState();
-};
 
-export const findUserByEmail = async (email: string): Promise<User | null> => {
-  return await getUserByEmailFromPrisma(email);
-};
-
-// --- Seeding Function for Users ---
+// --- Seeding Function for Users (Server-side) ---
 export const seedInitialUsersToPrisma = async (): Promise<{ successCount: number, errorCount: number, skippedCount: number }> => {
   let successCount = 0;
   let errorCount = 0;
@@ -148,7 +109,6 @@ export const seedInitialUsersToPrisma = async (): Promise<{ successCount: number
       });
 
       if (existingUser) {
-        // Optionally update role if super admin exists but has wrong role
         if (mockUser.email === SUPER_ADMIN_EMAIL && existingUser.role !== 'ADMIN') {
           await prisma.user.update({
             where: { id: existingUser.id },
@@ -160,15 +120,13 @@ export const seedInitialUsersToPrisma = async (): Promise<{ successCount: number
         continue;
       }
       
-      // IMPORTANT: Password hashing should be done here in a real app.
-      // Using mockUser.passwordHash directly as it's already "hashed" (or plain in mock data)
       await prisma.user.create({
         data: {
-          id: mockUser.id, // Use ID from mock data if you want to pre-define it
+          id: mockUser.id,
           name: mockUser.name,
           email: mockUser.email,
-          passwordHash: mockUser.passwordHash,
-          role: mockUser.role.toUpperCase() as Role, // Ensure role matches Prisma enum
+          passwordHash: mockUser.passwordHash, // Remember: HASH THIS IN PRODUCTION
+          role: mockUser.role.toUpperCase() as Role,
         },
       });
       successCount++;
@@ -178,4 +136,11 @@ export const seedInitialUsersToPrisma = async (): Promise<{ successCount: number
     }
   }
   return { successCount, errorCount, skippedCount };
+};
+// --- End Seeding Function ---
+
+// Old loginUser and registerUser are removed as their core logic is now in authActions.ts
+// logoutUser is a client-side concept of clearing state, so it's effectively clearAuthState
+export const logoutUser = () => {
+  clearAuthState();
 };

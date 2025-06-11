@@ -3,14 +3,12 @@
 import type { ReactNode } from 'react';
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { 
-    getAuthState as getInitialAuthState, 
+    getAuthState, 
     saveAuthState, 
-    clearAuthState, 
-    loginUser as apiLogin, 
-    registerUser as apiRegister, 
-    logoutUser as apiLogout 
-} from '@/lib/authUtils'; // Now uses Prisma-backed auth functions
-import type { User as PrismaUserType, Role as PrismaRoleType } from '@prisma/client'; // Prisma types
+    clearAuthState,
+} from '@/lib/authUtils'; // Client-side localStorage utils
+import { serverLoginUser, serverRegisterUser } from '@/actions/authActions'; // Server Actions
+import type { User as PrismaUserType, Role as PrismaRoleType } from '@prisma/client';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -33,39 +31,56 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedAuth = getInitialAuthState(); // This now reads state potentially set by Prisma-backed auth
+    const storedAuth = getAuthState();
     setAuthState(storedAuth);
     setLoading(false);
   }, []);
 
   const login = useCallback(async (email: string, pass: string) => {
     setLoading(true);
-    const user = await apiLogin(email, pass); // apiLogin now uses Prisma
-    if (user) {
-      setAuthState({ isAuthenticated: true, user, role: user.role });
-      // saveAuthState is called within apiLogin now
-      setLoading(false);
-      return user;
+    try {
+      const user = await serverLoginUser(email, pass); // Call Server Action
+      if (user) {
+        const newAuthState = { isAuthenticated: true, user, role: user.role };
+        setAuthState(newAuthState);
+        saveAuthState(newAuthState); // Save to localStorage on client
+        return user;
+      }
+      clearAuthState(); // Clear any old state if login failed
+      setAuthState({isAuthenticated: false, user: null, role: null });
+      return null;
+    } catch (error) {
+        console.error("Login error in AuthContext:", error);
+        clearAuthState();
+        setAuthState({isAuthenticated: false, user: null, role: null });
+        return null;
+    } finally {
+        setLoading(false);
     }
-    setLoading(false);
-    return null;
   }, []);
 
   const register = useCallback(async (name: string, email: string, pass: string) => {
     setLoading(true);
-    const user = await apiRegister(name, email, pass); // apiRegister now uses Prisma
-    if (user) {
-      setAuthState({ isAuthenticated: true, user, role: user.role });
-      // saveAuthState is called within apiRegister now
-      setLoading(false);
-      return user;
+    try {
+        const user = await serverRegisterUser(name, email, pass); // Call Server Action
+        if (user) {
+            const newAuthState = { isAuthenticated: true, user, role: user.role };
+            setAuthState(newAuthState);
+            saveAuthState(newAuthState); // Save to localStorage on client
+            return user;
+        }
+        // If user is null, it implies registration failure (e.g., email exists)
+        return null;
+    } catch (error) {
+        console.error("Register error in AuthContext:", error);
+        return null;
+    } finally {
+        setLoading(false);
     }
-    setLoading(false);
-    return null;
   }, []);
 
   const logout = useCallback(() => {
-    apiLogout(); // Clears auth state from localStorage
+    clearAuthState(); // Clear localStorage
     setAuthState({ isAuthenticated: false, user: null, role: null });
   }, []);
 
