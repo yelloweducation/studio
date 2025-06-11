@@ -1,14 +1,14 @@
 
-'use server';
+'use server'; // This can remain as a server action, but will use mock data utilities
 
 import { 
     getCoursesFromDb, 
     getCategoriesFromDb, 
     getLearningPathsFromDb,
-    type Course,
+    type Course, // Use mock data types
     type Category,
     type LearningPath
-} from '@/lib/dbUtils';
+} from '@/lib/dbUtils'; // dbUtils now uses mock data
 
 interface SearchPageData {
     courses: Course[];
@@ -18,6 +18,7 @@ interface SearchPageData {
 
 export async function getSearchPageData(): Promise<SearchPageData> {
     try {
+        // These functions will now return data from mockData.ts or localStorage
         const [courses, categories, learningPaths] = await Promise.all([
             getCoursesFromDb(),
             getCategoriesFromDb(),
@@ -25,10 +26,8 @@ export async function getSearchPageData(): Promise<SearchPageData> {
         ]);
         return { courses, categories, learningPaths };
     } catch (error) {
-        console.error("Error fetching search page data in server action:", error);
-        // In a real app, you might want to return a more specific error structure
-        // or throw the error to be caught by an error boundary if using one with server actions.
-        // For now, returning empty arrays to prevent breaking the client too much on an error.
+        console.error("Error fetching search page data (mock data source):", error);
+        // Fallback to empty arrays if something goes wrong with mock data retrieval
         return { courses: [], categories: [], learningPaths: [] };
     }
 }

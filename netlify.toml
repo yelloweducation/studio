@@ -1,11 +1,7 @@
-[build]
-  command = "npx prisma migrate deploy && npm run build"
-  publish = ".next"
 
-[build.environment]
-  # Ensure Prisma CLI can find the schema if it's not in the default location
-  # However, your schema is at the default prisma/schema.prisma so this might not be strictly necessary
-  # PRISMA_SCHEMA_PATH = "prisma/schema.prisma"
+[build]
+  command = "npm run build"
+  publish = ".next"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"

@@ -3,16 +3,16 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { DatabaseZap, BookText, FolderKanban, VideoIcon, Users, Loader2 } from 'lucide-react';
+import { DatabaseZap, BookText, FolderKanban, VideoIcon, Users, Loader2, Settings } from 'lucide-react'; // Added Settings
 import { useToast } from '@/hooks/use-toast';
 import { 
   seedCoursesToDb, 
   seedCategoriesToDb, 
   seedVideosToDb, 
   seedLearningPathsToDb,
-  seedPaymentSettingsToDb // Added for payment settings
-} from '@/lib/dbUtils'; // Updated to use Prisma-based dbUtils
-import { seedInitialUsersToPrisma } from '@/lib/authUtils'; // Updated to use Prisma-based authUtils
+  seedPaymentSettingsToDb // For payment settings
+} from '@/lib/dbUtils'; // dbUtils now seeds to localStorage
+import { seedInitialUsersToLocalStorage } from '@/lib/authUtils'; // authUtils seeds users to localStorage
 
 type SeedOperation = 'courses' | 'categories' | 'videos' | 'learningPaths' | 'users' | 'paymentSettings';
 
@@ -28,6 +28,15 @@ export default function DataSeeding() {
   const { toast } = useToast();
 
   const handleSeedOperation = async (operation: SeedOperation) => {
+    if (typeof window === 'undefined') {
+      toast({
+        variant: "destructive",
+        title: "Seeding Unavailable",
+        description: "Data seeding can only be performed in the browser environment.",
+      });
+      return;
+    }
+
     setLoadingStates(prev => ({ ...prev, [operation]: true }));
     let result: { successCount: number; errorCount: number; skippedCount: number } | undefined;
     let operationName = operation.charAt(0).toUpperCase() + operation.slice(1);
@@ -37,22 +46,22 @@ export default function DataSeeding() {
     try {
       switch (operation) {
         case 'courses':
-          result = await seedCoursesToDb();
+          result = await seedCoursesToDb(); // Seeds to localStorage
           break;
         case 'categories':
-          result = await seedCategoriesToDb();
+          result = await seedCategoriesToDb(); // Seeds to localStorage
           break;
         case 'videos':
-          result = await seedVideosToDb();
+          result = await seedVideosToDb(); // Seeds to localStorage
           break;
         case 'learningPaths':
-          result = await seedLearningPathsToDb();
+          result = await seedLearningPathsToDb(); // Seeds to localStorage
           break;
         case 'users':
-          result = await seedInitialUsersToPrisma();
+          result = seedInitialUsersToLocalStorage(); // Seeds to localStorage via authUtils
           break;
         case 'paymentSettings':
-          result = await seedPaymentSettingsToDb();
+          result = await seedPaymentSettingsToDb(); // Seeds to localStorage
           break;
         default:
           throw new Error("Invalid seed operation");
@@ -61,7 +70,7 @@ export default function DataSeeding() {
       if (result) {
         toast({
           title: `${operationName} Seeding Complete`,
-          description: `Successfully seeded: ${result.successCount}, Skipped (already exist/no change): ${result.skippedCount}, Errors: ${result.errorCount}.`,
+          description: `Successfully seeded/updated: ${result.successCount}, Skipped: ${result.skippedCount}, Errors: ${result.errorCount}. Data is in localStorage.`,
           duration: 7000,
         });
       }
@@ -80,20 +89,20 @@ export default function DataSeeding() {
     { operation: 'categories' as SeedOperation, label: 'Seed Categories', Icon: FolderKanban },
     { operation: 'courses' as SeedOperation, label: 'Seed Courses (Basic)', Icon: BookText },
     { operation: 'videos' as SeedOperation, label: 'Seed Videos', Icon: VideoIcon },
-    { operation: 'learningPaths' as SeedOperation, label: 'Seed Learning Paths', Icon: DatabaseZap },
+    { operation: 'learningPaths' as SeedOperation, label: 'Seed Learning Paths', Icon: DatabaseZap }, // Changed icon to DatabaseZap for paths
     { operation: 'users' as SeedOperation, label: 'Seed Initial Users', Icon: Users },
-    { operation: 'paymentSettings' as SeedOperation, label: 'Seed Payment Settings', Icon: DatabaseZap }, // Added button
+    { operation: 'paymentSettings' as SeedOperation, label: 'Seed Payment Settings', Icon: Settings }, // Changed icon to Settings
   ];
 
   return (
     <Card className="shadow-lg">
       <CardHeader>
         <CardTitle className="flex items-center text-xl md:text-2xl font-headline">
-          <DatabaseZap className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Database Seeding (PostgreSQL)
+          <DatabaseZap className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Local Data Seeding (localStorage)
         </CardTitle>
         <CardDescription>
-          Populate your PostgreSQL database with initial mock data using Prisma. This is useful for new setups or testing.
-          Existing documents with the same IDs (or unique constraints like email for users) will typically be skipped.
+          Populate your browser's localStorage with initial mock data. This is useful for testing without a backend.
+          Data will persist in your browser until cleared.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -121,7 +130,7 @@ export default function DataSeeding() {
           </Card>
         ))}
          <p className="text-xs text-muted-foreground text-center pt-4">
-            Note: Seeding courses may only create basic course entries; complex relations like modules/lessons might require more detailed seed scripts or manual setup for now.
+            Note: Seeding courses will use the basic mock data entries. Complex relations like modules/lessons are part of the mock course structure.
         </p>
       </CardContent>
     </Card>

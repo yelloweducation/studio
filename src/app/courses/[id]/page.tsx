@@ -2,7 +2,7 @@
 // This file is now a Server Component
 import React from 'react';
 import type { Metadata, ResolvingMetadata } from 'next';
-import { getCourseByIdFromDb } from '@/lib/dbUtils'; // Use Prisma-based function
+import { getCourseByIdFromDb } from '@/lib/dbUtils'; // Use mock data functions
 import CourseDetailClient from './course-detail-client'; 
 
 type Props = {
@@ -14,7 +14,7 @@ export async function generateMetadata(
   parent: ResolvingMetadata
 ): Promise<Metadata> {
   const id = params.id;
-  const course = await getCourseByIdFromDb(id);
+  const course = await getCourseByIdFromDb(id); // Now fetches from mock data
 
   if (!course) {
     return {
@@ -24,11 +24,12 @@ export async function generateMetadata(
   }
 
   const previousImages = (await parent).openGraph?.images || [];
+  const categoryName = course.category; // Use 'category' from mock Course type
 
   return {
     title: `${course.title} | Yellow Institute`,
-    description: `Learn about ${course.title}, a course in ${course.categoryNameCache || 'General'} taught by ${course.instructor || 'Yellow Institute'}. ${course.description?.substring(0, 150)}...`,
-    keywords: [course.title, course.categoryNameCache || 'education', course.instructor || 'education', 'course', 'learning', 'Yellow Institute'],
+    description: `Learn about ${course.title}, a course in ${categoryName || 'General'} taught by ${course.instructor || 'Yellow Institute'}. ${course.description?.substring(0, 150)}...`,
+    keywords: [course.title, categoryName || 'education', course.instructor || 'education', 'course', 'learning', 'Yellow Institute'],
     openGraph: {
       title: course.title,
       description: course.description?.substring(0, 120) + '...',

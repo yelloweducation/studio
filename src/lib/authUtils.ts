@@ -1,19 +1,16 @@
 
-import type { User as MockUserType } from '@/data/mockData'; // Keep for mock seeding type
-import { mockUsersForSeeding } from '@/data/mockData';
-import prisma from '@/lib/prisma'; // Import Prisma client
-import type { User, Role } from '@prisma/client'; // Import Prisma generated types
+import { users as mockUsers, type User as MockUserType, mockUsersForSeeding } from '@/data/mockData';
 
-const AUTH_STORAGE_KEY = 'luminaLearnAuth_prisma';
-export const SUPER_ADMIN_EMAIL = 'admin@example.com';
+const AUTH_STORAGE_KEY = 'luminaLearnAuth_mock'; // Changed key to reflect mock data usage
+export const SUPER_ADMIN_EMAIL = 'admin@example.com'; // Default super admin
 
 export interface AuthState {
   isAuthenticated: boolean;
-  user: User | null;
-  role: Role | null;
+  user: MockUserType | null;
+  role: 'student' | 'admin' | null; // Role from mock User type
 }
 
-// --- Client-side localStorage utilities ---
+// Client-side localStorage utilities
 export const getAuthState = (): AuthState => {
   if (typeof window === 'undefined') {
     return { isAuthenticated: false, user: null, role: null };
@@ -22,16 +19,14 @@ export const getAuthState = (): AuthState => {
   if (storedState) {
     try {
       const parsedState = JSON.parse(storedState) as AuthState;
-      // Basic check, could be more robust (e.g., token expiry if using tokens)
       if (parsedState.isAuthenticated && parsedState.user) {
         return parsedState;
       }
     } catch (e) {
       console.error("Failed to parse auth state from localStorage", e);
-      // Fall through to clear state
     }
   }
-  clearAuthState(); // Ensure invalid state is cleared
+  clearAuthState();
   return { isAuthenticated: false, user: null, role: null };
 };
 
@@ -46,101 +41,88 @@ export const clearAuthState = () => {
     localStorage.removeItem(AUTH_STORAGE_KEY);
   }
 };
-// --- End Client-side localStorage utilities ---
 
+// User data is now primarily from mockData.ts
+// These functions simulate database interactions with the mock array.
 
-// --- Server-side Prisma utilities (called by Server Actions or other server code) ---
-// getUserByEmailFromPrisma is now internal to authActions.ts or could be moved to a common dbUtils if needed by many server actions.
-
-export const getAllUsersFromPrisma = async (): Promise<User[]> => {
-  try {
-    return await prisma.user.findMany({
-      orderBy: {
-        name: 'asc',
-      },
-    });
-  } catch (error) {
-    console.error("Error fetching all users from Prisma:", error);
-    return [];
-  }
-};
-
-export const updateUserRoleInPrisma = async (userId: string, newRole: Role): Promise<void> => {
-  try {
-    const userToUpdate = await prisma.user.findUnique({ where: { id: userId } });
-    if (userToUpdate && userToUpdate.email === SUPER_ADMIN_EMAIL) {
-      console.warn("Attempted to change the role of the super admin. This action is not allowed.");
-      throw new Error("Cannot change the role of the super admin.");
+export const getAllUsersFromMock = (): MockUserType[] => {
+  // In a real app, this would fetch from a DB. Here, we use the mock array.
+  // We might want to load/save this from localStorage if admin can manage users.
+  // For now, it returns the static mockData.
+  let storedUsers = [];
+  if (typeof window !== 'undefined') {
+    const usersJson = localStorage.getItem('managedUsers');
+    if (usersJson) {
+      try {
+        storedUsers = JSON.parse(usersJson);
+      } catch (e) {
+        console.error("Error parsing users from localStorage", e);
+        storedUsers = [...mockUsers]; // fallback
+      }
+    } else {
+      storedUsers = [...mockUsers]; // initialize from mock
+      localStorage.setItem('managedUsers', JSON.stringify(storedUsers));
     }
-
-    await prisma.user.update({
-      where: { id: userId },
-      data: { role: newRole, updatedAt: new Date() },
-    });
-  } catch (error) {
-    console.error(`Error updating role for user ${userId} in Prisma:`, error);
-    throw error;
+  } else {
+     storedUsers = [...mockUsers]; // fallback for server context
   }
+  return storedUsers.sort((a, b) => a.name.localeCompare(b.name));
 };
 
-export const findUserByEmailFromPrisma = async (email: string): Promise<User | null> => {
-   try {
-    return await prisma.user.findUnique({
-      where: { email },
-    });
-  } catch (error) {
-    console.error("Error fetching user by email from Prisma:", error);
-    return null;
+export const updateUserRoleInMock = (userId: string, newRole: 'student' | 'admin'): MockUserType | null => {
+  let success = false;
+  let updatedUser: MockUserType | null = null;
+  if (typeof window !== 'undefined') {
+    let currentUsers = getAllUsersFromMock(); // Gets from localStorage or initializes
+    const userIndex = currentUsers.findIndex(u => u.id === userId);
+
+    if (userIndex > -1) {
+      if (currentUsers[userIndex].email === SUPER_ADMIN_EMAIL) {
+        console.warn("Attempted to change the role of the super admin. This action is not allowed.");
+        throw new Error("Cannot change the role of the super admin.");
+      }
+      currentUsers[userIndex].role = newRole;
+      updatedUser = currentUsers[userIndex];
+      localStorage.setItem('managedUsers', JSON.stringify(currentUsers));
+      success = true;
+    }
   }
+  return success ? updatedUser : null;
 };
-// --- End Server-side Prisma utilities ---
 
+export const findUserByEmailFromMock = (email: string): MockUserType | null => {
+  const allUsers = getAllUsersFromMock();
+  return allUsers.find(user => user.email.toLowerCase() === email.toLowerCase()) || null;
+};
 
-// --- Seeding Function for Users (Server-side) ---
-export const seedInitialUsersToPrisma = async (): Promise<{ successCount: number, errorCount: number, skippedCount: number }> => {
+// Seeding function for mock users (if needed for initializing localStorage)
+export const seedInitialUsersToLocalStorage = (): { successCount: number, errorCount: number, skippedCount: number } => {
+  if (typeof window === 'undefined') return { successCount: 0, errorCount: 0, skippedCount: 0 };
+
+  let currentUsers = getAllUsersFromMock(); // Load existing or initialize
   let successCount = 0;
-  let errorCount = 0;
   let skippedCount = 0;
 
-  for (const mockUser of mockUsersForSeeding) {
-    try {
-      const existingUser = await prisma.user.findUnique({
-        where: { email: mockUser.email },
-      });
-
-      if (existingUser) {
-        if (mockUser.email === SUPER_ADMIN_EMAIL && existingUser.role !== 'ADMIN') {
-          await prisma.user.update({
-            where: { id: existingUser.id },
-            data: { role: 'ADMIN' },
-          });
-          console.log(`Super admin ${mockUser.email} role updated to ADMIN.`);
-        }
-        skippedCount++;
-        continue;
-      }
-      
-      await prisma.user.create({
-        data: {
-          id: mockUser.id,
-          name: mockUser.name,
-          email: mockUser.email,
-          passwordHash: mockUser.passwordHash, // Remember: HASH THIS IN PRODUCTION
-          role: mockUser.role.toUpperCase() as Role,
-        },
-      });
+  mockUsersForSeeding.forEach(mockUser => {
+    const existingUser = currentUsers.find(u => u.email === mockUser.email);
+    if (!existingUser) {
+      currentUsers.push({...mockUser}); // Add if not exists
       successCount++;
-    } catch (e) {
-      console.error(`Error seeding user ${mockUser.email}:`, e);
-      errorCount++;
+    } else {
+      // Ensure super admin role is correct
+      if (existingUser.email === SUPER_ADMIN_EMAIL && existingUser.role !== 'admin') {
+        existingUser.role = 'admin';
+        successCount++; // Count as a successful update/correction
+      } else {
+        skippedCount++;
+      }
     }
-  }
-  return { successCount, errorCount, skippedCount };
+  });
+  localStorage.setItem('managedUsers', JSON.stringify(currentUsers));
+  return { successCount, errorCount: 0, skippedCount };
 };
-// --- End Seeding Function ---
 
-// Old loginUser and registerUser are removed as their core logic is now in authActions.ts
-// logoutUser is a client-side concept of clearing state, so it's effectively clearAuthState
+// Logout remains client-side
 export const logoutUser = () => {
   clearAuthState();
 };

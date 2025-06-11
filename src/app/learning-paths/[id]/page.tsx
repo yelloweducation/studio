@@ -1,7 +1,7 @@
 
 // This file is now a Server Component
 import type { Metadata, ResolvingMetadata } from 'next';
-import { getLearningPathsFromDb, getCoursesFromDb } from '@/lib/dbUtils'; // Use Prisma-based functions
+import { getLearningPathsFromDb, getCoursesFromDb } from '@/lib/dbUtils'; // Use mock data functions
 import LearningPathDetailClient from './learning-path-detail-client'; 
 
 type Props = {
@@ -13,7 +13,7 @@ export async function generateMetadata(
   parent: ResolvingMetadata
 ): Promise<Metadata> {
   const id = params.id;
-  const allPaths = await getLearningPathsFromDb();
+  const allPaths = await getLearningPathsFromDb(); // Now from mock data
   const learningPath = allPaths.find((p) => p.id === id);
 
   if (!learningPath) {
@@ -23,8 +23,8 @@ export async function generateMetadata(
     }
   }
 
-  const allCourses = await getCoursesFromDb();
-  const pathCourseIds = learningPath.courses?.map(lpc => lpc.courseId) || [];
+  const allCourses = await getCoursesFromDb(); // Now from mock data
+  const pathCourseIds = learningPath.courseIds || [];
   const pathCourses = allCourses.filter(course => pathCourseIds.includes(course.id));
   const courseTitles = pathCourses.map(c => c.title).slice(0, 3);
 

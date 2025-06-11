@@ -5,9 +5,9 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image'; 
 import { useAuth } from '@/hooks/useAuth';
-import { type Course, type PaymentSubmission, type User, type PaymentSettings } from '@/lib/dbUtils'; 
+import { type Course, type PaymentSubmission, type User, type PaymentSettings } from '@/lib/dbUtils'; // Now uses mock data types
 import { initialPaymentSettings as mockDefaultPaymentSettings } from '@/data/mockData'; 
-import { getCourseByIdFromDb, getPaymentSettingsFromDb, addPaymentSubmissionToDb } from '@/lib/dbUtils'; 
+import { getCourseByIdFromDb, getPaymentSettingsFromDb, addPaymentSubmissionToDb } from '@/lib/dbUtils'; // Now uses mock data functions
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -179,6 +179,7 @@ export default function CheckoutPage() {
 
     setIsSubmitting(true);
 
+    // For mock, we don't actually upload the file, just use the preview URL
     const submissionData: Omit<PaymentSubmission, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'submittedAt' | 'reviewedAt' | 'adminNotes' | 'user' | 'course'> = {
       userId: user.id,
       courseId: currentCourse.id,
