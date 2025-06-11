@@ -1,12 +1,12 @@
 
-import bcrypt from 'bcryptjs'; // Keep import for now, but bcrypt won't be used
+import bcrypt from 'bcryptjs';
 import { users as initialMockUsersArray, type User as MockUserType, mockUsersForSeeding } from '@/data/mockData';
 
 const AUTH_STORAGE_KEY = 'luminaLearnAuth_mock_secure';
 export const SUPER_ADMIN_EMAIL = 'admin@example.com';
-// const BCRYPT_SALT_ROUNDS_ENV = process.env.BCRYPT_SALT_ROUNDS; // No longer used
-// const SALT_ROUNDS = BCRYPT_SALT_ROUNDS_ENV && !isNaN(parseInt(BCRYPT_SALT_ROUNDS_ENV)) ? parseInt(BCRYPT_SALT_ROUNDS_ENV) : 10; // No longer used
-// console.log(`[AuthUtils] Using SALT_ROUNDS: ${SALT_ROUNDS}`); // No longer used
+const BCRYPT_SALT_ROUNDS_ENV = process.env.BCRYPT_SALT_ROUNDS;
+const SALT_ROUNDS = BCRYPT_SALT_ROUNDS_ENV && !isNaN(parseInt(BCRYPT_SALT_ROUNDS_ENV)) ? parseInt(BCRYPT_SALT_ROUNDS_ENV) : 10;
+console.log(`[AuthUtils] Using bcrypt SALT_ROUNDS: ${SALT_ROUNDS}`);
 
 
 export interface AuthState {
@@ -15,17 +15,19 @@ export interface AuthState {
   role: 'student' | 'admin' | null;
 }
 
-// --- Password Hashing Utilities (MODIFIED FOR DEBUGGING - PLAIN TEXT) ---
+// --- Password Hashing Utilities (using bcryptjs) ---
 export const hashPassword = async (password: string): Promise<string> => {
-  console.warn(`[AuthUtils - hashPassword - DEBUG MODE] Returning PLAIN TEXT password: ${password.substring(0,3)}... (length: ${password.length})`);
-  return Promise.resolve(password); // Store plain text
+  console.log(`[AuthUtils - hashPassword] Hashing password starting with: ${password.substring(0,3)}... (length: ${password.length})`);
+  const hash = await bcrypt.hash(password, SALT_ROUNDS);
+  console.log(`[AuthUtils - hashPassword] Generated hash (prefix): ${hash.substring(0,10)}...`);
+  return hash;
 };
 
-export const comparePassword = async (password: string, storedPasswordAttempt: string): Promise<boolean> => {
-  console.warn(`[AuthUtils - comparePassword - DEBUG MODE] Comparing PLAIN TEXT password: ${password.substring(0,3)}... (length: ${password.length}) against stored PLAIN TEXT: ${storedPasswordAttempt.substring(0,3)}... (length: ${storedPasswordAttempt.length})`);
-  const isMatch = password === storedPasswordAttempt; // Direct string comparison
-  console.warn(`[AuthUtils - comparePassword - DEBUG MODE] Comparison result: ${isMatch}`);
-  return Promise.resolve(isMatch);
+export const comparePassword = async (password: string, storedHash: string): Promise<boolean> => {
+  console.log(`[AuthUtils - comparePassword] Comparing password starting with: ${password.substring(0,3)}... (length: ${password.length}) against stored hash (prefix): ${storedHash.substring(0,10)}...`);
+  const isMatch = await bcrypt.compare(password, storedHash);
+  console.log(`[AuthUtils - comparePassword] bcrypt comparison result: ${isMatch}`);
+  return isMatch;
 };
 
 // --- Client-side localStorage utilities ---
@@ -37,19 +39,28 @@ export const getAuthState = (): AuthState => {
   if (storedState) {
     try {
       const parsedState = JSON.parse(storedState) as AuthState;
-      if (parsedState.isAuthenticated && parsedState.user) {
+      // It's good practice to re-validate the shape of the parsed object here
+      // especially if the AuthState structure evolves.
+      if (parsedState.isAuthenticated && parsedState.user && (parsedState.role === 'student' || parsedState.role === 'admin')) {
         return parsedState;
+      } else {
+        console.warn("[AuthUtils - getAuthState] Parsed auth state from localStorage is invalid. Clearing.");
+        clearAuthState(); // Clear invalid state
       }
     } catch (e) {
-      console.error("Failed to parse auth state from localStorage", e);
+      console.error("[AuthUtils - getAuthState] Failed to parse auth state from localStorage. Clearing.", e);
+      clearAuthState(); // Clear corrupted state
     }
   }
-  clearAuthState();
   return { isAuthenticated: false, user: null, role: null };
 };
 
 export const saveAuthState = (authState: AuthState) => {
   if (typeof window !== 'undefined') {
+    // Note: Storing sensitive user details (even if just name/role) in localStorage
+    // for client-side access is common in some architectures but has security implications
+    // (XSS). For production, prefer secure, httpOnly cookies for session tokens
+    // and fetch user details from the server as needed.
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authState));
   }
 };
@@ -62,10 +73,12 @@ export const clearAuthState = () => {
 
 
 // --- User Data Management (Mock, with localStorage for persistence) ---
-const MANAGED_USERS_STORAGE_KEY = 'managedUsers_hashed'; // Name is now a misnomer
+const MANAGED_USERS_STORAGE_KEY = 'managedUsers_hashed';
 
 const getManagedUsers = (): MockUserType[] => {
   if (typeof window === 'undefined') {
+    // For server-side or build-time, return a copy of the seed data (no localStorage)
+    // This part is more for conceptual purity, as most user management ops will be client-side here.
     return JSON.parse(JSON.stringify(mockUsersForSeeding));
   }
 
@@ -73,24 +86,27 @@ const getManagedUsers = (): MockUserType[] => {
   if (usersJson) {
     try {
       const parsedUsers = JSON.parse(usersJson);
-      if (Array.isArray(parsedUsers)) {
+      if (Array.isArray(parsedUsers)) { // Ensure it's an array
         return parsedUsers;
       } else {
-        console.error("[AuthUtils - getManagedUsers] Managed users in localStorage is not an array. Clearing and starting fresh.");
-        localStorage.removeItem(MANAGED_USERS_STORAGE_KEY);
+        console.error("[AuthUtils - getManagedUsers] Managed users in localStorage is not an array. Clearing and returning empty array.");
+        localStorage.removeItem(MANAGED_USERS_STORAGE_KEY); // Clear corrupted data
+        return []; // Return empty array
       }
     } catch (e) {
-      console.error("[AuthUtils - getManagedUsers] Error parsing users from localStorage. Clearing and starting fresh.", e);
-      localStorage.removeItem(MANAGED_USERS_STORAGE_KEY);
+      console.error("[AuthUtils - getManagedUsers] Error parsing users from localStorage. Clearing and returning empty array.", e);
+      localStorage.removeItem(MANAGED_USERS_STORAGE_KEY); // Clear corrupted data
+      return []; // Return empty array
     }
   }
+  // If no users are in localStorage, return an empty array. Seeding will populate it.
   return [];
 };
 
 
 const saveManagedUsers = (users: MockUserType[]) => {
   if (typeof window !== 'undefined') {
-    console.warn(`[AuthUtils - saveManagedUsers - DEBUG MODE] Saving ${users.length} users to localStorage. First user's stored password (plain text): ${users[0]?.passwordHash?.substring(0,10)}...`);
+    console.log(`[AuthUtils - saveManagedUsers] Saving ${users.length} users to localStorage. First user's stored hash (prefix): ${users[0]?.passwordHash?.substring(0,10)}...`);
     localStorage.setItem(MANAGED_USERS_STORAGE_KEY, JSON.stringify(users));
   }
 };
@@ -118,36 +134,38 @@ export const updateUserRoleInMock = (userId: string, newRole: 'student' | 'admin
 };
 
 export const findUserByEmailFromMock = (email: string): MockUserType | null => {
+  const normalizedEmail = email.toLowerCase();
+  console.log(`[AuthUtils - findUserByEmailFromMock] Searching for user with email: ${normalizedEmail}`);
   const allUsers = getManagedUsers();
-  const foundUser = allUsers.find(user => user.email.toLowerCase() === email.toLowerCase()) || null;
+  const foundUser = allUsers.find(user => user.email.toLowerCase() === normalizedEmail) || null;
   if (foundUser) {
-    console.warn(`[AuthUtils - findUserByEmailFromMock - DEBUG MODE] Found user for email ${email}. User ID: ${foundUser.id}, Stored Password (plain text prefix): ${foundUser.passwordHash?.substring(0,10)}... Full stored password (plain text): ${foundUser.passwordHash}`);
+    console.log(`[AuthUtils - findUserByEmailFromMock] Found user. ID: ${foundUser.id}, Email: ${foundUser.email}, Role: ${foundUser.role}, Stored Hash (prefix): ${foundUser.passwordHash?.substring(0,10)}...`);
   } else {
-    console.log(`[AuthUtils - findUserByEmailFromMock] User not found for email ${email}`);
+    console.log(`[AuthUtils - findUserByEmailFromMock] User not found for email: ${normalizedEmail}`);
   }
   return foundUser;
 };
 
 export const addUserToMock = async (userData: Omit<MockUserType, 'id' | 'passwordHash' | 'createdAt'>, password_raw: string): Promise<MockUserType> => {
-  console.warn(`[AuthUtils - addUserToMock - DEBUG MODE] Attempting to add user: ${userData.email} with PLAIN TEXT password starting: ${password_raw.substring(0,3)}... (length: ${password_raw.length})`);
-  const plainPasswordToStore = await hashPassword(password_raw); // hashPassword now returns plain text
+  console.log(`[AuthUtils - addUserToMock] Attempting to add user: ${userData.email}`);
+  const hashedPassword = await hashPassword(password_raw);
   const newUser: MockUserType = {
     id: `user-${Date.now()}`,
     ...userData,
-    passwordHash: plainPasswordToStore, // Storing plain text
+    passwordHash: hashedPassword,
     createdAt: new Date().toISOString(),
   };
   let currentUsers = getManagedUsers();
   currentUsers.push(newUser);
   saveManagedUsers(currentUsers);
-  console.warn(`[AuthUtils - addUserToMock - DEBUG MODE] User ${newUser.email} added with ID ${newUser.id} and stored PLAIN TEXT password ${plainPasswordToStore.substring(0,10)}...`);
+  console.log(`[AuthUtils - addUserToMock] User ${newUser.email} added with ID ${newUser.id}. Hash (prefix) stored: ${hashedPassword.substring(0,10)}...`);
   return newUser;
 };
 
 
 export const seedInitialUsersToLocalStorage = async (): Promise<{ successCount: number, errorCount: number, skippedCount: number }> => {
   if (typeof window === 'undefined') return { successCount: 0, errorCount: 0, skippedCount: 0 };
-  console.warn("[AuthUtils - seedInitialUsersToLocalStorage - DEBUG MODE] Starting user seeding process with PLAIN TEXT passwords.");
+  console.log("[AuthUtils - seedInitialUsersToLocalStorage] Starting user seeding process.");
 
   let currentUsers = getManagedUsers();
   let successCount = 0;
@@ -157,38 +175,38 @@ export const seedInitialUsersToLocalStorage = async (): Promise<{ successCount: 
   const superAdminSeedData = mockUsersForSeeding.find(u => u.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase());
 
   if (!superAdminSeedData) {
-    console.error(`[AuthUtils - seedInitialUsersToLocalStorage] CRITICAL: Super admin email ${SUPER_ADMIN_EMAIL} not found in mockUsersForSeeding. Seeding cannot guarantee super admin setup.`);
-    errorCount++;
+    console.error(`[AuthUtils - seedInitialUsersToLocalStorage] CRITICAL: Super admin email ${SUPER_ADMIN_EMAIL} not found in mockUsersForSeeding. Cannot guarantee super admin setup.`);
+    errorCount++; // Increment error count as this is a critical failure for admin setup
   } else {
     const superAdminPlainPassword = superAdminSeedData.passwordHash.replace('_PLAINTEXT', '');
+    console.log(`[AuthUtils - seedInitialUsersToLocalStorage] Processing super admin: ${SUPER_ADMIN_EMAIL}. Plain text password to be hashed: "${superAdminPlainPassword.substring(0,3)}..."`);
     try {
-      const existingSuperAdminIndex = currentUsers.findIndex(u => u.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase());
-      const plainPasswordToStoreForAdmin = superAdminPlainPassword; 
+      const hashedSuperAdminPassword = await hashPassword(superAdminPlainPassword);
+      console.log(`[AuthUtils - seedInitialUsersToLocalStorage] Hashed super admin password (prefix): ${hashedSuperAdminPassword.substring(0,10)}...`);
 
+      const existingSuperAdminIndex = currentUsers.findIndex(u => u.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase());
       if (existingSuperAdminIndex !== -1) {
-        console.warn(`[AuthUtils - seedInitialUsersToLocalStorage - DEBUG MODE] Super admin ${SUPER_ADMIN_EMAIL} exists. Updating details and forcing PLAIN TEXT password update.`);
+        console.log(`[AuthUtils - seedInitialUsersToLocalStorage] Super admin ${SUPER_ADMIN_EMAIL} found. Updating with fresh hash.`);
         currentUsers[existingSuperAdminIndex] = {
-          ...currentUsers[existingSuperAdminIndex],
+          ...currentUsers[existingSuperAdminIndex], // Preserve existing ID and other fields if any
           name: superAdminSeedData.name,
-          email: superAdminSeedData.email,
-          role: 'admin',
-          passwordHash: plainPasswordToStoreForAdmin, // Storing plain text
+          email: superAdminSeedData.email, // Ensure email casing is from seed data
+          role: 'admin', // Ensure role is admin
+          passwordHash: hashedSuperAdminPassword,
           updatedAt: new Date().toISOString(),
         };
-        console.warn(`[AuthUtils - seedInitialUsersToLocalStorage - DEBUG MODE] Updated super admin ${SUPER_ADMIN_EMAIL}. PLAIN TEXT password starts with: ${plainPasswordToStoreForAdmin.substring(0, 10)}`);
         successCount++;
       } else {
-        console.warn(`[AuthUtils - seedInitialUsersToLocalStorage - DEBUG MODE] Super admin ${SUPER_ADMIN_EMAIL} not found in current users. Adding with PLAIN TEXT password.`);
+        console.log(`[AuthUtils - seedInitialUsersToLocalStorage] Super admin ${SUPER_ADMIN_EMAIL} not found. Adding new entry.`);
         currentUsers.push({
-          id: superAdminSeedData.id || `user-super-admin-${Date.now()}`,
+          id: superAdminSeedData.id || `user-super-admin-${Date.now()}`, // Use seed ID or generate
           name: superAdminSeedData.name,
           email: superAdminSeedData.email,
           role: 'admin',
-          passwordHash: plainPasswordToStoreForAdmin, // Storing plain text
+          passwordHash: hashedSuperAdminPassword,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         });
-        console.warn(`[AuthUtils - seedInitialUsersToLocalStorage - DEBUG MODE] Added super admin ${SUPER_ADMIN_EMAIL}. PLAIN TEXT password starts with: ${plainPasswordToStoreForAdmin.substring(0, 10)}`);
         successCount++;
       }
     } catch (err) {
@@ -197,31 +215,37 @@ export const seedInitialUsersToLocalStorage = async (): Promise<{ successCount: 
     }
   }
 
+  // Process other users from mockUsersForSeeding
   for (const mockUser of mockUsersForSeeding) {
     if (mockUser.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()) {
+      // Super admin already handled, skip to avoid reprocessing or issues if it failed above
       continue;
     }
 
     const plainPassword = mockUser.passwordHash.replace('_PLAINTEXT', '');
+    console.log(`[AuthUtils - seedInitialUsersToLocalStorage] Processing user: ${mockUser.email}. Plain text password: "${plainPassword.substring(0,3)}..."`);
     try {
+      const hashedPassword = await hashPassword(plainPassword);
+      console.log(`[AuthUtils - seedInitialUsersToLocalStorage] Hashed password for ${mockUser.email} (prefix): ${hashedPassword.substring(0,10)}...`);
       const existingUserIndex = currentUsers.findIndex(u => u.email.toLowerCase() === mockUser.email.toLowerCase());
-      const plainPasswordToStoreForUser = plainPassword;
 
       if (existingUserIndex === -1) {
-        console.warn(`[AuthUtils - seedInitialUsersToLocalStorage - DEBUG MODE] Seeding new non-admin user: ${mockUser.email} with PLAIN TEXT password.`);
+        console.log(`[AuthUtils - seedInitialUsersToLocalStorage] User ${mockUser.email} not found. Adding new.`);
         currentUsers.push({
-          ...mockUser,
-          passwordHash: plainPasswordToStoreForUser, // Storing plain text
-          id: mockUser.id || `user-seed-${Date.now()}-${Math.random().toString(36).substring(2,7)}`,
-          createdAt: mockUser.createdAt || new Date().toISOString(),
+          ...mockUser, // Spreads id, name, email, role from mockUser
+          passwordHash: hashedPassword, // Overwrites passwordHash with the new hash
+          id: mockUser.id || `user-seed-${Date.now()}-${Math.random().toString(36).substring(2,7)}`, // Use provided ID or generate
+          createdAt: mockUser.createdAt || new Date().toISOString(), // Use provided or new
           updatedAt: new Date().toISOString(),
         });
         successCount++;
       } else {
-        console.warn(`[AuthUtils - seedInitialUsersToLocalStorage - DEBUG MODE] Non-admin user ${mockUser.email} already exists. Forcing PLAIN TEXT password update for debugging.`);
-        currentUsers[existingUserIndex].passwordHash = plainPasswordToStoreForUser; // Force update to plain text for debug
+        console.log(`[AuthUtils - seedInitialUsersToLocalStorage] User ${mockUser.email} already exists. Updating password hash.`);
+        currentUsers[existingUserIndex].passwordHash = hashedPassword; // Ensure hash is updated
+        currentUsers[existingUserIndex].name = mockUser.name; // Update name
+        currentUsers[existingUserIndex].role = mockUser.role; // Update role
         currentUsers[existingUserIndex].updatedAt = new Date().toISOString();
-        successCount++; 
+        successCount++; // Count as success because it was processed/updated
       }
     } catch (err) {
       console.error(`[AuthUtils - seedInitialUsersToLocalStorage] Error processing user ${mockUser.email} for seeding:`, err);
@@ -230,7 +254,7 @@ export const seedInitialUsersToLocalStorage = async (): Promise<{ successCount: 
   }
 
   saveManagedUsers(currentUsers);
-  console.warn(`[AuthUtils - seedInitialUsersToLocalStorage - DEBUG MODE] User seeding complete. Total Processed/Updated: ${successCount}, Skipped: ${skippedCount}, Errors: ${errorCount}. Passwords are now PLAIN TEXT.`);
+  console.log(`[AuthUtils - seedInitialUsersToLocalStorage] User seeding complete. Total Processed/Updated: ${successCount}, Skipped: ${skippedCount}, Errors: ${errorCount}.`);
   return { successCount, errorCount, skippedCount };
 };
 

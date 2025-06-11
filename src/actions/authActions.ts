@@ -34,17 +34,22 @@ export const serverLoginUser = async (email: string, password: string): Promise<
   const validation = LoginInputSchema.safeParse({ email, password });
   if (!validation.success) {
     console.error("[AuthActions - serverLoginUser] Server-side login input validation failed:", validation.error.flatten().fieldErrors);
+    // Consider throwing a more specific error or returning a structured error response
     return null;
   }
 
   const user = findUserByEmailFromMock(validation.data.email);
 
   if (user && user.passwordHash) {
-    console.log(`[AuthActions - serverLoginUser] User found (ID: ${user.id}). Comparing password. Stored hash: ${user.passwordHash}`);
+    console.log(`[AuthActions - serverLoginUser] User found (ID: ${user.id}). Comparing password. Stored hash (prefix): ${user.passwordHash.substring(0,10)}...`);
+    console.log(`[AuthActions - serverLoginUser] Calling comparePassword with plain password (len: ${validation.data.password.length}) and stored hash (len: ${user.passwordHash.length})`);
     const isMatch = await comparePassword(validation.data.password, user.passwordHash);
+    console.log(`[AuthActions - serverLoginUser] comparePassword result: ${isMatch}`);
     if (isMatch) {
       console.log(`[AuthActions - serverLoginUser] Password match for user ID: ${user.id}. Login successful.`);
-      return user;
+      // Omit passwordHash from the user object returned to the client
+      const { passwordHash, ...userWithoutPasswordHash } = user;
+      return userWithoutPasswordHash as MockUserType;
     } else {
       console.log(`[AuthActions - serverLoginUser] Password mismatch for user ID: ${user.id}.`);
     }
@@ -78,10 +83,12 @@ export const serverRegisterUser = async (name: string, email: string, password: 
       name: validation.data.name,
       email: validation.data.email,
       role: validation.data.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase() ? 'ADMIN' : 'STUDENT',
-    }, validation.data.password);
+    }, validation.data.password); // Pass the plain password here
 
-    console.log(`[AuthActions - serverRegisterUser] Registration successful for: ${newUser.email}, ID: ${newUser.id}. Hash stored: ${newUser.passwordHash.substring(0,10)}...`);
-    return newUser;
+    console.log(`[AuthActions - serverRegisterUser] Registration successful for: ${newUser.email}, ID: ${newUser.id}. Hash stored (prefix): ${newUser.passwordHash.substring(0,10)}...`);
+    // Omit passwordHash from the user object returned
+    const { passwordHash, ...userWithoutPasswordHash } = newUser;
+    return userWithoutPasswordHash as MockUserType;
   } catch (error) {
     console.error("[AuthActions - serverRegisterUser] Error during user registration process:", error);
     if (error instanceof Error && (error.message === "UserAlreadyExists")) { // Should be caught above, but good practice
@@ -94,7 +101,12 @@ export const serverRegisterUser = async (name: string, email: string, password: 
 
 export async function getAllUsersServerAction(): Promise<MockUserType[]> {
   console.log("[AuthActions - getAllUsersServerAction] Fetching all users.");
-  return getAllUsersFromMockUtil(); // Use the renamed util function
+  const users = getAllUsersFromMockUtil(); // Use the renamed util function
+  // Ensure passwordHash is not sent to client from this action either
+  return users.map(user => {
+    const { passwordHash, ...userWithoutPasswordHash } = user;
+    return userWithoutPasswordHash as MockUserType;
+  });
 }
 
 export async function updateUserRoleServerAction(userId: string, newRole: PrismaRoleType): Promise<MockUserType | null> {
@@ -114,10 +126,13 @@ export async function updateUserRoleServerAction(userId: string, newRole: Prisma
     const updatedUser = updateUserRoleInMock(validation.data.userId, validation.data.newRole as 'student' | 'admin');
     if (updatedUser) {
       console.log(`[AuthActions - updateUserRoleServerAction] Role updated successfully for user ID: ${userId} to ${newRole}`);
+      // Omit passwordHash
+      const { passwordHash, ...userWithoutPasswordHash } = updatedUser;
+      return userWithoutPasswordHash as MockUserType;
     } else {
       console.warn(`[AuthActions - updateUserRoleServerAction] User not found or update failed for user ID: ${userId}`);
+      return null;
     }
-    return updatedUser;
   } catch (error: any) {
     console.error(`[AuthActions - updateUserRoleServerAction] Error updating role for user ${userId}:`, error.message);
     throw error; // Re-throw the original error to be handled by the caller
