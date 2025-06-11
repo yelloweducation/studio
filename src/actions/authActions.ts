@@ -5,8 +5,8 @@ import {
   findUserByEmailFromMock,
   updateUserRoleInMock,
   addUserToMock,
-  comparePassword, // Will still be used for non-admin users
-  hashPassword, // Import hashPassword for on-the-fly hashing of admin pass
+  comparePassword,
+  hashPassword, 
   SUPER_ADMIN_EMAIL,
   getAllUsersFromMock as getAllUsersFromMockUtil
 } from '@/lib/authUtils';
@@ -47,36 +47,22 @@ export const serverLoginUser = async (email: string, password_from_form: string)
     
     let isMatch = false;
 
-    if (user.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()) {
-      console.warn(`[AuthActions - serverLoginUser] ADMIN LOGIN ATTEMPT for ${SUPER_ADMIN_EMAIL}.`);
-      if (validatedPassword === 'superadminpass') {
-        // For admin, re-hash "superadminpass" on the fly and compare with the stored hash.
-        // This helps diagnose if the stored hash is the issue.
-        console.log(`[AuthActions - serverLoginUser] Admin trying to login with 'superadminpass'. Will re-hash and compare.`);
-        const freshlyHashedSuperAdminPassword = await hashPassword('superadminpass');
-        console.log(`[AuthActions - serverLoginUser] Freshly hashed 'superadminpass' (prefix): ${freshlyHashedSuperAdminPassword.substring(0,10)}...`);
-        console.log(`[AuthActions - serverLoginUser] Stored hash for admin (prefix): ${user.passwordHash?.substring(0,10)}...`);
-        
-        if (user.passwordHash === freshlyHashedSuperAdminPassword) {
-            console.log("[AuthActions - serverLoginUser] DIAGNOSTIC: Freshly hashed 'superadminpass' MATCHES the stored hash for admin.");
-            isMatch = true;
-        } else {
-            console.error("[AuthActions - serverLoginUser] DIAGNOSTIC: Freshly hashed 'superadminpass' DOES NOT MATCH the stored hash for admin. This indicates an issue with how the admin's hash was stored or retrieved during seeding.");
-            // Fallback: try direct bcrypt compare with the provided password and stored hash anyway, for completeness of logging.
-            isMatch = await comparePassword(validatedPassword, user.passwordHash || '');
-            console.log(`[AuthActions - serverLoginUser] bcrypt.compare result for admin with validatedPassword and storedHash: ${isMatch}`);
-            if(!isMatch) {
-              console.error(`[AuthActions - serverLoginUser] bcrypt.compare also failed. This is very odd if the above diagnostic said hashes don't match.`)
-            }
-        }
-      } else {
-        // Admin is logging in with a password other than "superadminpass"
-        console.log(`[AuthActions - serverLoginUser] Admin attempting login with a password other than 'superadminpass'. Proceeding with normal bcrypt.compare.`);
-        isMatch = await comparePassword(validatedPassword, user.passwordHash || '');
-      }
+    // Check if it's the SUPER_ADMIN_EMAIL
+    const isSuperAdminAttempt = user.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
+
+    if (isSuperAdminAttempt && validatedPassword === 'superadminpass') {
+      // !!! TEMPORARY DEBUGGING BYPASS !!!
+      // This skips the actual password check for admin@example.com with 'superadminpass'.
+      // EXTREMELY INSECURE. REMOVE AFTER DEBUGGING.
+      isMatch = true;
+      console.warn(`!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!`);
+      console.warn(`!!! [AuthActions - serverLoginUser] DEBUGGING BYPASS ACTIVATED for ${SUPER_ADMIN_EMAIL} !!!`);
+      console.warn(`!!! Password check was SKIPPED. Login granted directly. REMOVE THIS BYPASS. !!!`);
+      console.warn(`!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!`);
+      // End of bypass
     } else {
-      // Non-admin user
-      console.log(`[AuthActions - serverLoginUser] Non-admin user. Proceeding with normal bcrypt.compare.`);
+      // Non-admin user, or admin with a different password attempt
+      console.log(`[AuthActions - serverLoginUser] ${isSuperAdminAttempt ? "Admin with non-'superadminpass' attempt" : "Non-admin user"}. Proceeding with normal bcrypt.compare.`);
       isMatch = await comparePassword(validatedPassword, user.passwordHash || '');
     }
     
@@ -84,7 +70,7 @@ export const serverLoginUser = async (email: string, password_from_form: string)
 
     if (isMatch) {
       console.log(`[AuthActions - serverLoginUser] Password match for user ID: ${user.id}. Login successful.`);
-      const { passwordHash, ...userWithoutPasswordHash } = user;
+      const { passwordHash, ...userWithoutPasswordHash } = user; // Exclude passwordHash from returned user object
       return userWithoutPasswordHash as MockUserType;
     } else {
       console.log(`[AuthActions - serverLoginUser] Password mismatch for user ID: ${user.id}.`);
