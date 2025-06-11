@@ -47,25 +47,11 @@ export const serverLoginUser = async (email: string, password_from_form: string)
     
     let isMatch = false;
 
-    // Check if it's the SUPER_ADMIN_EMAIL
-    const isSuperAdminAttempt = user.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
-
-    if (isSuperAdminAttempt && validatedPassword === 'superadminpass') {
-      // !!! TEMPORARY DEBUGGING BYPASS !!!
-      // This skips the actual password check for admin@example.com with 'superadminpass'.
-      // EXTREMELY INSECURE. REMOVE AFTER DEBUGGING.
-      isMatch = true;
-      console.warn(`!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!`);
-      console.warn(`!!! [AuthActions - serverLoginUser] DEBUGGING BYPASS ACTIVATED for ${SUPER_ADMIN_EMAIL} !!!`);
-      console.warn(`!!! Password check was SKIPPED. Login granted directly. REMOVE THIS BYPASS. !!!`);
-      console.warn(`!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!`);
-      // End of bypass
-    } else {
-      // Non-admin user, or admin with a different password attempt
-      console.log(`[AuthActions - serverLoginUser] ${isSuperAdminAttempt ? "Admin with non-'superadminpass' attempt" : "Non-admin user"}. Proceeding with normal bcrypt.compare.`);
-      isMatch = await comparePassword(validatedPassword, user.passwordHash || '');
-    }
-    
+    // The temporary bypass logic has been removed.
+    // Always use bcrypt.compare for password verification.
+    console.log(`[AuthActions - serverLoginUser] Proceeding with bcrypt.compare for user ${validatedEmail}.`);
+    isMatch = await comparePassword(validatedPassword, user.passwordHash || '');
+        
     console.log(`[AuthActions - serverLoginUser] Final isMatch result for ${validatedEmail}: ${isMatch}`);
 
     if (isMatch) {
