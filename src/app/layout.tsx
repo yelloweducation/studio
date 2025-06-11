@@ -26,14 +26,14 @@ const ptSans = PT_Sans({
 });
 
 export const metadata: Metadata = {
-  // metadataBase: new URL('https://your-production-domain.com'), // IMPORTANT: Update this!
+  metadataBase: process.env.NEXT_PUBLIC_SITE_URL ? new URL(process.env.NEXT_PUBLIC_SITE_URL) : undefined,
   title: {
     default: siteConfig.name,
     template: `%s | ${siteConfig.name}`,
   },
   description: siteConfig.description,
   keywords: ["education", "online learning", "courses", "tech education", "yellow institute", "e-learning", "study tools", "flashcards"],
-  authors: [{ name: "Yellow Institute Team", url: "https://your-production-domain.com" }], // IMPORTANT: Update this!
+  authors: [{ name: "Yellow Institute Team", url: siteConfig.url }],
   creator: "Yellow Institute Team",
   robots: {
     index: true,
@@ -46,49 +46,46 @@ export const metadata: Metadata = {
       'max-snippet': -1,
     },
   },
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#FACC15' }, // Yellow-500 for light mode
-    { media: '(prefers-color-scheme: dark)', color: '#423A0E' },  // Darker variant for dark mode
-  ],
-  manifest: '/manifest.json', // You'll need to create public/manifest.json
+  manifest: '/manifest.json',
   openGraph: {
     type: "website",
-    locale: "en_US", // Default locale
-    // url: "https://your-production-domain.com", // IMPORTANT: Update this!
+    locale: "en_US",
+    url: siteConfig.url,
     title: siteConfig.name,
     description: siteConfig.description,
     siteName: siteConfig.name,
-    // images: [ // Add a default OG image
-    //   {
-    //     url: "https://your-production-domain.com/og-image.png", // IMPORTANT: Create and update this!
-    //     width: 1200,
-    //     height: 630,
-    //     alt: "Yellow Institute - Online Learning Platform",
-    //   },
-    // ],
+    images: siteConfig.ogImage ? [
+      {
+        url: siteConfig.ogImage,
+        width: 1200,
+        height: 630,
+        alt: `${siteConfig.name} - Online Learning Platform`,
+      },
+    ] : undefined,
   },
   twitter: {
     card: "summary_large_image",
     title: siteConfig.name,
     description: siteConfig.description,
-    // images: ["https://your-production-domain.com/og-image.png"], // IMPORTANT: Create and update this!
-    // creator: "@yourTwitterHandle", // IMPORTANT: Add your Twitter handle
+    images: siteConfig.ogImage ? [siteConfig.ogImage] : undefined,
+    creator: siteConfig.links?.twitter ? `@${siteConfig.links.twitter.split('/').pop()}` : undefined,
   },
-  icons: { // Add favicon links
+  icons: {
     icon: "/favicon.ico",
     shortcut: "/favicon-16x16.png",
     apple: "/apple-touch-icon.png",
   }
+  // themeColor was removed from here
 };
 
 // Separate viewport export
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1, // Optional: Prevents zooming, consider accessibility
-  themeColor: [ // Match metadata themeColor for consistency
-    { media: '(prefers-color-scheme: light)', color: '#FACC15' },
-    { media: '(prefers-color-scheme: dark)', color: '#423A0E' },
+  maximumScale: 1,
+  themeColor: [ // themeColor is now correctly placed here
+    { media: '(prefers-color-scheme: light)', color: '#FACC15' }, // Yellow-500 for light mode
+    { media: '(prefers-color-scheme: dark)', color: '#423A0E' },  // Darker variant for dark mode
   ],
 };
 
@@ -97,30 +94,27 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const pathname = headers().get('next-url') || ''; // Get current pathname
+  const pathname = headers().get('next-url') || '';
 
   return (
     <html lang="en" suppressHydrationWarning className={`${poppins.variable} ${ptSans.variable}`}>
       <head>
-        {/* Viewport meta tag is now handled by the viewport export */}
-        {/* Other head tags like preconnects can be added here if needed */}
       </head>
       <body className="font-body antialiased flex flex-col min-h-screen">
         <ThemeProvider>
           <AuthProvider>
-            <LanguageProvider> {/* Added LanguageProvider */}
-              {/* Header and Footer already have internal logic to hide on /videos */}
+            <LanguageProvider>
               <Header />
               {pathname === '/videos' ? (
-                children // Render children directly for the /videos page
+                children
               ) : (
                 <main className="flex-grow container mx-auto px-4 py-8">
-                  {children} {/* Wrap other pages in the main container */}
+                  {children}
                 </main>
               )}
               <Footer />
               <Toaster />
-            </LanguageProvider> {/* Closed LanguageProvider */}
+            </LanguageProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>
