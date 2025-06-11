@@ -119,9 +119,9 @@ const VideoInputSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().min(1, "Description is required"),
   thumbnailUrl: z.string().url("Invalid thumbnail URL").optional().nullable(),
-  embedUrl: z.string().url("Invalid embed URL").refine(val => val.includes("youtube.com") || val.includes("tiktok.com"), {
+  embedUrl: z.string().min(1, "Embed URL is required").url("Invalid embed URL").refine(val => val.includes("youtube.com") || val.includes("tiktok.com"), {
     message: "Embed URL must be a valid YouTube or TikTok URL."
-  }).min(1, "Embed URL is required"),
+  }),
   dataAiHint: z.string().max(50, "AI hint too long").optional().nullable(),
 });
 
