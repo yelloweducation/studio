@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button';
 import CourseCard from '@/components/courses/CourseCard';
 import CategoryCard from '@/components/categories/CategoryCard';
 import { type Course, type Category, type LearningPath } from '@/lib/dbUtils'; // Use Prisma types from dbUtils
-import { getCoursesFromDb, getCategoriesFromDb, getLearningPathsFromDb } from '@/lib/dbUtils'; // Use Prisma-based functions
+// REMOVE: import { getCoursesFromDb, getCategoriesFromDb, getLearningPathsFromDb } from '@/lib/dbUtils';
+import { getSearchPageData } from '@/actions/searchPageActions'; // ADDED: Import server action
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { Search, X, LayoutGrid, GraduationCap, Star, Milestone, AlertTriangle, ListFilter, Info } from 'lucide-react';
@@ -101,23 +102,30 @@ function SearchCoursesClientLogic() {
     const loadData = async () => {
       setIsLoadingData(true);
       try {
-        const [coursesFromDb, categoriesFromDb, learningPathsFromDb] = await Promise.all([
-          getCoursesFromDb(),
-          getCategoriesFromDb(),
-          getLearningPathsFromDb()
-        ]);
+        // UPDATED: Call server action
+        const { 
+            courses: coursesFromDb, 
+            categories: categoriesFromDb, 
+            learningPaths: learningPathsFromDb 
+        } = await getSearchPageData();
         
         setAllFetchedCourses(coursesFromDb);
         setFeaturedCourses(coursesFromDb.filter(c => c.isFeatured));
         
-        const uniqueCourseCategories = Array.from(new Set(coursesFromDb.map(c => c.categoryNameCache))).filter(Boolean) as string[];
+        const uniqueCourseCategories = Array.from(new Set(coursesFromDb.map(c => c.categoryNameCache ?? ''))).filter(Boolean) as string[];
         setPopularTopics(uniqueCourseCategories);
         
         setAvailableCategories(categoriesFromDb);
         setLearningPaths(learningPathsFromDb.slice(0, 3)); 
 
       } catch (error) {
-        console.error("Error loading data from database:", error);
+        console.error("Error loading data via server action:", error);
+        // Set states to empty arrays or handle error appropriately
+        setAllFetchedCourses([]);
+        setFeaturedCourses([]);
+        setPopularTopics([]);
+        setAvailableCategories([]);
+        setLearningPaths([]);
       }
       setIsLoadingData(false);
     };
