@@ -1,6 +1,6 @@
 
 import { db } from './firebase';
-import { collection, getDocs, addDoc, doc, setDoc, updateDoc, deleteDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, setDoc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, getDoc } from 'firebase/firestore';
 import type { Category, Course, Video, LearningPath, PaymentSettings, PaymentSubmission } from '@/data/mockData';
 
 // --- Category Functions ---
@@ -54,13 +54,73 @@ export const deleteCategoryFromFirestore = async (categoryId: string): Promise<v
   }
 };
 
-// --- Course Functions (Placeholders - to be implemented) ---
+// --- Course Functions ---
 export const getCoursesFromFirestore = async (): Promise<Course[]> => {
-    // Placeholder: Implement Firestore logic
-    console.warn("getCoursesFromFirestore not yet implemented for Firestore");
+  try {
+    const coursesCol = collection(db, 'courses');
+    // Consider adding orderBy('title') or orderBy('createdAt', 'desc') if needed
+    const q = query(coursesCol, orderBy('title')); 
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Course));
+  } catch (error) {
+    console.error("Error fetching courses from Firestore:", error);
     return [];
+  }
 };
-// ... other course CRUD functions
+
+export const getCourseByIdFromFirestore = async (courseId: string): Promise<Course | null> => {
+  try {
+    const courseDocRef = doc(db, 'courses', courseId);
+    const docSnap = await getDoc(courseDocRef);
+    if (docSnap.exists()) {
+      return { id: docSnap.id, ...docSnap.data() } as Course;
+    }
+    console.log(`No course found with ID: ${courseId}`);
+    return null;
+  } catch (error) {
+    console.error(`Error fetching course ${courseId} from Firestore:`, error);
+    return null;
+  }
+};
+
+export const addCourseToFirestore = async (courseData: Omit<Course, 'id'>): Promise<Course> => {
+  try {
+    const coursesCol = collection(db, 'courses');
+    // Firestore automatically generates an ID if you use addDoc
+    const docRef = await addDoc(coursesCol, {
+      ...courseData,
+      createdAt: serverTimestamp(),
+    });
+    return { id: docRef.id, ...courseData };
+  } catch (error) {
+    console.error("Error adding course to Firestore:", error);
+    throw error;
+  }
+};
+
+export const updateCourseInFirestore = async (courseId: string, courseData: Partial<Omit<Course, 'id'>>): Promise<void> => {
+  try {
+    const courseDocRef = doc(db, 'courses', courseId);
+    await updateDoc(courseDocRef, {
+      ...courseData,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error(`Error updating course ${courseId} in Firestore:`, error);
+    throw error;
+  }
+};
+
+export const deleteCourseFromFirestore = async (courseId: string): Promise<void> => {
+  try {
+    const courseDocRef = doc(db, 'courses', courseId);
+    await deleteDoc(courseDocRef);
+  } catch (error) {
+    console.error(`Error deleting course ${courseId} from Firestore:`, error);
+    throw error;
+  }
+};
+
 
 // --- Video Functions (Placeholders) ---
 export const getVideosFromFirestore = async (): Promise<Video[]> => {
@@ -93,3 +153,4 @@ export const getPaymentSubmissionsFromFirestore = async (): Promise<PaymentSubmi
     return [];
 }
 // ... other payment submission CRUD functions
+

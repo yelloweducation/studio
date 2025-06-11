@@ -2,12 +2,13 @@
 "use client";
 import { useState, useEffect, type FormEvent, type ChangeEvent } from 'react';
 import Image from 'next/image';
+// initialCoursesData is now only for potential seeding, not direct use here
 import { courses_DEPRECATED_USE_FIRESTORE as initialCoursesData, type Course, type Module, type Lesson, type Quiz, type Question, type Option } from '@/data/mockData';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Edit3, Trash2, GraduationCap, BookOpen, Clock, Link as LinkIcon, Image as ImageIcon, Info, Tag, DollarSign, Filter, Star, ListChecks, UsersIcon as TargetAudienceIcon, ShieldCheck, Timer, FileQuestion, CheckSquare, XSquare, Settings2, Eye } from 'lucide-react';
+import { PlusCircle, Edit3, Trash2, GraduationCap, BookOpen, Clock, Link as LinkIcon, Image as ImageIcon, Info, Tag, DollarSign, Filter, Star, ListChecks, UsersIcon as TargetAudienceIcon, ShieldCheck, Timer, FileQuestion, CheckSquare, XSquare, Settings2, Eye, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -25,6 +26,7 @@ import { Label } from '../ui/label';
 import { Checkbox } from '../ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { getCoursesFromFirestore, addCourseToFirestore, updateCourseInFirestore, deleteCourseFromFirestore } from '@/lib/firestoreUtils';
 
 
 const generateQuestionId = () => `q-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
@@ -309,10 +311,12 @@ const CourseForm = ({
   course,
   onSubmit,
   onCancel,
+  isSubmitting,
 }: {
   course?: Course;
-  onSubmit: (data: Course) => void;
+  onSubmit: (data: Omit<Course, 'id'>) => Promise<void>;
   onCancel: () => void;
+  isSubmitting: boolean;
 }) => {
   const [title, setTitle] = useState(course?.title || '');
   const [description, setDescription] = useState(course?.description || '');
@@ -325,7 +329,6 @@ const CourseForm = ({
   const [isFeatured, setIsFeatured] = useState(course?.isFeatured || false);
   const [modules, setModules] = useState<Module[]>(course?.modules || []);
   
-  // Quiz state in CourseForm
   const [quizzes, setQuizzes] = useState<Quiz[]>(course?.quizzes || []);
   const [editingQuizForQuestions, setEditingQuizForQuestions] = useState<Quiz | null>(null);
 
@@ -395,14 +398,13 @@ const CourseForm = ({
 
   const handleSaveQuizWithUpdatedQuestions = (updatedQuiz: Quiz) => {
     setQuizzes(prevQuizzes => prevQuizzes.map(q => q.id === updatedQuiz.id ? updatedQuiz : q));
-    setEditingQuizForQuestions(null); // Close the questions management dialog
+    setEditingQuizForQuestions(null);
   };
 
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const courseData: Course = {
-      id: course?.id || `course${Date.now()}`,
+    const courseData: Omit<Course, 'id'> = {
       title,
       description,
       category,
@@ -419,7 +421,7 @@ const CourseForm = ({
       modules,
       quizzes,
     };
-    onSubmit(courseData);
+    await onSubmit(courseData);
   };
 
   if (editingLesson !== null) {
@@ -452,20 +454,20 @@ const CourseForm = ({
         <div className="space-y-4">
           <div>
             <Label htmlFor="title">Course Title</Label>
-            <Input id="title" value={title} onChange={e => setTitle(e.target.value)} required />
+            <Input id="title" value={title} onChange={e => setTitle(e.target.value)} required disabled={isSubmitting} />
           </div>
           <div>
             <Label htmlFor="description">Description</Label>
-            <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} required />
+            <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} required disabled={isSubmitting} />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="category">Category</Label>
-              <Input id="category" value={category} onChange={e => setCategory(e.target.value)} placeholder="e.g., Web Development" required />
+              <Input id="category" value={category} onChange={e => setCategory(e.target.value)} placeholder="e.g., Web Development" required disabled={isSubmitting} />
             </div>
             <div>
               <Label htmlFor="instructor">Instructor</Label>
-              <Input id="instructor" value={instructor} onChange={e => setInstructor(e.target.value)} required />
+              <Input id="instructor" value={instructor} onChange={e => setInstructor(e.target.value)} required disabled={isSubmitting} />
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -473,19 +475,19 @@ const CourseForm = ({
               <Label htmlFor="price">Price (0 for free)</Label>
               <div className="relative">
                 <DollarSign className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input id="price" type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="e.g., 49.99" className="pl-8" step="0.01" min="0" />
+                <Input id="price" type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="e.g., 49.99" className="pl-8" step="0.01" min="0" disabled={isSubmitting} />
               </div>
             </div>
             <div>
               <Label htmlFor="currency">Currency</Label>
               <div className="relative">
                 <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input id="currency" value={currency} onChange={e => setCurrency(e.target.value)} placeholder="e.g., USD" className="pl-8" />
+                <Input id="currency" value={currency} onChange={e => setCurrency(e.target.value)} placeholder="e.g., USD" className="pl-8" disabled={isSubmitting} />
               </div>
             </div>
           </div>
            <div className="flex items-center space-x-2 pt-2">
-            <Checkbox id="isFeatured" checked={isFeatured} onCheckedChange={(checked) => setIsFeatured(checked as boolean)} />
+            <Checkbox id="isFeatured" checked={isFeatured} onCheckedChange={(checked) => setIsFeatured(checked as boolean)} disabled={isSubmitting} />
             <Label htmlFor="isFeatured" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
               Mark as Featured Course
             </Label>
@@ -493,7 +495,7 @@ const CourseForm = ({
           <div>
             <Label htmlFor="imageUrl">Course Image URL</Label>
             <div className="relative">
-                <Input id="imageUrl" value={imageUrl} onChange={e => setImageUrl(e.target.value)} className="pl-8"/>
+                <Input id="imageUrl" value={imageUrl} onChange={e => setImageUrl(e.target.value)} className="pl-8" disabled={isSubmitting}/>
                 <ImageIcon className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             </div>
             {imageUrl && (
@@ -505,7 +507,7 @@ const CourseForm = ({
           <div>
             <Label htmlFor="dataAiHint">Image AI Hint (for Unsplash search)</Label>
             <div className="relative">
-                <Input id="dataAiHint" value={dataAiHint} onChange={e => setDataAiHint(e.target.value)} placeholder="e.g. technology learning" className="pl-8"/>
+                <Input id="dataAiHint" value={dataAiHint} onChange={e => setDataAiHint(e.target.value)} placeholder="e.g. technology learning" className="pl-8" disabled={isSubmitting}/>
                 <Info className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             </div>
           </div>
@@ -515,19 +517,19 @@ const CourseForm = ({
             <div className="space-y-4">
                 <div>
                     <Label htmlFor="learningObjectives" className="flex items-center"><ListChecks className="mr-2 h-4 w-4 text-muted-foreground"/> Learning Objectives (one per line)</Label>
-                    <Textarea id="learningObjectives" value={learningObjectives} onChange={e => setLearningObjectives(e.target.value)} rows={4} placeholder="Students will be able to...\nUnderstand concept X..."/>
+                    <Textarea id="learningObjectives" value={learningObjectives} onChange={e => setLearningObjectives(e.target.value)} rows={4} placeholder="Students will be able to...\nUnderstand concept X..." disabled={isSubmitting}/>
                 </div>
                 <div>
                     <Label htmlFor="targetAudience" className="flex items-center"><TargetAudienceIcon className="mr-2 h-4 w-4 text-muted-foreground"/> Target Audience</Label>
-                    <Input id="targetAudience" value={targetAudience} onChange={e => setTargetAudience(e.target.value)} placeholder="e.g., Beginners, Advanced Developers"/>
+                    <Input id="targetAudience" value={targetAudience} onChange={e => setTargetAudience(e.target.value)} placeholder="e.g., Beginners, Advanced Developers" disabled={isSubmitting}/>
                 </div>
                 <div>
                     <Label htmlFor="prerequisites" className="flex items-center"><ShieldCheck className="mr-2 h-4 w-4 text-muted-foreground"/> Prerequisites (one per line)</Label>
-                    <Textarea id="prerequisites" value={prerequisites} onChange={e => setPrerequisites(e.target.value)} rows={3} placeholder="Basic HTML knowledge\nFamiliarity with JavaScript..."/>
+                    <Textarea id="prerequisites" value={prerequisites} onChange={e => setPrerequisites(e.target.value)} rows={3} placeholder="Basic HTML knowledge\nFamiliarity with JavaScript..." disabled={isSubmitting}/>
                 </div>
                 <div>
                     <Label htmlFor="estimatedTimeToComplete" className="flex items-center"><Timer className="mr-2 h-4 w-4 text-muted-foreground"/> Estimated Time to Complete</Label>
-                    <Input id="estimatedTimeToComplete" value={estimatedTimeToComplete} onChange={e => setEstimatedTimeToComplete(e.target.value)} placeholder="e.g., Approx. 20 hours"/>
+                    <Input id="estimatedTimeToComplete" value={estimatedTimeToComplete} onChange={e => setEstimatedTimeToComplete(e.target.value)} placeholder="e.g., Approx. 20 hours" disabled={isSubmitting}/>
                 </div>
             </div>
           </div>
@@ -544,6 +546,7 @@ const CourseForm = ({
                       placeholder={`Module ${moduleIndex + 1} Title`}
                       className="text-md font-medium flex-grow mr-2"
                       onClick={(e) => e.stopPropagation()}
+                      disabled={isSubmitting}
                     />
                   </AccordionTrigger>
                   <AccordionContent className="pl-2">
@@ -556,17 +559,17 @@ const CourseForm = ({
                                     <p className="text-xs text-muted-foreground">{lesson.duration} {lesson.embedUrl && <LinkIcon className="inline h-3 w-3 ml-1"/>}</p>
                                 </div>
                                 <div className="flex space-x-1 shrink-0">
-                                    <Button type="button" variant="ghost" size="icon_sm" onClick={() => setEditingLesson({ moduleIndex, lessonIndex, lesson })}>
+                                    <Button type="button" variant="ghost" size="icon_sm" onClick={() => setEditingLesson({ moduleIndex, lessonIndex, lesson })} disabled={isSubmitting}>
                                         <Edit3 className="h-4 w-4" />
                                     </Button>
-                                    <Button type="button" variant="ghost" size="icon_sm" onClick={() => removeLesson(moduleIndex, lessonIndex)}>
+                                    <Button type="button" variant="ghost" size="icon_sm" onClick={() => removeLesson(moduleIndex, lessonIndex)} disabled={isSubmitting}>
                                         <Trash2 className="h-4 w-4 text-destructive" />
                                     </Button>
                                 </div>
                            </div>
                         </Card>
                       ))}
-                      <Button type="button" variant="outline" size="sm" onClick={() => setEditingLesson({ moduleIndex, lesson: { title: '', duration: ''} })}>
+                      <Button type="button" variant="outline" size="sm" onClick={() => setEditingLesson({ moduleIndex, lesson: { title: '', duration: ''} })} disabled={isSubmitting}>
                         <PlusCircle className="mr-2 h-4 w-4" /> Add Lesson
                       </Button>
                     </div>
@@ -577,13 +580,14 @@ const CourseForm = ({
                       size="sm"
                       className="mt-1 text-destructive hover:text-destructive-foreground hover:bg-destructive/90 w-full justify-start text-xs"
                       onClick={() => removeModule(moduleIndex)}
+                      disabled={isSubmitting}
                     >
                       <Trash2 className="mr-2 h-3 w-3" /> Remove Module {moduleIndex + 1}
                     </Button>
                 </AccordionItem>
               ))}
             </Accordion>
-            <Button type="button" onClick={addModule} variant="outline" className="w-full">
+            <Button type="button" onClick={addModule} variant="outline" className="w-full" disabled={isSubmitting}>
               <PlusCircle className="mr-2 h-4 w-4" /> Add Module
             </Button>
           </div>
@@ -597,9 +601,10 @@ const CourseForm = ({
                 value={newQuizTitle}
                 onChange={(e) => setNewQuizTitle(e.target.value)}
                 placeholder="e.g., Mid-term Assessment"
+                disabled={isSubmitting}
               />
               <Label htmlFor="newQuizType">Quiz Type</Label>
-              <Select value={newQuizType} onValueChange={(value: 'practice' | 'graded') => setNewQuizType(value)}>
+              <Select value={newQuizType} onValueChange={(value: 'practice' | 'graded') => setNewQuizType(value)} disabled={isSubmitting}>
                 <SelectTrigger id="newQuizType">
                   <SelectValue placeholder="Select quiz type" />
                 </SelectTrigger>
@@ -608,7 +613,7 @@ const CourseForm = ({
                   <SelectItem value="graded">Graded Quiz</SelectItem>
                 </SelectContent>
               </Select>
-              <Button type="button" onClick={addQuiz} size="sm" className="mt-2">
+              <Button type="button" onClick={addQuiz} size="sm" className="mt-2" disabled={isSubmitting}>
                 <PlusCircle className="mr-2 h-4 w-4" /> Add Quiz
               </Button>
             </div>
@@ -624,10 +629,10 @@ const CourseForm = ({
                         <p className="text-xs text-muted-foreground capitalize">{quizItem.quizType} Quiz ({quizItem.questions?.length || 0} questions)</p>
                       </div>
                       <div className="flex space-x-1 shrink-0">
-                         <Button type="button" variant="ghost" size="icon_sm" title="Manage Questions" onClick={() => setEditingQuizForQuestions(quizItem)}>
+                         <Button type="button" variant="ghost" size="icon_sm" title="Manage Questions" onClick={() => setEditingQuizForQuestions(quizItem)} disabled={isSubmitting}>
                             <Settings2 className="h-4 w-4" />
                           </Button>
-                        <Button type="button" variant="ghost" size="icon_sm" title="Delete Quiz" onClick={() => removeQuiz(quizItem.id)}>
+                        <Button type="button" variant="ghost" size="icon_sm" title="Delete Quiz" onClick={() => removeQuiz(quizItem.id)} disabled={isSubmitting}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>
@@ -642,9 +647,10 @@ const CourseForm = ({
       </ScrollArea>
       <DialogFooter className="pt-6 border-t">
         <DialogClose asChild>
-          <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>Cancel</Button>
         </DialogClose>
-        <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90">
+        <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90" disabled={isSubmitting}>
+           {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           {course?.id ? 'Save Changes' : 'Add Course'}
         </Button>
       </DialogFooter>
@@ -664,50 +670,58 @@ export default function CourseManagement() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [editingCourse, setEditingCourse] = useState<Course | undefined>(undefined);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [isSubmittingForm, setIsSubmittingForm] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    const storedCoursesString = localStorage.getItem('adminCourses');
-    if (storedCoursesString) {
-      try {
-        const parsedCourses = JSON.parse(storedCoursesString) as Course[];
-        setCourses(parsedCourses);
-      } catch (e) {
-        console.error("Failed to parse courses from localStorage", e);
-        setCourses(initialCoursesData);
-      }
-    } else {
-      setCourses(initialCoursesData);
-    }
-    setIsDataLoaded(true);
+    const loadCourses = async () => {
+      setIsLoadingData(true);
+      const firestoreCourses = await getCoursesFromFirestore();
+      setCourses(firestoreCourses);
+      setIsLoadingData(false);
+    };
+    loadCourses();
   }, []);
 
-  useEffect(() => {
-    if (isDataLoaded) {
-      localStorage.setItem('adminCourses', JSON.stringify(courses));
+  const handleAddCourse = async (data: Omit<Course, 'id'>) => {
+    setIsSubmittingForm(true);
+    try {
+      const newCourse = await addCourseToFirestore(data);
+      setCourses(prev => [newCourse, ...prev].sort((a, b) => a.title.localeCompare(b.title)));
+      closeForm();
+      toast({ title: "Course Added", description: `${data.title} has been successfully added.` });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error Adding Course", description: "Could not add course. Please try again." });
+    } finally {
+      setIsSubmittingForm(false);
     }
-  }, [courses, isDataLoaded]);
-
-
-  const handleAddCourse = (data: Course) => {
-    setCourses(prev => [{ ...data, id: data.id || `course${Date.now()}` }, ...prev]);
-    setIsFormOpen(false);
-    setEditingCourse(undefined);
-    toast({ title: "Course Added", description: `${data.title} has been successfully added.` });
   };
 
-  const handleEditCourse = (data: Course) => {
-    setCourses(prev => prev.map(c => c.id === data.id ? data : c));
-    setEditingCourse(undefined);
-    setIsFormOpen(false);
-    toast({ title: "Course Updated", description: `${data.title} has been successfully updated.` });
+  const handleEditCourse = async (data: Omit<Course, 'id'>) => {
+    if (!editingCourse || !editingCourse.id) return;
+    setIsSubmittingForm(true);
+    try {
+      await updateCourseInFirestore(editingCourse.id, data);
+      setCourses(prev => prev.map(c => c.id === editingCourse.id ? { ...c, ...data, id: editingCourse.id! } : c).sort((a,b) => a.title.localeCompare(b.title)));
+      closeForm();
+      toast({ title: "Course Updated", description: `${data.title} has been successfully updated.` });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error Updating Course", description: "Could not update course. Please try again." });
+    } finally {
+      setIsSubmittingForm(false);
+    }
   };
 
-  const handleDeleteCourse = (courseId: string) => {
+  const handleDeleteCourse = async (courseId: string) => {
     const courseToDelete = courses.find(c => c.id === courseId);
-    setCourses(prev => prev.filter(c => c.id !== courseId));
-    toast({ title: "Course Deleted", description: `${courseToDelete?.title ?? 'Course'} has been deleted.`, variant: "destructive" });
+    try {
+      await deleteCourseFromFirestore(courseId);
+      setCourses(prev => prev.filter(c => c.id !== courseId));
+      toast({ title: "Course Deleted", description: `${courseToDelete?.title ?? 'Course'} has been deleted.`, variant: "destructive" });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error Deleting Course", description: "Could not delete course. Please try again." });
+    }
   };
 
   const openForm = (course?: Course) => {
@@ -726,7 +740,7 @@ export default function CourseManagement() {
         <CardTitle className="flex items-center text-xl md:text-2xl font-headline">
           <GraduationCap className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Course Management
         </CardTitle>
-        <CardDescription>Add, edit, or delete courses, modules, lessons, quizzes (with questions & options), set prices, and mark featured courses.</CardDescription>
+        <CardDescription>Add, edit, or delete courses, modules, lessons, quizzes, set prices, and mark featured courses. Data is stored in Firestore.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="mb-6 text-right">
@@ -747,12 +761,18 @@ export default function CourseManagement() {
                 course={editingCourse}
                 onSubmit={editingCourse ? handleEditCourse : handleAddCourse}
                 onCancel={closeForm}
+                isSubmitting={isSubmittingForm}
               />
             </DialogContent>
           </Dialog>
         </div>
 
-        {courses.length > 0 ? (
+        {isLoadingData ? (
+           <div className="flex justify-center items-center py-10">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="ml-2 text-muted-foreground">Loading courses...</p>
+          </div>
+        ) : courses.length > 0 ? (
           <ul className="space-y-4">
             {courses.map(course => (
               <li key={course.id} className="p-3 sm:p-4 border rounded-lg bg-card flex flex-col gap-3 sm:flex-row sm:items-start shadow-sm hover:shadow-md transition-shadow">
@@ -806,7 +826,7 @@ export default function CourseManagement() {
             ))}
           </ul>
         ) : (
-          <p className="text-center text-muted-foreground py-4">No courses available. Add some!</p>
+          <p className="text-center text-muted-foreground py-4">No courses found in Firestore. Add some!</p>
         )}
       </CardContent>
     </Card>
