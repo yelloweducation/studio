@@ -17,24 +17,34 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
 
   useEffect(() => {
     if (loading) {
-      return; 
-    }
-
-    if (!isAuthenticated) {
-      router.push('/login?redirect=' + window.location.pathname);
+      // If auth state is still loading, don't do anything.
+      // The component will show its own loading skeleton or null.
       return;
     }
 
+    // Auth state is no longer loading.
+    if (!isAuthenticated) {
+      // User is not authenticated, redirect to login.
+      // Use router.asPath to get the current client-side path for the redirect.
+      const currentClientPath = router.asPath;
+      router.push(`/login?redirect=${encodeURIComponent(currentClientPath)}`);
+      return;
+    }
+
+    // User is authenticated, check roles.
     if (allowedRoles && role && !allowedRoles.includes(role)) {
-      // If user's role is not allowed, redirect to their default dashboard or home
+      // User's role is not allowed for this route.
+      // Redirect to their default dashboard or home.
       if (role === 'admin') {
         router.push('/dashboard/admin');
       } else if (role === 'student') {
         router.push('/dashboard/student');
       } else {
-        router.push('/'); // Fallback, should not happen if role is set
+        // Fallback for unexpected roles or if no specific dashboard.
+        router.push('/');
       }
     }
+    // If authenticated and role is allowed (or no specific roles required), rendering children.
   }, [isAuthenticated, role, loading, router, allowedRoles]);
 
   if (loading) {
@@ -50,10 +60,10 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
     );
   }
 
+  // If not loading but still not authenticated (or role mismatch),
+  // useEffect will handle redirection. Return null to prevent rendering children prematurely.
   if (!isAuthenticated || (allowedRoles && role && !allowedRoles.includes(role))) {
-    // This will be briefly shown before redirection, or if redirection logic fails
-    // It's better to show skeleton during loading, and let useEffect handle redirection
-    return null; 
+    return null;
   }
 
   return <>{children}</>;
