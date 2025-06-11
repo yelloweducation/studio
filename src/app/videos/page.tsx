@@ -5,7 +5,7 @@ import { type Video } from '@/data/mockData';
 import VideoCard from '@/components/videos/VideoCard';
 import { Loader2 } from 'lucide-react';
 import VideoPageHeader from '@/components/layout/VideoPageHeader';
-import { getVideosFromFirestore } from '@/lib/firestoreUtils'; // Import Firestore utility
+import { getVideosFromDb } from '@/lib/dbUtils'; // Updated to use dbUtils
 
 export default function VideosPage() {
   const [allFeedVideos, setAllFeedVideos] = useState<Video[]>([]);
@@ -14,7 +14,7 @@ export default function VideosPage() {
   useEffect(() => {
     const fetchVideos = async () => {
       setIsLoadingFeedVideos(true);
-      const videosFromDb = await getVideosFromFirestore();
+      const videosFromDb = await getVideosFromDb(); // Use Prisma-based function
       setAllFeedVideos(videosFromDb);
       setIsLoadingFeedVideos(false);
     };

@@ -5,8 +5,9 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image'; 
 import { useAuth } from '@/hooks/useAuth';
-import { type Course, type PaymentSubmission, type User, type PaymentSettings, initialPaymentSettings } from '@/data/mockData';
-import { getCourseByIdFromFirestore, getPaymentSettingsFromFirestore, addPaymentSubmissionToFirestore } from '@/lib/firestoreUtils';
+import { type Course, type PaymentSubmission, type User, type PaymentSettings } from '@/lib/dbUtils'; // Use Prisma types from dbUtils
+import { initialPaymentSettings as mockDefaultPaymentSettings } from '@/data/mockData'; // For default structure
+import { getCourseByIdFromDb, getPaymentSettingsFromDb, addPaymentSubmissionToDb } from '@/lib/dbUtils'; // Use Prisma-based functions
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -123,11 +124,11 @@ export default function CheckoutPage() {
       setIsLoadingCourse(true);
 
       const [settingsFromDb, courseFromDb] = await Promise.all([
-        getPaymentSettingsFromFirestore(),
-        getCourseByIdFromFirestore(courseId)
+        getPaymentSettingsFromDb(), // Use Prisma-based function
+        getCourseByIdFromDb(courseId) // Use Prisma-based function
       ]);
 
-      setPaymentSettings(settingsFromDb || initialPaymentSettings); // Use initial if null
+      setPaymentSettings(settingsFromDb || (mockDefaultPaymentSettings as PaymentSettings)); // Use default if null
       setIsLoadingSettings(false);
 
       setCurrentCourse(courseFromDb);
@@ -178,9 +179,7 @@ export default function CheckoutPage() {
 
     setIsSubmitting(true);
 
-    // In a real app, upload screenshotFile to Firebase Storage or similar, then use the URL.
-    // For this prototype, we're using the base64 data URI as the screenshotUrl.
-    const submissionData = {
+    const submissionData: Omit<PaymentSubmission, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'submittedAt' | 'reviewedAt' | 'adminNotes' | 'user' | 'course'> = { // Prisma type expects relations to be connect objects or IDs
       userId: user.id,
       courseId: currentCourse.id,
       amount: currentCourse.price,
@@ -189,11 +188,11 @@ export default function CheckoutPage() {
     };
 
     try {
-      await addPaymentSubmissionToFirestore(submissionData);
+      await addPaymentSubmissionToDb(submissionData); // Use Prisma-based function
       toast({ title: t.paymentSubmitted, description: t.paymentSubmittedDesc });
       router.push(`/courses/${courseId}`);
     } catch (error) {
-      console.error("Error saving payment submission to Firestore:", error);
+      console.error("Error saving payment submission:", error);
       toast({ variant: "destructive", title: t.submissionFailed, description: t.submissionFailedDesc });
     } finally {
       setIsSubmitting(false);

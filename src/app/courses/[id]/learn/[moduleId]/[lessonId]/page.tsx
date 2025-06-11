@@ -3,8 +3,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { type Course, type Module, type Lesson, type Enrollment } from '@/data/mockData';
-import { getCourseByIdFromFirestore, getEnrollmentForUserAndCourse, updateEnrollmentProgressInFirestore, createEnrollmentInFirestore } from '@/lib/firestoreUtils';
+import { type Course, type Module, type Lesson, type Enrollment } from '@/lib/dbUtils'; // Use Prisma types from dbUtils
+import { getCourseByIdFromDb, getEnrollmentForUserAndCourseFromDb, updateEnrollmentProgressInDb, createEnrollmentInDb } from '@/lib/dbUtils'; // Use Prisma-based functions
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,7 +30,7 @@ const lessonViewerTranslations = {
     previous: "Previous",
     next: "Next",
     finishModule: "Finish Module",
-    finishCourse: "Finish Course & Mark as Complete", // New
+    finishCourse: "Finish Course & Mark as Complete", 
     enrollmentCreated: "Enrollment started!",
     progressUpdated: "Progress updated!"
   },
@@ -47,7 +47,7 @@ const lessonViewerTranslations = {
     previous: "ယခင်",
     next: "နောက်တစ်ခု",
     finishModule: "အခန်းပြီးပါပြီ",
-    finishCourse: "သင်တန်းပြီးဆုံးကြောင်း မှတ်သားပါ", // New
+    finishCourse: "သင်တန်းပြီးဆုံးကြောင်း မှတ်သားပါ", 
     enrollmentCreated: "စာရင်းသွင်းခြင်း စတင်ပါပြီ!",
     progressUpdated: "တိုးတက်မှု အပ်ဒိတ်လုပ်ပြီးပါပြီ!"
   }
@@ -69,8 +69,8 @@ export default function LessonViewerPage() {
   const [currentCourse, setCurrentCourse] = useState<Course | null>(null);
   const [currentEnrollment, setCurrentEnrollment] = useState<Enrollment | null>(null);
   
-  const currentModule = useMemo(() => currentCourse?.modules.find(m => m.id === moduleId), [currentCourse, moduleId]);
-  const currentLesson = useMemo(() => currentModule?.lessons.find(l => l.id === lessonId), [currentModule, lessonId]);
+  const currentModule = useMemo(() => currentCourse?.modules?.find(m => m.id === moduleId), [currentCourse, moduleId]);
+  const currentLesson = useMemo(() => currentModule?.lessons?.find(l => l.id === lessonId), [currentModule, lessonId]);
 
   const { previousLesson, nextLesson, moduleLessons, lessonIndex, totalLessonsInModule } = useMemo(() => {
     if (!currentModule || !currentLesson) return { moduleLessons: [], lessonIndex: -1, totalLessonsInModule: 0 };
@@ -92,16 +92,14 @@ export default function LessonViewerPage() {
         setIsLoading(false);
         return;
       }
-      const courseData = await getCourseByIdFromFirestore(courseId);
+      const courseData = await getCourseByIdFromDb(courseId); // Use Prisma-based function
       setCurrentCourse(courseData);
 
       if (user && courseData) {
-        let enrollment = await getEnrollmentForUserAndCourse(user.id, courseId);
+        let enrollment = await getEnrollmentForUserAndCourseFromDb(user.id, courseId); // Use Prisma-based function
         if (!enrollment) {
-          // Auto-enroll if not enrolled (common for free courses or if access is granted)
-          // Or this could be handled on the course detail page before navigating here
-          if (courseData.price === 0 || courseData.price === undefined) { // Example: auto-enroll for free courses
-             enrollment = await createEnrollmentInFirestore(user.id, courseId);
+          if (courseData.price === 0 || courseData.price === null) { 
+             enrollment = await createEnrollmentInDb(user.id, courseId); // Use Prisma-based function
              if (enrollment) toast({ title: t.enrollmentCreated });
           }
         }
@@ -116,17 +114,13 @@ export default function LessonViewerPage() {
   const markLessonCompleted = async () => {
     if (!user || !currentEnrollment || !currentCourse || !currentModule || !currentLesson) return;
 
-    const totalLessonsInCourse = currentCourse.modules.reduce((acc, mod) => acc + (mod.lessons?.length || 0), 0);
-    if (totalLessonsInCourse === 0) return; // Avoid division by zero
+    const totalLessonsInCourse = currentCourse.modules?.reduce((acc, mod) => acc + (mod.lessons?.length || 0), 0) || 0;
+    if (totalLessonsInCourse === 0) return; 
 
-    // Calculate overall progress based on number of lessons completed
-    // This is a simplified progress calculation. A more robust one would track individual lesson completion.
-    // For now, we'll assume completing a lesson means progress towards the next distinct lesson.
-    // Let's find the global index of the current lesson across all modules.
     let globalLessonIndex = 0;
     let lessonFound = false;
-    for (const mod of currentCourse.modules) {
-        for (const les of mod.lessons) {
+    for (const mod of currentCourse.modules || []) {
+        for (const les of mod.lessons || []) {
             if (les.id === currentLesson.id) {
                 lessonFound = true;
                 break;
@@ -136,19 +130,17 @@ export default function LessonViewerPage() {
         if (lessonFound) break;
     }
     
-    // If current lesson is the last lesson in the course, progress is 100%.
-    // Otherwise, progress is based on the next lesson's position.
     let newProgress = 0;
-    if (globalLessonIndex >= totalLessonsInCourse -1) { // Current lesson is the last one
+    if (globalLessonIndex >= totalLessonsInCourse -1) { 
         newProgress = 100;
     } else {
         newProgress = Math.round(((globalLessonIndex + 1) / totalLessonsInCourse) * 100);
     }
-    newProgress = Math.min(newProgress, 100); // Cap at 100
+    newProgress = Math.min(newProgress, 100); 
 
     if (newProgress > (currentEnrollment.progress || 0)) {
         try {
-            await updateEnrollmentProgressInFirestore(currentEnrollment.id, newProgress);
+            await updateEnrollmentProgressInDb(currentEnrollment.id, newProgress); // Use Prisma-based function
             setCurrentEnrollment(prev => prev ? { ...prev, progress: newProgress } : null);
             if (newProgress < 100) {
                 // toast({ title: t.progressUpdated, description: `Progress: ${newProgress}%` });
@@ -165,7 +157,7 @@ export default function LessonViewerPage() {
       markLessonCompleted();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentLesson, isAuthenticated]); // Rerun when lesson changes and user is authenticated
+  }, [currentLesson, isAuthenticated]); 
 
 
   const handleFinishCourse = async () => {
@@ -175,7 +167,7 @@ export default function LessonViewerPage() {
     }
     try {
         if (currentEnrollment.progress < 100) {
-            await updateEnrollmentProgressInFirestore(currentEnrollment.id, 100);
+            await updateEnrollmentProgressInDb(currentEnrollment.id, 100); // Use Prisma-based function
             setCurrentEnrollment(prev => prev ? { ...prev, progress: 100 } : null);
         }
         toast({ title: "Course Completed!", description: "Congratulations on finishing the course." });
@@ -316,8 +308,6 @@ export default function LessonViewerPage() {
                         {lesson.id === lessonId ? (
                           <CheckCircle className="mr-2 h-4 w-4 text-primary flex-shrink-0" />
                         ) : (
-                          // Check if this lesson is 'completed' based on overall progress (simple check)
-                          // A more accurate check would involve individual lesson completion status in Firestore
                           currentEnrollment && currentEnrollment.progress >= (((moduleLessons.slice(0, idx + 1).length) / totalLessonsInModule) * 100) ?
                           <CheckCircle className="mr-2 h-4 w-4 text-green-500 flex-shrink-0" />
                           :

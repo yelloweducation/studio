@@ -4,15 +4,15 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { type LearningPath, type Course } from '@/data/mockData';
-import { getLearningPathsFromFirestore, getCoursesFromFirestore } from '@/lib/firestoreUtils'; // Import Firestore utils
+import { type LearningPath, type Course } from '@/lib/dbUtils'; // Use Prisma types from dbUtils
+import { getLearningPathsFromDb, getCoursesFromDb } from '@/lib/dbUtils'; // Use Prisma-based functions
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronLeft, AlertTriangle, Home, BookOpenCheck, BookMarked, ArrowRight, Loader2 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 
-const isValidLucideIcon = (iconName: string | undefined): iconName is keyof typeof LucideIcons => {
+const isValidLucideIcon = (iconName: string | undefined | null): iconName is keyof typeof LucideIcons => {
   return typeof iconName === 'string' && iconName in LucideIcons;
 };
 
@@ -36,21 +36,22 @@ export default function LearningPathDetailClient({ pathId }: LearningPathDetailC
       setIsLoading(true);
       
       try {
-        // Fetch all learning paths and find the current one
-        const allPaths = await getLearningPathsFromFirestore();
+        const allPaths = await getLearningPathsFromDb(); // Use Prisma-based function
         const currentPath = allPaths.find(p => p.id === pathId);
         setLearningPath(currentPath || null);
 
-        if (currentPath && currentPath.courseIds.length > 0) {
-          // Fetch all courses and filter by IDs in the current path
-          const allCourses = await getCoursesFromFirestore();
-          const coursesForPath = allCourses.filter(course => currentPath.courseIds.includes(course.id));
+        if (currentPath && currentPath.courses && currentPath.courses.length > 0) {
+          // Prisma relation 'courses' on LearningPath should be LearningPathCourse[]
+          // We need to extract the actual Course objects
+          const courseIds = currentPath.courses.map(lpc => lpc.courseId);
+          const allCourses = await getCoursesFromDb(); // Fetch all courses to filter from
+          const coursesForPath = allCourses.filter(course => courseIds.includes(course.id));
           setPathCourses(coursesForPath);
         } else {
           setPathCourses([]);
         }
       } catch (error) {
-        console.error("Error fetching learning path data from Firestore:", error);
+        console.error("Error fetching learning path data:", error);
         setLearningPath(null);
         setPathCourses([]);
       }
@@ -62,12 +63,12 @@ export default function LearningPathDetailClient({ pathId }: LearningPathDetailC
   if (isLoading) {
     return (
       <div className="max-w-3xl mx-auto py-8 space-y-6">
-        <Skeleton className="h-8 w-1/4 mb-4" /> {/* Back button */}
+        <Skeleton className="h-8 w-1/4 mb-4" /> 
         <Card className="shadow-xl">
           <CardHeader>
-            <Skeleton className="h-10 w-3/4 mb-2" /> {/* Path Title */}
-            <Skeleton className="h-20 w-full" /> {/* Path Image/Icon Area */}
-            <Skeleton className="h-6 w-1/2 mt-2" /> {/* Path Description Line 1 */}
+            <Skeleton className="h-10 w-3/4 mb-2" /> 
+            <Skeleton className="h-20 w-full" /> 
+            <Skeleton className="h-6 w-1/2 mt-2" /> 
           </CardHeader>
           <CardContent className="py-10">
             <div className="flex justify-center items-center">
@@ -105,7 +106,7 @@ export default function LearningPathDetailClient({ pathId }: LearningPathDetailC
   }
 
   const PathIconComponent = learningPath.icon && isValidLucideIcon(learningPath.icon)
-    ? LucideIcons[learningPath.icon] as React.ElementType
+    ? LucideIcons[learningPath.icon as keyof typeof LucideIcons] as React.ElementType
     : BookOpenCheck;
 
   return (
@@ -154,7 +155,7 @@ export default function LearningPathDetailClient({ pathId }: LearningPathDetailC
                         )}
                         <div>
                             <h4 className="font-semibold text-md group-hover:text-primary transition-colors">{course.title}</h4>
-                            <p className="text-xs text-muted-foreground">{course.category} &bull; {course.instructor}</p>
+                            <p className="text-xs text-muted-foreground">{course.categoryNameCache} &bull; {course.instructor}</p>
                         </div>
                       </div>
                       <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors group-hover:translate-x-1"/>

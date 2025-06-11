@@ -20,7 +20,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
-import { getVideosFromFirestore, addVideoToFirestore, updateVideoInFirestore, deleteVideoFromFirestore } from '@/lib/firestoreUtils';
+import { getVideosFromDb, addVideoToDb, updateVideoInDb, deleteVideoFromDb } from '@/lib/dbUtils'; // Updated to use dbUtils
 import { Label } from '../ui/label';
 
 const VideoForm = ({
@@ -30,7 +30,7 @@ const VideoForm = ({
   isSubmitting
 }: {
   video?: Video,
-  onSubmit: (data: Omit<Video, 'id'>) => Promise<void>,
+  onSubmit: (data: Omit<Video, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>, // Prisma types don't always have createdAt/updatedAt on input
   onCancel: () => void,
   isSubmitting: boolean
 }) => {
@@ -42,13 +42,13 @@ const VideoForm = ({
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const videoData: Omit<Video, 'id'> = {
+    const videoData: Omit<Video, 'id' | 'createdAt' | 'updatedAt'> = {
       title,
       description,
       thumbnailUrl,
       embedUrl,
       dataAiHint,
-      videoUrl: video?.videoUrl || '', 
+      videoUrl: video?.videoUrl || '', // Keep if still relevant, though embedUrl is primary
     };
     await onSubmit(videoData);
   };
@@ -120,18 +120,18 @@ export default function VideoManagement() {
   useEffect(() => {
     const loadVideos = async () => {
       setIsLoadingData(true);
-      const firestoreVideos = await getVideosFromFirestore();
-      setVideos(firestoreVideos);
+      const dbVideos = await getVideosFromDb(); // Use Prisma-based function
+      setVideos(dbVideos);
       setIsLoadingData(false);
     };
     loadVideos();
   }, []);
 
-  const handleAddVideo = async (data: Omit<Video, 'id'>) => {
+  const handleAddVideo = async (data: Omit<Video, 'id' | 'createdAt' | 'updatedAt'>) => {
     setIsSubmittingForm(true);
     try {
-      const newVideo = await addVideoToFirestore(data);
-      setVideos(prev => [newVideo, ...prev].sort((a, b) => (b.createdAt as any) - (a.createdAt as any) || 0));
+      const newVideo = await addVideoToDb(data); // Use Prisma-based function
+      setVideos(prev => [newVideo, ...prev].sort((a, b) => (b.createdAt as any) - (a.createdAt as any) || 0)); // Prisma returns Date objects for createdAt
       closeForm();
       toast({ title: "Video Added", description: `${data.title} has been successfully added.` });
     } catch (error) {
@@ -141,12 +141,12 @@ export default function VideoManagement() {
     }
   };
 
-  const handleEditVideo = async (data: Omit<Video, 'id'>) => {
+  const handleEditVideo = async (data: Omit<Video, 'id' | 'createdAt' | 'updatedAt'>) => {
     if (!editingVideo || !editingVideo.id) return;
     setIsSubmittingForm(true);
     try {
-      await updateVideoInFirestore(editingVideo.id, data);
-      setVideos(prev => prev.map(v => v.id === editingVideo.id ? { ...v, ...data, id: editingVideo.id! } : v).sort((a,b) => (b.createdAt as any) - (a.createdAt as any) || 0));
+      const updatedVideo = await updateVideoInDb(editingVideo.id, data); // Use Prisma-based function
+      setVideos(prev => prev.map(v => v.id === editingVideo.id ? updatedVideo : v).sort((a,b) => (b.createdAt as any) - (a.createdAt as any) || 0));
       closeForm();
       toast({ title: "Video Updated", description: `${data.title} has been successfully updated.` });
     } catch (error) {
@@ -159,7 +159,7 @@ export default function VideoManagement() {
   const handleDeleteVideo = async (videoId: string) => {
     const videoToDelete = videos.find(v => v.id === videoId);
     try {
-      await deleteVideoFromFirestore(videoId);
+      await deleteVideoFromDb(videoId); // Use Prisma-based function
       setVideos(prev => prev.filter(v => v.id !== videoId));
       toast({ title: "Video Deleted", description: `${videoToDelete?.title} has been deleted.`, variant: "destructive" });
     } catch (error) {
@@ -183,7 +183,7 @@ export default function VideoManagement() {
         <CardTitle className="flex items-center text-xl md:text-2xl font-headline">
           <VideoIcon className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Video Management
         </CardTitle>
-        <CardDescription>Add, edit, or delete videos for the Reels feed using Firestore. Provide YouTube or TikTok URLs for embedding.</CardDescription>
+        <CardDescription>Add, edit, or delete videos for the Reels feed using your Neon/Postgres database via Prisma. Provide YouTube or TikTok URLs for embedding.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="mb-6 text-right">
@@ -261,7 +261,7 @@ export default function VideoManagement() {
             ))}
           </ul>
         ) : (
-          <p className="text-center text-muted-foreground py-4">No videos found in Firestore. Add some!</p>
+          <p className="text-center text-muted-foreground py-4">No videos found in your database. Add some!</p>
         )}
       </CardContent>
     </Card>

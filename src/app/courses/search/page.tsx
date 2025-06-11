@@ -8,8 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import CourseCard from '@/components/courses/CourseCard';
 import CategoryCard from '@/components/categories/CategoryCard';
-import { type Course, type Category, type LearningPath } from '@/data/mockData';
-import { getCoursesFromFirestore, getCategoriesFromFirestore, getLearningPathsFromFirestore } from '@/lib/firestoreUtils'; // Firestore imports
+import { type Course, type Category, type LearningPath } from '@/lib/dbUtils'; // Use Prisma types from dbUtils
+import { getCoursesFromDb, getCategoriesFromDb, getLearningPathsFromDb } from '@/lib/dbUtils'; // Use Prisma-based functions
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { Search, X, LayoutGrid, GraduationCap, Star, Milestone, AlertTriangle, ListFilter, Info } from 'lucide-react';
@@ -19,7 +19,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import * as LucideIcons from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-const isValidLucideIcon = (iconName: string | undefined): iconName is keyof typeof LucideIcons => {
+const isValidLucideIcon = (iconName: string | undefined | null): iconName is keyof typeof LucideIcons => {
   return typeof iconName === 'string' && iconName in LucideIcons;
 };
 
@@ -102,22 +102,22 @@ function SearchCoursesClientLogic() {
       setIsLoadingData(true);
       try {
         const [coursesFromDb, categoriesFromDb, learningPathsFromDb] = await Promise.all([
-          getCoursesFromFirestore(),
-          getCategoriesFromFirestore(),
-          getLearningPathsFromFirestore()
+          getCoursesFromDb(),
+          getCategoriesFromDb(),
+          getLearningPathsFromDb()
         ]);
         
         setAllFetchedCourses(coursesFromDb);
         setFeaturedCourses(coursesFromDb.filter(c => c.isFeatured));
         
-        const uniqueCourseCategories = Array.from(new Set(coursesFromDb.map(c => c.category))).filter(Boolean) as string[];
+        const uniqueCourseCategories = Array.from(new Set(coursesFromDb.map(c => c.categoryNameCache))).filter(Boolean) as string[];
         setPopularTopics(uniqueCourseCategories);
         
         setAvailableCategories(categoriesFromDb);
         setLearningPaths(learningPathsFromDb.slice(0, 3)); 
 
       } catch (error) {
-        console.error("Error loading data from Firestore:", error);
+        console.error("Error loading data from database:", error);
       }
       setIsLoadingData(false);
     };
@@ -143,7 +143,7 @@ function SearchCoursesClientLogic() {
     }
 
     if (selectedCategory && selectedCategory !== 'all') {
-      filtered = filtered.filter(course => course.category === selectedCategory);
+      filtered = filtered.filter(course => course.categoryNameCache === selectedCategory);
     }
 
     setDisplayedCourses(filtered);
@@ -336,7 +336,7 @@ function SearchCoursesClientLogic() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {learningPaths.map(path => {
-                const IconComponent = path.icon && isValidLucideIcon(path.icon) ? LucideIcons[path.icon] as React.ElementType : Milestone;
+                const IconComponent = path.icon && isValidLucideIcon(path.icon) ? LucideIcons[path.icon as keyof typeof LucideIcons] as React.ElementType : Milestone;
                 return (
                     <Link key={path.id} href={`/learning-paths/${path.id}`} passHref>
                         <Card className="group h-full flex flex-col shadow-lg hover:shadow-xl transition-shadow duration-150 cursor-pointer overflow-hidden">

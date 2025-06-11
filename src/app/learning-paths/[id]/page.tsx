@@ -1,7 +1,8 @@
 
 // This file is now a Server Component
 import type { Metadata, ResolvingMetadata } from 'next';
-import { initialLearningPaths, courses as defaultMockCourses } from '@/data/mockData';
+// Import the Prisma version of getLearningPathsFromDb and getCoursesFromDb
+import { getLearningPathsFromDb, getCoursesFromDb } from '@/lib/dbUtils';
 import LearningPathDetailClient from './learning-path-detail-client'; // Import the new client component
 
 type Props = {
@@ -13,9 +14,9 @@ export async function generateMetadata(
   parent: ResolvingMetadata
 ): Promise<Metadata> {
   const id = params.id;
-  // Note: In a real app, fetch this from your CMS or database
-  // For generateMetadata, we can't use localStorage, so we rely on the initial mock data.
-  const learningPath = initialLearningPaths.find((p) => p.id === id);
+  // Fetch all learning paths and find the current one using Prisma
+  const allPaths = await getLearningPathsFromDb();
+  const learningPath = allPaths.find((p) => p.id === id);
 
   if (!learningPath) {
     return {
@@ -24,7 +25,11 @@ export async function generateMetadata(
     }
   }
 
-  const pathCourses = defaultMockCourses.filter(course => learningPath.courseIds.includes(course.id));
+  // Fetch all courses and filter by IDs in the current path using Prisma
+  const allCourses = await getCoursesFromDb();
+  // The 'courses' relation on LearningPath should contain LearningPathCourse objects
+  const pathCourseIds = learningPath.courses?.map(lpc => lpc.courseId) || [];
+  const pathCourses = allCourses.filter(course => pathCourseIds.includes(course.id));
   const courseTitles = pathCourses.map(c => c.title).slice(0, 3); // Get first 3 course titles for description
 
   const previousImages = (await parent).openGraph?.images || []

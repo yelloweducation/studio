@@ -7,8 +7,8 @@ import { BookUser, BookMarked, History, GraduationCap, Loader2 } from "lucide-re
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import CourseCard from "@/components/courses/CourseCard"; 
-import { type Course, type Enrollment } from "@/data/mockData";
-import { getEnrollmentsByUserId, getCourseByIdFromFirestore } from "@/lib/firestoreUtils";
+import { type Course, type Enrollment } from "@/lib/dbUtils"; // Use Prisma types from dbUtils
+import { getEnrollmentsByUserIdFromDb, getCourseByIdFromDb } from "@/lib/dbUtils"; // Use Prisma-based functions
 import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -48,15 +48,13 @@ export default function StudentDashboardPage() {
       if (user) {
         setIsLoading(true);
         try {
-          const userEnrollments = await getEnrollmentsByUserId(user.id);
-          const coursesDataPromises = userEnrollments.map(async (enrollment) => {
-            return await getCourseByIdFromFirestore(enrollment.courseId);
-          });
-          const coursesResults = await Promise.all(coursesDataPromises);
-          setEnrolledCoursesDetails(coursesResults.filter(course => course !== null) as Course[]);
+          // getEnrollmentsByUserIdFromDb should include course data if Prisma schema is set up with include
+          const userEnrollments = await getEnrollmentsByUserIdFromDb(user.id); 
+          const coursesData = userEnrollments.map(enrollment => enrollment.course).filter(course => course !== null) as Course[];
+          setEnrolledCoursesDetails(coursesData);
         } catch (error) {
-          console.error("Error fetching enrolled courses from Firestore:", error);
-          setEnrolledCoursesDetails([]); // Set to empty on error
+          console.error("Error fetching enrolled courses from database:", error);
+          setEnrolledCoursesDetails([]); 
         }
         setIsLoading(false);
       } else {

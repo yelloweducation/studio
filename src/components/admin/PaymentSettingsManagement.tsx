@@ -1,7 +1,8 @@
 
 "use client";
 import React, { useState, useEffect, type FormEvent } from 'react';
-import { initialPaymentSettings, type PaymentSettings } from '@/data/mockData';
+import { type PaymentSettings } from '@/lib/dbUtils'; // Use Prisma type from dbUtils
+import { initialPaymentSettings as mockDefaultSettings } from '@/data/mockData'; // Keep for default structure
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,10 +10,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Label } from '@/components/ui/label';
 import { Settings, Save, Banknote, UserCircle, ClipboardList, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getPaymentSettingsFromFirestore, savePaymentSettingsToFirestore } from '@/lib/firestoreUtils';
+import { getPaymentSettingsFromDb, savePaymentSettingsToDb } from '@/lib/dbUtils'; // Use Prisma-based functions
 
 export default function PaymentSettingsManagement() {
-  const [settings, setSettings] = useState<PaymentSettings>(initialPaymentSettings);
+  const [settings, setSettings] = useState<PaymentSettings>(mockDefaultSettings as PaymentSettings); // Cast for initial state
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
@@ -20,11 +21,11 @@ export default function PaymentSettingsManagement() {
   useEffect(() => {
     const loadSettings = async () => {
       setIsLoading(true);
-      const firestoreSettings = await getPaymentSettingsFromFirestore();
-      if (firestoreSettings) {
-        setSettings(firestoreSettings);
+      const dbSettings = await getPaymentSettingsFromDb(); // Use Prisma-based function
+      if (dbSettings) {
+        setSettings(dbSettings);
       } else {
-        setSettings(initialPaymentSettings); // Fallback or if no settings exist yet
+        setSettings(mockDefaultSettings as PaymentSettings); // Fallback if no settings exist yet
       }
       setIsLoading(false);
     };
@@ -33,17 +34,24 @@ export default function PaymentSettingsManagement() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setSettings(prev => ({ ...prev, [name]: value }));
+    setSettings(prev => ({ ...prev, [name]: value === '' ? null : value } as PaymentSettings)); // Allow null for optional fields
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
     try {
-      await savePaymentSettingsToFirestore(settings);
+      // The `id` field is managed by Prisma (upsert uses 'global') and `updatedAt` is auto by Prisma
+      const dataToSave: Omit<PaymentSettings, 'id' | 'updatedAt'> = {
+          bankName: settings.bankName || null,
+          accountNumber: settings.accountNumber || null,
+          accountHolderName: settings.accountHolderName || null,
+          additionalInstructions: settings.additionalInstructions || null,
+      };
+      await savePaymentSettingsToDb(dataToSave); // Use Prisma-based function
       toast({
         title: "Settings Saved",
-        description: "Your payment configuration has been updated in Firestore.",
+        description: "Your payment configuration has been updated.",
       });
     } catch (error) {
       toast({
@@ -63,7 +71,7 @@ export default function PaymentSettingsManagement() {
           <CardTitle className="flex items-center text-xl md:text-2xl font-headline">
             <Settings className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Payment Configuration
           </CardTitle>
-          <CardDescription>Loading payment settings from Firestore...</CardDescription>
+          <CardDescription>Loading payment settings from your database...</CardDescription>
         </CardHeader>
         <CardContent className="py-10">
           <div className="flex justify-center items-center">
@@ -81,7 +89,7 @@ export default function PaymentSettingsManagement() {
           <Settings className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Payment Configuration
         </CardTitle>
         <CardDescription>
-          Set up the bank details and instructions for manual payments. This data is stored in Firestore.
+          Set up the bank details and instructions for manual payments. This data is stored in your Neon/Postgres database via Prisma.
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>

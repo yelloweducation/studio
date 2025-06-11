@@ -1,8 +1,10 @@
+
 // This file is now a Server Component
 import React from 'react';
 import type { Metadata, ResolvingMetadata } from 'next';
-import { courses as allMockCourses } from '@/data/mockData'; // Renamed for clarity in this file
-import CourseDetailClient from './course-detail-client'; // Import the new client component
+// Import the Prisma version of getCourseByIdFromDb to fetch data for metadata
+import { getCourseByIdFromDb } from '@/lib/dbUtils';
+import CourseDetailClient from './course-detail-client'; // Import the client component
 
 type Props = {
   params: { id: string }
@@ -13,9 +15,8 @@ export async function generateMetadata(
   parent: ResolvingMetadata
 ): Promise<Metadata> {
   const id = params.id;
-  // generateMetadata runs on the server, so it uses the initial mockData.
-  // In a real app, this would fetch data from a DB/CMS.
-  const course = allMockCourses.find((c) => c.id === id);
+  // Fetch course data using Prisma for metadata generation
+  const course = await getCourseByIdFromDb(id);
 
   if (!course) {
     return {
@@ -28,11 +29,11 @@ export async function generateMetadata(
 
   return {
     title: `${course.title} | Yellow Institute`,
-    description: `Learn about ${course.title}, a course in ${course.category} taught by ${course.instructor}. ${course.description.substring(0, 150)}...`,
-    keywords: [course.title, course.category, course.instructor || 'education', 'course', 'learning', 'Yellow Institute'],
+    description: `Learn about ${course.title}, a course in ${course.categoryNameCache || 'General'} taught by ${course.instructor || 'Yellow Institute'}. ${course.description?.substring(0, 150)}...`,
+    keywords: [course.title, course.categoryNameCache || 'education', course.instructor || 'education', 'course', 'learning', 'Yellow Institute'],
     openGraph: {
       title: course.title,
-      description: course.description.substring(0, 120) + '...',
+      description: course.description?.substring(0, 120) + '...',
       images: course.imageUrl ? [course.imageUrl, ...previousImages] : previousImages,
       type: 'article', 
       authors: course.instructor ? [course.instructor] : [],

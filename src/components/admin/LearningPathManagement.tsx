@@ -2,7 +2,7 @@
 "use client";
 import { useState, useEffect, type FormEvent } from 'react';
 import Image from 'next/image';
-import { initialLearningPaths_DEPRECATED_USE_FIRESTORE as initialLearningPaths, type LearningPath, courses_DEPRECATED_USE_FIRESTORE as initialCoursesData, type Course } from '@/data/mockData';
+import { type LearningPath, type Course } from '@/lib/dbUtils'; // Using Prisma types from dbUtils
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -23,9 +23,9 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import * as LucideIcons from 'lucide-react';
-import { getLearningPathsFromFirestore, addLearningPathToFirestore, updateLearningPathInFirestore, deleteLearningPathFromFirestore, getCoursesFromFirestore } from '@/lib/firestoreUtils';
+import { getLearningPathsFromDb, addLearningPathToDb, updateLearningPathInDb, deleteLearningPathFromDb, getCoursesFromDb } from '@/lib/dbUtils'; // Updated to use dbUtils
 
-const isValidLucideIcon = (iconName: string | undefined): iconName is keyof typeof LucideIcons => {
+const isValidLucideIcon = (iconName: string | undefined | null): iconName is keyof typeof LucideIcons => {
   return typeof iconName === 'string' && iconName in LucideIcons;
 };
 
@@ -38,14 +38,16 @@ const LearningPathForm = ({
 }: {
   path?: LearningPath;
   allCourses: Course[];
-  onSubmit: (data: Omit<LearningPath, 'id'>) => Promise<void>;
+  onSubmit: (data: Omit<LearningPath, 'id' | 'createdAt' | 'updatedAt' | 'courses'> & { courseIdsToConnect?: string[] }) => Promise<void>;
   onCancel: () => void;
   isSubmitting: boolean;
 }) => {
   const [title, setTitle] = useState(path?.title || '');
   const [description, setDescription] = useState(path?.description || '');
   const [icon, setIcon] = useState(path?.icon || 'Milestone');
-  const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>(path?.courseIds || []);
+  // For Prisma, we expect LearningPath.courses to be LearningPathCourse[]
+  // We need to extract course IDs for checkbox state
+  const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>(path?.courses?.map(lpc => lpc.courseId) || []);
   const [imageUrl, setImageUrl] = useState(path?.imageUrl || 'https://placehold.co/300x200.png');
   const [dataAiHint, setDataAiHint] = useState(path?.dataAiHint || 'learning path');
 
@@ -65,13 +67,13 @@ const LearningPathForm = ({
       title,
       description,
       icon,
-      courseIds: selectedCourseIds,
       imageUrl,
       dataAiHint,
+      courseIdsToConnect: selectedCourseIds, // This is how we pass IDs to dbUtils
     });
   };
 
-  const IconComponent = isValidLucideIcon(icon) ? LucideIcons[icon] as React.ElementType : LucideIcons.Milestone;
+  const IconComponent = isValidLucideIcon(icon) ? LucideIcons[icon as keyof typeof LucideIcons] as React.ElementType : LucideIcons.Milestone;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -88,7 +90,7 @@ const LearningPathForm = ({
           <div>
             <Label htmlFor="lp-icon">Lucide Icon Name</Label>
             <div className="relative">
-                <Input id="lp-icon" value={icon} onChange={e => setIcon(e.target.value)} placeholder="e.g., Milestone, TrendingUp" className="pl-8" disabled={isSubmitting}/>
+                <Input id="lp-icon" value={icon || ''} onChange={e => setIcon(e.target.value)} placeholder="e.g., Milestone, TrendingUp" className="pl-8" disabled={isSubmitting}/>
                 <IconComponent className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             </div>
             <p className="text-xs text-muted-foreground mt-1">Enter a valid Lucide icon name. Defaults to 'Milestone'.</p>
@@ -96,7 +98,7 @@ const LearningPathForm = ({
           <div>
             <Label htmlFor="lp-imageUrl">Path Image URL</Label>
             <div className="relative">
-                <Input id="lp-imageUrl" value={imageUrl} onChange={e => setImageUrl(e.target.value)} className="pl-8" disabled={isSubmitting}/>
+                <Input id="lp-imageUrl" value={imageUrl || ''} onChange={e => setImageUrl(e.target.value)} className="pl-8" disabled={isSubmitting}/>
                 <ImageIcon className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             </div>
             {imageUrl && (
@@ -108,7 +110,7 @@ const LearningPathForm = ({
           <div>
             <Label htmlFor="lp-dataAiHint">Image AI Hint</Label>
             <div className="relative">
-                <Input id="lp-dataAiHint" value={dataAiHint} onChange={e => setDataAiHint(e.target.value)} placeholder="e.g. career journey" className="pl-8" disabled={isSubmitting}/>
+                <Input id="lp-dataAiHint" value={dataAiHint || ''} onChange={e => setDataAiHint(e.target.value)} placeholder="e.g. career journey" className="pl-8" disabled={isSubmitting}/>
                 <Info className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             </div>
           </div>
@@ -159,8 +161,8 @@ export default function LearningPathManagement() {
     const loadData = async () => {
       setIsLoadingData(true);
       const [pathsFromDb, coursesFromDb] = await Promise.all([
-        getLearningPathsFromFirestore(),
-        getCoursesFromFirestore() // Fetch courses for selection
+        getLearningPathsFromDb(),
+        getCoursesFromDb()
       ]);
       setLearningPaths(pathsFromDb);
       setAllCourses(coursesFromDb);
@@ -169,10 +171,10 @@ export default function LearningPathManagement() {
     loadData();
   }, []);
 
-  const handleAddPath = async (data: Omit<LearningPath, 'id'>) => {
+  const handleAddPath = async (data: Omit<LearningPath, 'id' | 'createdAt' | 'updatedAt' | 'courses'> & { courseIdsToConnect?: string[] }) => {
     setIsSubmittingForm(true);
     try {
-      const newPath = await addLearningPathToFirestore(data);
+      const newPath = await addLearningPathToDb(data); // Use Prisma-based function
       setLearningPaths(prev => [newPath, ...prev].sort((a, b) => a.title.localeCompare(b.title)));
       closeForm();
       toast({ title: "Learning Path Added", description: `"${data.title}" created.` });
@@ -183,12 +185,12 @@ export default function LearningPathManagement() {
     }
   };
 
-  const handleEditPath = async (data: Omit<LearningPath, 'id'>) => {
+  const handleEditPath = async (data: Omit<LearningPath, 'id' | 'createdAt' | 'updatedAt'| 'courses'> & { courseIdsToConnect?: string[] }) => {
     if (!editingPath || !editingPath.id) return;
     setIsSubmittingForm(true);
     try {
-      await updateLearningPathInFirestore(editingPath.id, data);
-      setLearningPaths(prev => prev.map(p => (p.id === editingPath.id ? { ...p, ...data, id: editingPath.id! } : p)).sort((a,b) => a.title.localeCompare(b.title)));
+      const updatedPath = await updateLearningPathInDb(editingPath.id, data); // Use Prisma-based function
+      setLearningPaths(prev => prev.map(p => (p.id === editingPath.id ? updatedPath : p)).sort((a,b) => a.title.localeCompare(b.title)));
       closeForm();
       toast({ title: "Learning Path Updated", description: `"${data.title}" updated.` });
     } catch (error) {
@@ -201,7 +203,7 @@ export default function LearningPathManagement() {
   const handleDeletePath = async (pathId: string) => {
     const pathToDelete = learningPaths.find(p => p.id === pathId);
     try {
-      await deleteLearningPathFromFirestore(pathId);
+      await deleteLearningPathFromDb(pathId); // Use Prisma-based function
       setLearningPaths(prev => prev.filter(p => p.id !== pathId));
       toast({ title: "Learning Path Deleted", description: `"${pathToDelete?.title}" deleted.`, variant: "destructive" });
     } catch (error) {
@@ -225,7 +227,7 @@ export default function LearningPathManagement() {
         <CardTitle className="flex items-center text-xl md:text-2xl font-headline">
           <BookOpenCheck className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Learning Path Management
         </CardTitle>
-        <CardDescription>Create, edit, and manage guided learning paths using Firestore. Assign courses to paths.</CardDescription>
+        <CardDescription>Create, edit, and manage guided learning paths using your Neon/Postgres database via Prisma. Assign courses to paths.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="mb-6 text-right">
@@ -261,7 +263,7 @@ export default function LearningPathManagement() {
         ) : learningPaths.length > 0 ? (
           <ul className="space-y-4">
             {learningPaths.map(path => {
-              const IconComponent = path.icon && isValidLucideIcon(path.icon) ? LucideIcons[path.icon] as React.ElementType : LucideIcons.Milestone;
+              const IconComponent = path.icon && isValidLucideIcon(path.icon) ? LucideIcons[path.icon as keyof typeof LucideIcons] as React.ElementType : LucideIcons.Milestone;
               return (
                 <li key={path.id} className="p-3 sm:p-4 border rounded-lg bg-card flex flex-col sm:flex-row sm:items-start shadow-sm hover:shadow-md transition-shadow">
                   {path.imageUrl && (
@@ -275,7 +277,7 @@ export default function LearningPathManagement() {
                       {path.title}
                     </h3>
                     <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{path.description}</p>
-                    <p className="text-xs text-muted-foreground mt-1">Courses: {path.courseIds.length}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Courses: {path.courses?.length || path.courseIds?.length || 0}</p> {/* Display count from relation or stored IDs */}
                   </div>
                   <div className="flex flex-col sm:flex-row sm:space-x-2 gap-2 sm:gap-0 w-full sm:w-auto sm:items-center mt-2 sm:mt-0 shrink-0 self-start sm:self-center">
                     <Button variant="outline" size="sm" onClick={() => openForm(path)} className="w-full sm:w-auto hover:border-primary hover:text-primary">
@@ -306,7 +308,7 @@ export default function LearningPathManagement() {
             })}
           </ul>
         ) : (
-          <p className="text-center text-muted-foreground py-4">No learning paths found in Firestore. Add some!</p>
+          <p className="text-center text-muted-foreground py-4">No learning paths found in your database. Add some!</p>
         )}
       </CardContent>
     </Card>

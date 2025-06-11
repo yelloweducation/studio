@@ -4,8 +4,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { type Course, type Module, type Lesson, type User, type Enrollment, type PaymentSubmission, type PaymentSubmissionStatus, type Quiz } from '@/data/mockData';
-import { getCourseByIdFromFirestore, getPaymentSubmissionsFromFirestore, getEnrollmentForUserAndCourse, createEnrollmentInFirestore } from '@/lib/firestoreUtils';
+import { type Course, type Module, type Lesson, type User, type Enrollment, type PaymentSubmission, type PaymentSubmissionStatus, type Quiz } from '@/lib/dbUtils'; // Use Prisma types from dbUtils
+import { getCourseByIdFromDb, getPaymentSubmissionsFromDb, getEnrollmentForUserAndCourseFromDb, createEnrollmentInDb } from '@/lib/dbUtils'; // Use Prisma-based functions
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,7 +21,7 @@ interface CompletionInfo {
   progress: number;
 }
 interface PaymentInfo {
-  status: PaymentSubmissionStatus | null;
+  status: PaymentSubmissionStatus | null; // Prisma's enum for status
   submission?: PaymentSubmission;
 }
 
@@ -137,7 +137,7 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
       setCurrentCourse(null);
       setFirstLessonPath(null);
 
-      const courseFromDb = await getCourseByIdFromFirestore(courseId);
+      const courseFromDb = await getCourseByIdFromDb(courseId); // Use Prisma-based function
       setCurrentCourse(courseFromDb);
 
       if (courseFromDb?.modules?.[0]?.lessons?.[0]) {
@@ -145,43 +145,37 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
       } else {
         setFirstLessonPath(null);
       }
-      // Note: isLoadingPage will be set to false in the second useEffect after auth and user-specific data is processed.
     };
     fetchCourseData();
   }, [courseId]);
 
   useEffect(() => {
     const fetchUserSpecificData = async () => {
-      if (authLoading || !currentCourse) { // Wait for auth and course to be loaded
-        if (!currentCourse && !isLoadingPage) { // If course loading failed, don't proceed
-             // setIsLoadingPage(false) is already handled if currentCourse is null after fetch
+      if (authLoading || !currentCourse) { 
+        if (!currentCourse && !isLoadingPage) {
         } else if (authLoading) {
-            // Still waiting for auth, keep loading page
         }
         return;
       }
       
-      setIsLoadingPage(true); // Ensure loading state until all data is processed
+      setIsLoadingPage(true); 
 
       if (isAuthenticated && user) {
-        const enrollment = await getEnrollmentForUserAndCourse(user.id, currentCourse.id);
+        const enrollment = await getEnrollmentForUserAndCourseFromDb(user.id, currentCourse.id); // Use Prisma-based function
         if (enrollment) {
           setCompletionInfo({ isCompleted: enrollment.progress === 100, progress: enrollment.progress });
         } else {
           setCompletionInfo({ isCompleted: false, progress: 0 });
-          // Optionally, create an enrollment record if the course is free or payment approved (handled later)
-          // For now, just indicates no existing enrollment.
         }
 
         if (currentCourse.price && currentCourse.price > 0) {
-          const allSubmissions = await getPaymentSubmissionsFromFirestore(); // Consider filtering by userId on backend if possible
+          const allSubmissions = await getPaymentSubmissionsFromDb(); // Use Prisma-based function
           const userSubmission = allSubmissions.find(s => s.userId === user.id && s.courseId === currentCourse.id);
           setPaymentInfo({ status: userSubmission?.status || null, submission: userSubmission });
         } else {
-          setPaymentInfo({ status: null }); // Free course
+          setPaymentInfo({ status: null }); 
         }
       } else {
-        // Not authenticated or no user
         setCompletionInfo({ isCompleted: false, progress: 0 });
         setPaymentInfo({ status: null });
       }
@@ -195,7 +189,7 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
   const renderCTAButton = () => {
     if (!currentCourse) return null;
 
-    const canAccessContent = (paymentInfo?.status === 'approved') || (!currentCourse.price || currentCourse.price <= 0);
+    const canAccessContent = (paymentInfo?.status === 'APPROVED') || (!currentCourse.price || currentCourse.price <= 0);
 
     if (currentCourse.price && currentCourse.price > 0) {
         if (!isAuthenticated) {
@@ -208,7 +202,7 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
                 </Button>
             );
         }
-        if (paymentInfo?.status === 'approved') {
+        if (paymentInfo?.status === 'APPROVED') {
             if (completionInfo?.isCompleted) {
                 return (
                     <div className="flex flex-col items-center text-center p-4 bg-green-100 dark:bg-green-900/50 rounded-lg shadow">
@@ -239,7 +233,7 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
                     </Link>
                 </Button>
             );
-        } else if (paymentInfo?.status === 'pending') {
+        } else if (paymentInfo?.status === 'PENDING') {
             return (
                 <div className="flex flex-col items-center text-center p-4 bg-blue-100 dark:bg-blue-900/50 rounded-lg shadow">
                     <Hourglass className="w-12 h-12 text-blue-600 dark:text-blue-400 mb-2" />
@@ -247,7 +241,7 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
                     <p className="text-sm text-blue-600 dark:text-blue-400">{t.paymentSubmittedDesc}</p>
                 </div>
             );
-        } else { // Includes null status (not submitted yet) or 'rejected'
+        } else { 
              if (!currentCourse.modules || currentCourse.modules.length === 0 || !firstLessonPath) {
                 return (
                     <div className="flex flex-col items-center text-center p-4 bg-muted rounded-lg shadow">
@@ -268,7 +262,6 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
         }
     }
 
-    // Free course logic
     if (completionInfo?.isCompleted) {
       return (
         <div className="flex flex-col items-center text-center p-4 bg-green-100 dark:bg-green-900/50 rounded-lg shadow">
@@ -284,7 +277,7 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
       );
     }
 
-    if (!firstLessonPath) { // Handles case where course is free but has no content
+    if (!firstLessonPath) { 
          return (
             <div className="flex flex-col items-center text-center p-4 bg-muted rounded-lg shadow">
                 <AlertTriangle className="w-12 h-12 text-amber-500 mb-2" />
@@ -303,7 +296,7 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
     );
   };
 
-  if (isLoadingPage || authLoading) { // Keep authLoading in condition
+  if (isLoadingPage || authLoading) { 
     return (
       <div className="max-w-4xl mx-auto py-4 md:py-8 space-y-6">
         <Skeleton className="h-8 w-1/4" />
@@ -323,7 +316,7 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
             </Card>
             <Card><CardContent className="pt-6"><Skeleton className="h-20 w-full" /></CardContent></Card>
             <Card><CardContent className="pt-6"><Skeleton className="h-16 w-full" /></CardContent></Card>
-            <Card><CardContent className="pt-6"><Skeleton className="h-16 w-full" /></CardContent></Card> {/* Skeleton for Quizzes */}
+            <Card><CardContent className="pt-6"><Skeleton className="h-16 w-full" /></CardContent></Card>
           </div>
           <div className="md:col-span-1 space-y-6 md:sticky md:top-24">
             <Card>
@@ -370,8 +363,8 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
     );
   }
 
-  const { title, description, category, instructor, modules, imageUrl, dataAiHint, price, currency, learningObjectives, targetAudience, prerequisites, estimatedTimeToComplete, quizzes } = currentCourse;
-  const canAccessContent = (paymentInfo?.status === 'approved') || (!price || price <= 0);
+  const { title, description, categoryNameCache, instructor, modules, imageUrl, dataAiHint, price, currency, learningObjectives, targetAudience, prerequisites, estimatedTimeToComplete, quizzes } = currentCourse;
+  const canAccessContent = (paymentInfo?.status === 'APPROVED') || (!price || price <= 0);
 
   return (
     <div className="max-w-4xl mx-auto py-4 md:py-8">
@@ -397,7 +390,7 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
             <CardHeader>
               <CardTitle className="text-2xl sm:text-3xl font-headline text-foreground">{title}</CardTitle>
               <CardDescription className="text-md text-muted-foreground">
-                {t.taughtBy.replace('{instructor}', instructor || '')} &bull; {t.categoryLabel.replace('{category}', category || '')}
+                {t.taughtBy.replace('{instructor}', instructor || '')} &bull; {t.categoryLabel.replace('{category}', categoryNameCache || '')}
                 {price && price > 0 && currency && (
                     <span className="block mt-1 font-semibold text-primary">
                         {t.priceLabel.replace('{price}', price.toFixed(2)).replace('{currency}', currency)}
@@ -410,7 +403,7 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
             </CardContent>
           </Card>
 
-          {/* Learning Objectives */}
+          
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle className="text-xl font-headline flex items-center"><ListChecks className="mr-2 h-6 w-6 text-primary" /> {t.whatYouWillLearn}</CardTitle>
@@ -426,7 +419,7 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
             </CardContent>
           </Card>
 
-          {/* Target Audience */}
+          
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle className="text-xl font-headline flex items-center"><TargetAudienceIcon className="mr-2 h-6 w-6 text-primary" /> {t.targetAudience}</CardTitle>
@@ -440,7 +433,7 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
             </CardContent>
           </Card>
 
-          {/* Prerequisites */}
+          
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle className="text-xl font-headline flex items-center"><ShieldCheck className="mr-2 h-6 w-6 text-primary" /> {t.prerequisites}</CardTitle>
@@ -467,7 +460,6 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
             </Card>
           )}
 
-           {/* Quizzes Section */}
           {quizzes && quizzes.length > 0 && (
             <Card className="shadow-lg">
               <CardHeader>
@@ -478,8 +470,8 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
               <CardContent>
                 <ul className="space-y-3">
                   {quizzes.map((quiz: Quiz) => {
-                    const QuizIcon = quiz.quizType === 'graded' ? GradedQuizIcon : PracticeQuizIcon;
-                    const quizLabel = quiz.quizType === 'graded' ? t.gradedQuiz : t.practiceQuiz;
+                    const QuizIcon = quiz.quizType === 'GRADED' ? GradedQuizIcon : PracticeQuizIcon; // Prisma uses uppercase for enums
+                    const quizLabel = quiz.quizType === 'GRADED' ? t.gradedQuiz : t.practiceQuiz;
                     return (
                       <li key={quiz.id} className="p-3 border rounded-lg bg-card hover:shadow-sm transition-shadow">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
