@@ -75,17 +75,15 @@ export const metadata: Metadata = {
     shortcut: "/favicon-16x16.png",
     apple: "/apple-touch-icon.png",
   }
-  // themeColor was removed from here
 };
 
-// Separate viewport export
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
-  themeColor: [ // themeColor is now correctly placed here
-    { media: '(prefers-color-scheme: light)', color: '#FACC15' }, // Yellow-500 for light mode
-    { media: '(prefers-color-scheme: dark)', color: '#423A0E' },  // Darker variant for dark mode
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#FACC15' }, 
+    { media: '(prefers-color-scheme: dark)', color: '#423A0E' },  
   ],
 };
 
@@ -108,7 +106,7 @@ export default function RootLayout({
               {pathname === '/videos' ? (
                 children
               ) : (
-                <main className="flex-grow container mx-auto px-4 py-8">
+                <main className="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                   {children}
                 </main>
               )}
