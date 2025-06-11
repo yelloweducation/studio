@@ -12,6 +12,12 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import type { Course } from '@/data/mockData'; // Assuming Course type is exported from mockData
 
+// Early check for 'ai' object validity
+if (!ai || typeof ai.definePrompt !== 'function' || typeof ai.defineFlow !== 'function') {
+  const errorMessage = "[QuickRecommendationFlow] CRITICAL: Genkit 'ai' object from '@/ai/genkit' is not properly initialized or is missing essential methods. This usually means Genkit initialization failed, often due to missing API keys (e.g., GOOGLE_API_KEY) in the environment. Check Netlify function logs and environment variable settings for 'GOOGLE_API_KEY' or 'GEMINI_API_KEY'.";
+  console.error(errorMessage);
+}
+
 // Define Zod schema for individual course objects as they are passed to the flow
 const CourseSchemaForFlow = z.object({
   id: z.string(),
@@ -39,6 +45,10 @@ export type QuickRecommendationOutput = z.infer<typeof QuickRecommendationOutput
 
 export async function getQuickRecommendations(input: QuickRecommendationInput): Promise<QuickRecommendationOutput> {
   console.log('[getQuickRecommendations] Invoked with user interest:', input.userInterest, 'and', input.availableCourses?.length, 'courses.');
+  if (!ai || typeof ai.definePrompt !== 'function') { // Defensive check before using quickRecommendationFlow
+    console.error("[getQuickRecommendations] Genkit 'ai' object is not available or not properly initialized. Cannot proceed.");
+    return { recommendations: [] };
+  }
   try {
     if (!input.availableCourses || input.availableCourses.length === 0) {
         console.warn('[getQuickRecommendations] No available courses provided.');
@@ -56,58 +66,69 @@ export async function getQuickRecommendations(input: QuickRecommendationInput): 
   }
 }
 
-const prompt = ai.definePrompt({
-  name: 'quickRecommendationPrompt',
-  input: {schema: QuickRecommendationInputSchema},
-  output: {schema: QuickRecommendationOutputSchema},
-  prompt: `You are an AI assistant helping users find relevant courses.
-  Based on the user's stated interest: "{{userInterest}}" and the following list of available courses, please select 1 or at most 2 courses that best match the interest.
-  For each recommended course, provide its ID and title. Optionally, provide a very brief reason for the recommendation.
+let prompt: any;
+let quickRecommendationFlow: any;
 
-  Available Courses (format: ID - Title - Description - Category):
-  {{#each availableCourses}}
-  - {{id}} - {{title}} - {{description}} - {{category}}
-  {{/each}}
+if (ai && typeof ai.definePrompt === 'function' && typeof ai.defineFlow === 'function') {
+  prompt = ai.definePrompt({
+    name: 'quickRecommendationPrompt',
+    input: {schema: QuickRecommendationInputSchema},
+    output: {schema: QuickRecommendationOutputSchema},
+    prompt: `You are an AI assistant helping users find relevant courses.
+    Based on the user's stated interest: "{{userInterest}}" and the following list of available courses, please select 1 or at most 2 courses that best match the interest.
+    For each recommended course, provide its ID and title. Optionally, provide a very brief reason for the recommendation.
 
-  Consider the course title, description, and category for relevance.
-  Prioritize courses that directly address keywords in the user's interest.
-  If multiple courses are highly relevant, pick the top two. If only one is very relevant, just pick one. If none seem relevant, return an empty list of recommendations.
-  `,
-});
+    Available Courses (format: ID - Title - Description - Category):
+    {{#each availableCourses}}
+    - {{id}} - {{title}} - {{description}} - {{category}}
+    {{/each}}
 
-const quickRecommendationFlow = ai.defineFlow(
-  {
-    name: 'quickRecommendationFlow',
-    inputSchema: QuickRecommendationInputSchema,
-    outputSchema: QuickRecommendationOutputSchema,
-  },
-  async (input): Promise<QuickRecommendationOutput> => {
-    console.log('[quickRecommendationFlow] Invoked with user interest:', input.userInterest);
-    try {
-      const genkitResponse = await prompt(input);
-      
-      if (!genkitResponse || !genkitResponse.output) {
-        console.warn('[quickRecommendationFlow] QuickRecommendationPrompt returned no output for interest:', input.userInterest);
+    Consider the course title, description, and category for relevance.
+    Prioritize courses that directly address keywords in the user's interest.
+    If multiple courses are highly relevant, pick the top two. If only one is very relevant, just pick one. If none seem relevant, return an empty list of recommendations.
+    `,
+  });
+
+  quickRecommendationFlow = ai.defineFlow(
+    {
+      name: 'quickRecommendationFlow',
+      inputSchema: QuickRecommendationInputSchema,
+      outputSchema: QuickRecommendationOutputSchema,
+    },
+    async (input): Promise<QuickRecommendationOutput> => {
+      console.log('[quickRecommendationFlow] Invoked with user interest:', input.userInterest, 'and', input.availableCourses?.length, 'courses.');
+      try {
+        const genkitResponse = await prompt(input);
+        
+        if (!genkitResponse || !genkitResponse.output) {
+          console.warn('[quickRecommendationFlow] QuickRecommendationPrompt returned no output for interest:', input.userInterest, 'Genkit Response:', JSON.stringify(genkitResponse));
+          return { recommendations: [] };
+        }
+        // Ensure recommendations are drawn from provided course IDs
+        const validRecommendations = genkitResponse.output.recommendations.filter(rec => 
+          input.availableCourses.some(course => course.id === rec.id)
+        );
+
+        if (validRecommendations.length !== genkitResponse.output.recommendations.length) {
+          console.warn('[quickRecommendationFlow] AI recommended non-existent course IDs. Filtered to valid IDs. Original:', JSON.stringify(genkitResponse.output.recommendations), 'Valid:', JSON.stringify(validRecommendations));
+        }
+        
+        console.log('[quickRecommendationFlow] Successfully generated recommendations from AI:', JSON.stringify(validRecommendations));
+        return { recommendations: validRecommendations };
+
+      } catch (error) {
+        console.error("[quickRecommendationFlow] Error during AI execution:", error);
+        if (error instanceof Error && error.stack) {
+          console.error("[quickRecommendationFlow] Stack trace:", error.stack);
+        }
         return { recommendations: [] };
       }
-      // Ensure recommendations are drawn from provided course IDs
-      const validRecommendations = genkitResponse.output.recommendations.filter(rec => 
-        input.availableCourses.some(course => course.id === rec.id)
-      );
-
-      if (validRecommendations.length !== genkitResponse.output.recommendations.length) {
-        console.warn('[quickRecommendationFlow] AI recommended non-existent course IDs. Filtered to valid IDs.');
-      }
-      
-      console.log('[quickRecommendationFlow] Successfully generated recommendations from AI.');
-      return { recommendations: validRecommendations };
-
-    } catch (error) {
-      console.error("[quickRecommendationFlow] Error during AI execution:", error);
-      if (error instanceof Error && error.stack) {
-        console.error("[quickRecommendationFlow] Stack trace:", error.stack);
-      }
-      return { recommendations: [] };
     }
-  }
-);
+  );
+} else {
+    console.error("[QuickRecommendationFlow] ai.definePrompt or ai.defineFlow is not available. Skipping prompt and flow definition.");
+    quickRecommendationFlow = async (input: QuickRecommendationInput): Promise<QuickRecommendationOutput> => {
+        console.error("[QuickRecommendationFlow] Fallback used because 'ai' was not initialized.");
+        return { recommendations: [] };
+    };
+}
