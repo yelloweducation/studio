@@ -1,7 +1,7 @@
 
 "use client"; 
 
-import React, { useState, useEffect, Suspense, lazy, type FormEvent } from 'react';
+import React, { useState, useEffect, Suspense, type FormEvent } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
@@ -12,15 +12,12 @@ import { type Course, type Category, type LearningPath } from '@/data/mockData';
 import { getCoursesFromFirestore, getCategoriesFromFirestore, getLearningPathsFromFirestore } from '@/lib/firestoreUtils'; // Firestore imports
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
-import { Search, X, LayoutGrid, GraduationCap, Lightbulb, Star, Milestone, Send, Loader2, AlertTriangle, ListFilter } from 'lucide-react';
+import { Search, X, LayoutGrid, GraduationCap, Star, Milestone, AlertTriangle, ListFilter } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import { getQuickRecommendations, type QuickRecommendationInput, type QuickRecommendationOutput } from '@/ai/flows/quick-recommendation-flow';
 import * as LucideIcons from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
-
-const CareerAdviceChatbox = lazy(() => import('@/components/ai/CareerAdviceChatbox'));
 
 const isValidLucideIcon = (iconName: string | undefined): iconName is keyof typeof LucideIcons => {
   return typeof iconName === 'string' && iconName in LucideIcons;
@@ -34,12 +31,6 @@ const searchPageTranslations = {
     allCategories: "All Categories",
     clearFilters: "Clear Filters",
     featuredCourses: "Featured Courses",
-    quickSuggestions: "Quick Suggestions",
-    quickSuggestionsDesc: "Tell us your interest, and we'll suggest a course!",
-    quickSuggestionsInputPlaceholder: "e.g., 'learn python for web'",
-    getSuggestion: "Get Suggestion",
-    quickRecsIdeas: "Here are some ideas:",
-    noQuickRecsFound: "No specific recommendations found for \"{query}\". Try a broader term or browse below!",
     popularTopics: "Popular Topics",
     browseCategories: "Browse Categories",
     noCategoriesAvailable: "No Categories Available",
@@ -57,12 +48,6 @@ const searchPageTranslations = {
     allCategories: "အမျိုးအစားအားလုံး",
     clearFilters: "စစ်ထုတ်မှုများ ဖယ်ရှားရန်",
     featuredCourses: "အထူးပြု အတန်းများ",
-    quickSuggestions: "အမြန် အကြံပြုချက်များ",
-    quickSuggestionsDesc: "သင်၏ စိတ်ဝင်စားမှုကို ပြောပြပါ၊ အတန်းတစ်ခု အကြံပြုပေးပါမည်!",
-    quickSuggestionsInputPlaceholder: "ဥပမာ - 'web အတွက် python လေ့လာရန်'",
-    getSuggestion: "အကြံပြုချက်ရယူပါ",
-    quickRecsIdeas: "ဤတွင် အကြံဉာဏ်အချို့ရှိပါသည်:",
-    noQuickRecsFound: "\"{query}\" အတွက် သီးခြားအကြံပြုချက်များ မတွေ့ပါ။ ကျယ်ပြန့်သော စကားလုံးကို စမ်းကြည့်ပါ သို့မဟုတ် အောက်တွင် ရှာဖွေပါ။",
     popularTopics: "ရှာဖွေမှုများသောအတန်းများ",
     browseCategories: "အမျိုးအစားများ ကြည့်ရှုရန်",
     noCategoriesAvailable: "အမျိုးအစားများ မရှိသေးပါ",
@@ -95,11 +80,6 @@ function SearchCoursesClientLogic() {
   const [learningPaths, setLearningPaths] = useState<LearningPath[]>([]);
   const [popularTopics, setPopularTopics] = useState<string[]>([]);
 
-  const [quickRecInput, setQuickRecInput] = useState('');
-  const [quickRecs, setQuickRecs] = useState<QuickRecommendationOutput['recommendations']>([]);
-  const [isQuickRecLoading, setIsQuickRecLoading] = useState(false);
-  const [quickRecError, setQuickRecError] = useState<string | null>(null);
-
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -126,11 +106,10 @@ function SearchCoursesClientLogic() {
         setPopularTopics(uniqueCourseCategories);
         
         setAvailableCategories(categoriesFromDb);
-        setLearningPaths(learningPathsFromDb.slice(0, 3)); // Show top 3 or implement pagination
+        setLearningPaths(learningPathsFromDb.slice(0, 3)); 
 
       } catch (error) {
         console.error("Error loading data from Firestore:", error);
-        // Optionally, set an error state to display to the user
       }
       setIsLoadingData(false);
     };
@@ -143,7 +122,7 @@ function SearchCoursesClientLogic() {
   }, [initialQuery, initialCategory]);
 
   useEffect(() => {
-    if (isLoadingData) return; // Don't filter until data is loaded
+    if (isLoadingData) return; 
 
     let filtered = [...allFetchedCourses];
 
@@ -180,35 +159,8 @@ function SearchCoursesClientLogic() {
     setSelectedCategory(topic);
     setSearchTerm(''); 
   };
-
-  const handleQuickRecSubmit = async (e?: FormEvent) => {
-    if (e) e.preventDefault();
-    const interest = quickRecInput.trim();
-    if (!interest || allFetchedCourses.length === 0) return;
-
-    setIsQuickRecLoading(true);
-    setQuickRecError(null);
-    setQuickRecs([]);
-
-    try {
-      const coursesForAI = allFetchedCourses.map(c => ({
-        id: c.id,
-        title: c.title,
-        description: c.description || '',
-        category: c.category || '',
-      }));
-      const inputData: QuickRecommendationInput = { userInterest: interest, availableCourses: coursesForAI };
-      const response = await getQuickRecommendations(inputData);
-      setQuickRecs(response.recommendations);
-    } catch (err) {
-      console.error("Error getting quick recommendations:", err);
-      setQuickRecError(err instanceof Error ? err.message : "Failed to get recommendations.");
-    } finally {
-      setIsQuickRecLoading(false);
-    }
-  };
   
-  if (isLoadingData && displayedCourses.length === 0) { // Show initial skeleton only if truly loading AND no courses yet
+  if (isLoadingData && displayedCourses.length === 0) { 
       return <SearchPageInitialSkeleton />;
   }
 
@@ -280,56 +232,6 @@ function SearchCoursesClientLogic() {
           </Carousel>
         </section>
       )}
-
-      <section className="py-4 md:py-6">
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-lg md:text-xl font-headline flex items-center">
-              <Lightbulb className="mr-2 h-5 w-5 text-primary" /> {t.quickSuggestions}
-            </CardTitle>
-            <CardDescription>{t.quickSuggestionsDesc}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleQuickRecSubmit} className="flex items-center gap-2">
-              <Input
-                type="text"
-                placeholder={t.quickSuggestionsInputPlaceholder}
-                value={quickRecInput}
-                onChange={(e) => setQuickRecInput(e.target.value)}
-                className="flex-grow shadow-sm"
-                disabled={isQuickRecLoading}
-              />
-              <Button type="submit" disabled={isQuickRecLoading || !quickRecInput.trim()} className="shadow-sm" aria-label={t.getSuggestion}>
-                {isQuickRecLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-                <span className="sr-only">{t.getSuggestion}</span>
-              </Button>
-            </form>
-            {quickRecError && <p className="text-destructive text-sm mt-2 flex items-center"><AlertTriangle className="h-4 w-4 mr-1.5"/>{quickRecError}</p>}
-            {quickRecs.length > 0 && (
-              <div className="mt-4 space-y-2">
-                <h4 className="text-sm font-medium text-muted-foreground">{t.quickRecsIdeas}</h4>
-                {quickRecs.map(rec => (
-                  <Link key={rec.id} href={`/courses/${rec.id}`} passHref>
-                    <Button 
-                      variant="outline" 
-                      className="w-full justify-start items-start text-left h-auto py-2.5 shadow-sm hover:border-primary whitespace-normal"
-                    >
-                        <GraduationCap className="mt-1 h-4 w-4 text-primary/80 flex-shrink-0"/>
-                        <div className="flex-1 min-w-0"> 
-                            <span className="font-semibold">{rec.title}</span>
-                            {rec.reason && <p className="text-xs text-muted-foreground">{rec.reason}</p>}
-                        </div>
-                    </Button>
-                  </Link>
-                ))}
-              </div>
-            )}
-             {isQuickRecLoading === false && quickRecs.length === 0 && quickRecInput && !quickRecError && (
-                <p className="text-sm text-muted-foreground mt-3">{t.noQuickRecsFound.replace('{query}', quickRecInput)}</p>
-            )}
-          </CardContent>
-        </Card>
-      </section>
       
       {popularTopics.length > 0 && (
         <section className="py-4 md:py-6">
@@ -466,23 +368,6 @@ function SearchCoursesClientLogic() {
         </section>
       )}
 
-      <section className="w-full mt-8 md:mt-12 mb-8">
-        <Suspense fallback={
-            <Card className="w-full shadow-xl">
-                <CardHeader className="pb-4">
-                    <Skeleton className="h-7 w-1/2" />
-                </CardHeader>
-                <CardContent>
-                    <Skeleton className="h-40 w-full" />
-                </CardContent>
-                <CardFooter>
-                    <Skeleton className="h-10 w-full" />
-                </CardFooter>
-            </Card>
-        }>
-          <CareerAdviceChatbox />
-        </Suspense>
-      </section>
     </div>
   );
 }
@@ -541,19 +426,6 @@ function SearchPageInitialSkeleton() {
             </CardFooter>
           </Card>
         ))}
-      </section>
-      <section className="w-full mt-8 md:mt-12 mb-8">
-        <Card className="w-full shadow-xl">
-          <CardHeader className="pb-4">
-            <Skeleton className="h-7 w-1/2" />
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="h-40 w-full" />
-          </CardContent>
-          <CardFooter>
-            <Skeleton className="h-10 w-full" />
-          </CardFooter>
-        </Card>
       </section>
     </div>
   );
