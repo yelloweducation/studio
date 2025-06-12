@@ -92,7 +92,9 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const pathname = headers().get('next-url') || '';
+  const requestHeaders = headers();
+  const nextUrl = requestHeaders.get('next-url');
+  const pathname = nextUrl ? nextUrl : ''; // Refactored line
 
   return (
     <html lang="en" suppressHydrationWarning className={`${poppins.variable} ${ptSans.variable}`}>
