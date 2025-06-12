@@ -48,7 +48,7 @@ const QuestionInputSchema = z.object({
 const QuizInputSchema = z.object({
   id: z.string().optional(),
   title: z.string().min(1, "Quiz title is required"),
-  quizType: z.nativeEnum(PrismaQuizTypeEnum), 
+  quizType: z.string().transform(val => val.toUpperCase()).pipe(z.nativeEnum(PrismaQuizTypeEnum)), 
   passingScore: z.number().int().min(0).max(100).optional().nullable(),
   questions: z.array(QuestionInputSchema).optional(), 
 });
@@ -119,7 +119,7 @@ const PaymentSubmissionInputSchema = z.object({
 
 const SitePageInputSchema = z.object({
   title: z.string().min(1, "Title is required"),
-  content: z.any(), // For Prisma.JsonValue, z.any() is a simple way. For stricter validation, use z.string() if it's HTML.
+  content: z.any(), 
 });
 
 
@@ -188,7 +188,7 @@ export const getCoursesFromDb = async (): Promise<Course[]> => {
       include: { 
         category: true, 
         modules: { include: { lessons: true }, orderBy: { order: 'asc' } },
-        quizzes: { include: { questions: { include: { options: true }, orderBy: {order: 'asc'} } } }
+        quizzes: { include: { questions: { include: { options: true, correctOption: true }, orderBy: {order: 'asc'} } } }
       },
       orderBy: { title: 'asc' }
     });
@@ -232,7 +232,7 @@ export const addCourseToDb = async (
     console.error("[dbUtils] addCourseToDb: Course validation failed:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
     throw new Error(validation.error.flatten().fieldErrors._errors?.join(', ') || "Invalid course data.");
   }
-  console.log("[dbUtils] addCourseToDb: Zod validation successful.");
+  console.log("[dbUtils] addCourseToDb: Zod validation successful. Validated data (first 500 chars):", JSON.stringify(validation.data).substring(0,500) + "...");
   const { categoryName, modules, quizzes, ...mainCourseData } = validation.data;
 
   try {
@@ -270,7 +270,7 @@ export const addCourseToDb = async (
       quizzes: quizzes ? {
         create: quizzes.map((quizData) => ({
           title: quizData.title!,
-          quizType: quizData.quizType!, 
+          quizType: quizData.quizType!, // This is now uppercase due to Zod transform
           passingScore: quizData.passingScore,
           questions: quizData.questions ? {
             create: quizData.questions.map(q => ({
@@ -365,7 +365,7 @@ export const updateCourseInDb = async (
     console.error("[dbUtils] updateCourseInDb: Course validation failed:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
     throw new Error(validation.error.flatten().fieldErrors._errors?.join(', ') || "Invalid course data for update.");
   }
-  console.log("[dbUtils] updateCourseInDb: Zod validation successful.");
+  console.log("[dbUtils] updateCourseInDb: Zod validation successful. Validated data (first 500 chars):", JSON.stringify(validation.data).substring(0,500) + "...");
   const { categoryName, modules, quizzes, ...mainCourseData } = validation.data;
   
   try {
@@ -418,7 +418,7 @@ export const updateCourseInDb = async (
       prismaCourseUpdateData.quizzes = {
         create: quizzes.map((quizData) => ({
             title: quizData.title!,
-            quizType: quizData.quizType!,
+            quizType: quizData.quizType!, // This is now uppercase due to Zod transform
             passingScore: quizData.passingScore,
             questions: quizData.questions ? {
               create: quizData.questions.map(q => ({
@@ -641,7 +641,7 @@ export const saveQuizWithQuestionsToDb = async (
             const updatedQuiz = await prisma.quiz.update({
                 where: { id: existingQuiz.id },
                 data: { title: quizData.title, quizType: quizData.quizType as PrismaQuizTypeEnum, passingScore: quizData.passingScore },
-                include: { questions: { include: { options: true }, orderBy: {order: 'asc'} } }
+                include: { questions: { include: { options: true, correctOption: true }, orderBy: {order: 'asc'} } }
             });
             console.log(`[dbUtils] saveQuizWithQuestionsToDb: Quiz ID ${existingQuiz.id} updated successfully.`);
             return updatedQuiz;
@@ -660,7 +660,7 @@ export const saveQuizWithQuestionsToDb = async (
                         })
                     } : undefined
                 },
-                include: { questions: { include: { options: true }, orderBy: {order: 'asc'} } }
+                include: { questions: { include: { options: true, correctOption: true }, orderBy: {order: 'asc'} } }
             });
              if (createdQuiz.questions && quizData.questionsToUpsert) {
                 for (let i = 0; i < createdQuiz.questions.length; i++) {
@@ -675,7 +675,7 @@ export const saveQuizWithQuestionsToDb = async (
                     }
                 }
             }
-            const finalQuiz = await prisma.quiz.findUniqueOrThrow({where: {id: createdQuiz.id}, include: {questions: {include: {options: true}}}});
+            const finalQuiz = await prisma.quiz.findUniqueOrThrow({where: {id: createdQuiz.id}, include: {questions: {include: {options: true, correctOption: true}}}});
             console.log(`[dbUtils] saveQuizWithQuestionsToDb: New quiz created with ID ${finalQuiz.id}.`);
             return finalQuiz;
         }
@@ -856,7 +856,7 @@ export const getSitePageBySlug = async (slug: string): Promise<SitePage | null> 
 export const upsertSitePage = async (
   slug: string,
   title: string,
-  content: Prisma.JsonValue | string // Allow string for simple HTML, or JSON for structured
+  content: Prisma.JsonValue | string 
 ): Promise<SitePage> => {
   console.log(`[dbUtils] upsertSitePage: Upserting page with slug "${slug}".`);
   const validation = SitePageInputSchema.safeParse({ title, content });
@@ -865,20 +865,10 @@ export const upsertSitePage = async (
     throw new Error(validation.error.flatten().fieldErrors._errors?.join(', ') || "Invalid site page data.");
   }
   
-  // If content is a string, Prisma expects it to be a JSON string if the field type is Json.
-  // For simplicity, if we intend to store HTML as string, the Prisma schema might need `content String @db.Text`.
-  // Assuming `content Json` in schema, and if we pass a string, it should be parsable as JSON or be a JSON string.
-  // For now, we pass it directly; Prisma will handle it or error if not valid JSON.
-  // If we are storing HTML directly, it's better to change Prisma schema `content` to `String @db.Text`.
-  // For this iteration, assuming content is passed as a JSON-compatible value (e.g., a string that is also valid JSON string, or an object).
-  // A simple string like "<h1>Hello</h1>" is a valid JSON string if double-quoted: "\"<h1>Hello</h1>\""
-  // Let's assume 'content' is directly usable by Prisma's Json type. If it's raw HTML, it might be better to store as String.
-  // For now, passing `validation.data.content` which is `any`.
-  
   const dataToUpsert = {
     slug,
     title: validation.data.title,
-    content: validation.data.content as Prisma.JsonValue, // Cast to Prisma.JsonValue
+    content: validation.data.content as Prisma.JsonValue, 
   };
 
   try {
