@@ -2,7 +2,7 @@
 "use client";
 import { useState, useEffect, type FormEvent } from 'react';
 import Image from 'next/image';
-import { type LearningPath, type Course } from '@/lib/dbUtils'; // Using Prisma types from dbUtils
+import { type LearningPath, type Course } from '@prisma/client'; // Using Prisma types
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -23,7 +23,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import * as LucideIcons from 'lucide-react';
-import { getLearningPathsFromDb, addLearningPathToDb, updateLearningPathInDb, deleteLearningPathFromDb, getCoursesFromDb } from '@/lib/dbUtils'; // Updated to use dbUtils
+import { getLearningPathsFromDb, addLearningPathToDb, updateLearningPathInDb, deleteLearningPathFromDb, getCoursesFromDb } from '@/lib/dbUtils'; // Uses Prisma functions
 
 const isValidLucideIcon = (iconName: string | undefined | null): iconName is keyof typeof LucideIcons => {
   return typeof iconName === 'string' && iconName in LucideIcons;
@@ -36,16 +36,16 @@ const LearningPathForm = ({
   onCancel,
   isSubmitting,
 }: {
-  path?: LearningPath & { courses?: { course: Course }[] }; // Prisma type includes nested relation
+  path?: LearningPath & { learningPathCourses?: { course: Course }[] }; // Prisma type structure
   allCourses: Course[];
-  onSubmit: (data: Omit<LearningPath, 'id' | 'createdAt' | 'updatedAt' | 'courses'> & { courseIdsToConnect?: string[] }) => Promise<void>;
+  onSubmit: (data: Omit<LearningPath, 'id' | 'createdAt' | 'updatedAt' | 'learningPathCourses'> & { courseIdsToConnect?: string[] }) => Promise<void>;
   onCancel: () => void;
   isSubmitting: boolean;
 }) => {
   const [title, setTitle] = useState(path?.title || '');
   const [description, setDescription] = useState(path?.description || '');
   const [icon, setIcon] = useState(path?.icon || 'Milestone');
-  const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>(path?.courses?.map(lpc => lpc.courseId) || []);
+  const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>(path?.learningPathCourses?.map(lpc => lpc.courseId) || []);
   const [imageUrl, setImageUrl] = useState(path?.imageUrl || 'https://placehold.co/300x200.png');
   const [dataAiHint, setDataAiHint] = useState(path?.dataAiHint || 'learning path');
 
@@ -149,7 +149,7 @@ const LearningPathForm = ({
 export default function LearningPathManagement() {
   const [learningPaths, setLearningPaths] = useState<LearningPath[]>([]);
   const [allCourses, setAllCourses] = useState<Course[]>([]);
-  const [editingPath, setEditingPath] = useState<(LearningPath & { courses?: { course: Course }[] }) | undefined>(undefined);
+  const [editingPath, setEditingPath] = useState<(LearningPath & { learningPathCourses?: { course: Course }[] }) | undefined>(undefined);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [isSubmittingForm, setIsSubmittingForm] = useState(false);
@@ -158,22 +158,27 @@ export default function LearningPathManagement() {
   useEffect(() => {
     const loadData = async () => {
       setIsLoadingData(true);
-      const [pathsFromDb, coursesFromDb] = await Promise.all([
-        getLearningPathsFromDb(),
-        getCoursesFromDb()
-      ]);
-      setLearningPaths(pathsFromDb as any); // Cast if Prisma type for courses relation is different initially
-      setAllCourses(coursesFromDb);
+      try {
+        const [pathsFromDb, coursesFromDb] = await Promise.all([
+          getLearningPathsFromDb(),
+          getCoursesFromDb()
+        ]);
+        setLearningPaths(pathsFromDb);
+        setAllCourses(coursesFromDb);
+      } catch (error) {
+        console.error("Error loading learning paths or courses:", error);
+        toast({variant: "destructive", title: "Load Error", description: "Could not load data for learning paths."});
+      }
       setIsLoadingData(false);
     };
     loadData();
-  }, []);
+  }, [toast]);
 
-  const handleAddPath = async (data: Omit<LearningPath, 'id' | 'createdAt' | 'updatedAt' | 'courses'> & { courseIdsToConnect?: string[] }) => {
+  const handleAddPath = async (data: Omit<LearningPath, 'id' | 'createdAt' | 'updatedAt' | 'learningPathCourses'> & { courseIdsToConnect?: string[] }) => {
     setIsSubmittingForm(true);
     try {
       const newPath = await addLearningPathToDb(data);
-      setLearningPaths(prev => [newPath, ...prev].sort((a, b) => a.title.localeCompare(b.title)) as any);
+      setLearningPaths(prev => [newPath, ...prev].sort((a, b) => a.title.localeCompare(b.title)));
       closeForm();
       toast({ title: "Learning Path Added", description: `"${data.title}" created.` });
     } catch (error) {
@@ -183,12 +188,12 @@ export default function LearningPathManagement() {
     }
   };
 
-  const handleEditPath = async (data: Omit<LearningPath, 'id' | 'createdAt' | 'updatedAt'| 'courses'> & { courseIdsToConnect?: string[] }) => {
+  const handleEditPath = async (data: Partial<Omit<LearningPath, 'id' | 'createdAt' | 'updatedAt'| 'learningPathCourses'>> & { courseIdsToConnect?: string[] }) => {
     if (!editingPath || !editingPath.id) return;
     setIsSubmittingForm(true);
     try {
       const updatedPath = await updateLearningPathInDb(editingPath.id, data);
-      setLearningPaths(prev => prev.map(p => (p.id === editingPath.id ? updatedPath : p)).sort((a,b) => a.title.localeCompare(b.title)) as any);
+      setLearningPaths(prev => prev.map(p => (p.id === editingPath.id ? updatedPath : p)).sort((a,b) => a.title.localeCompare(b.title)));
       closeForm();
       toast({ title: "Learning Path Updated", description: `"${data.title}" updated.` });
     } catch (error) {
@@ -209,7 +214,7 @@ export default function LearningPathManagement() {
     }
   };
 
-  const openForm = (path?: LearningPath & { courses?: { course: Course }[] }) => {
+  const openForm = (path?: LearningPath & { learningPathCourses?: { course: Course }[] }) => {
     setEditingPath(path ? JSON.parse(JSON.stringify(path)) : undefined);
     setIsFormOpen(true);
   };
@@ -231,7 +236,7 @@ export default function LearningPathManagement() {
         <div className="mb-6 text-right">
           <Dialog open={isFormOpen} onOpenChange={(isOpen) => { if(!isOpen) closeForm(); else setIsFormOpen(true);}}>
             <DialogTrigger asChild>
-              <Button onClick={() => openForm()} className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-md">
+              <Button onClick={() => openForm()} className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-md" disabled={isLoadingData}>
                 <PlusCircle className="mr-2 h-5 w-5" /> Add New Learning Path
               </Button>
             </DialogTrigger>
@@ -242,13 +247,16 @@ export default function LearningPathManagement() {
                   {editingPath ? 'Modify details of this learning path.' : 'Define a new learning path and select courses.'}
                 </DialogDescription>
               </DialogHeader>
-              <LearningPathForm
-                path={editingPath}
-                allCourses={allCourses}
-                onSubmit={editingPath ? handleEditPath : handleAddPath}
-                onCancel={closeForm}
-                isSubmitting={isSubmittingForm}
-              />
+              {(isFormOpen && !isLoadingData) &&
+                <LearningPathForm
+                    path={editingPath}
+                    allCourses={allCourses}
+                    onSubmit={editingPath ? handleEditPath : handleAddPath}
+                    onCancel={closeForm}
+                    isSubmitting={isSubmittingForm}
+                />
+              }
+              {isLoadingData && isFormOpen && <div className="flex justify-center items-center p-10"><Loader2 className="h-6 w-6 animate-spin text-primary"/> Initializing form...</div>}
             </DialogContent>
           </Dialog>
         </div>
@@ -275,7 +283,7 @@ export default function LearningPathManagement() {
                       {path.title}
                     </h3>
                     <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{path.description}</p>
-                    <p className="text-xs text-muted-foreground mt-1">Courses: {(path as any).courses?.length || (path as any).courseIds?.length || 0}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Courses: {(path as any).learningPathCourses?.length || 0}</p>
                   </div>
                   <div className="flex flex-col sm:flex-row sm:space-x-2 gap-2 sm:gap-0 w-full sm:w-auto sm:items-center mt-2 sm:mt-0 shrink-0 self-start sm:self-center">
                     <Button variant="outline" size="sm" onClick={() => openForm(path as any)} className="w-full sm:w-auto hover:border-primary hover:text-primary">
@@ -306,9 +314,12 @@ export default function LearningPathManagement() {
             })}
           </ul>
         ) : (
-          <p className="text-center text-muted-foreground py-4">No learning paths found in your database. Add some!</p>
+          <p className="text-center text-muted-foreground py-4">No learning paths found in your database. Add some or use the seeder!</p>
         )}
       </CardContent>
     </Card>
   );
 }
+
+
+    

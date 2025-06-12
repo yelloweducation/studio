@@ -2,8 +2,8 @@
 "use client";
 import { useState, useEffect, type FormEvent, type ChangeEvent } from 'react';
 import Image from 'next/image';
-// Use types from mockData.ts
-import type { Course, Module, Lesson, Quiz, Question, Option, QuizType } from '@/data/mockData'; 
+// Use types from Prisma where applicable, or mock types for form data structure if simpler
+import type { Course, Module, Lesson, Quiz, Question, Option, QuizType, Category as PrismaCategory } from '@prisma/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -26,19 +26,22 @@ import { Label } from '../ui/label';
 import { Checkbox } from '../ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-// Use dbUtils functions that operate on mock data / localStorage
+// Use dbUtils functions that now operate on Prisma
 import { 
     getCoursesFromDb, 
     addCourseToDb, 
     updateCourseInDb, 
     deleteCourseFromDb,
-    saveQuizWithQuestionsToDb, // For managing quiz questions
-    getCourseByIdFromDb, // Added
+    saveQuizWithQuestionsToDb,
+    getCourseByIdFromDb, 
+    getCategoriesFromDb, // To fetch categories for the dropdown
 } from '@/lib/dbUtils'; 
+import type { Course as MockCourseType, Module as MockModuleType, Lesson as MockLessonType, Quiz as MockQuizType, Question as MockQuestionType, Option as MockOptionType, QuizType as MockQuizEnumType } from '@/data/mockData';
 
 
-const generateQuestionId = () => `q-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-const generateOptionId = () => `opt-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+const generateQuestionId = () => `q-new-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+const generateOptionId = () => `opt-new-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+
 
 const LessonForm = ({
   lesson,
@@ -46,12 +49,14 @@ const LessonForm = ({
   onCancel,
   moduleIndex,
   lessonIndex,
+  isSubmitting,
 }: {
-  lesson?: Partial<Lesson>;
-  onSave: (lesson: Omit<Lesson, 'moduleId' | 'createdAt' | 'updatedAt'>, moduleIndex: number, lessonIndex?: number) => void;
+  lesson?: Partial<Omit<Lesson, 'moduleId'|'createdAt'|'updatedAt'>>; // Prisma Lesson type
+  onSave: (lesson: Partial<Omit<Lesson, 'moduleId'|'createdAt'|'updatedAt'>>, moduleIndex: number, lessonIndex?: number) => void;
   onCancel: () => void;
   moduleIndex: number;
   lessonIndex?: number;
+  isSubmitting: boolean;
 }) => {
   const [title, setTitle] = useState(lesson?.title || '');
   const [duration, setDuration] = useState(lesson?.duration || '');
@@ -64,13 +69,12 @@ const LessonForm = ({
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     onSave({
-      id: lesson?.id || `l${Date.now()}`, 
+      id: lesson?.id, 
       title,
       duration,
       description,
       embedUrl,
       imageUrl,
-      // @ts-ignore // order is not in mock Lesson, but was in Prisma. Assuming we keep it for UI.
       order, 
     }, moduleIndex, lessonIndex);
   };
@@ -79,33 +83,31 @@ const LessonForm = ({
     <form onSubmit={handleSubmit} className="space-y-3 p-1">
       <div>
         <Label htmlFor={`lessonTitle-${moduleIndex}-${lessonIndex}`}>Lesson Title</Label>
-        <Input id={`lessonTitle-${moduleIndex}-${lessonIndex}`} value={title} onChange={e => setTitle(e.target.value)} required />
+        <Input id={`lessonTitle-${moduleIndex}-${lessonIndex}`} value={title} onChange={e => setTitle(e.target.value)} required disabled={isSubmitting}/>
       </div>
       <div>
         <Label htmlFor={`lessonDuration-${moduleIndex}-${lessonIndex}`}>Duration (e.g., 10min)</Label>
-        <Input id={`lessonDuration-${moduleIndex}-${lessonIndex}`} value={duration} onChange={e => setDuration(e.target.value)} required />
+        <Input id={`lessonDuration-${moduleIndex}-${lessonIndex}`} value={duration || ''} onChange={e => setDuration(e.target.value)} required disabled={isSubmitting}/>
       </div>
       <div>
-        {/* @ts-ignore */}
         <Label htmlFor={`lessonOrder-${moduleIndex}-${lessonIndex}`}>Order</Label>
-        {/* @ts-ignore */}
-        <Input id={`lessonOrder-${moduleIndex}-${lessonIndex}`} type="number" value={order} onChange={e => setOrder(parseInt(e.target.value,10))} required />
+        <Input id={`lessonOrder-${moduleIndex}-${lessonIndex}`} type="number" value={order} onChange={e => setOrder(parseInt(e.target.value,10))} required disabled={isSubmitting}/>
       </div>
       <div>
         <Label htmlFor={`lessonDescription-${moduleIndex}-${lessonIndex}`}>Description</Label>
-        <Textarea id={`lessonDescription-${moduleIndex}-${lessonIndex}`} value={description || ''} onChange={e => setDescription(e.target.value)} />
+        <Textarea id={`lessonDescription-${moduleIndex}-${lessonIndex}`} value={description || ''} onChange={e => setDescription(e.target.value)} disabled={isSubmitting}/>
       </div>
        <div>
         <Label htmlFor={`lessonEmbedUrl-${moduleIndex}-${lessonIndex}`}>Video Embed URL (YouTube, TikTok, Google Drive)</Label>
-        <Input id={`lessonEmbedUrl-${moduleIndex}-${lessonIndex}`} value={embedUrl || ''} onChange={e => setEmbedUrl(e.target.value)} placeholder="https://www.youtube.com/watch?v=..."/>
+        <Input id={`lessonEmbedUrl-${moduleIndex}-${lessonIndex}`} value={embedUrl || ''} onChange={e => setEmbedUrl(e.target.value)} placeholder="https://www.youtube.com/watch?v=..." disabled={isSubmitting}/>
       </div>
       <div>
         <Label htmlFor={`lessonImageUrl-${moduleIndex}-${lessonIndex}`}>Fallback Image URL (if no video)</Label>
-        <Input id={`lessonImageUrl-${moduleIndex}-${lessonIndex}`} value={imageUrl || ''} onChange={e => setImageUrl(e.target.value)} placeholder="https://placehold.co/600x400.png"/>
+        <Input id={`lessonImageUrl-${moduleIndex}-${lessonIndex}`} value={imageUrl || ''} onChange={e => setImageUrl(e.target.value)} placeholder="https://placehold.co/600x400.png" disabled={isSubmitting}/>
       </div>
       <div className="flex justify-end space-x-2 pt-2">
-        <Button type="button" variant="outline" size="sm" onClick={onCancel}>Cancel</Button>
-        <Button type="submit" size="sm">{lesson?.id ? 'Save Lesson' : 'Add Lesson'}</Button>
+        <Button type="button" variant="outline" size="sm" onClick={onCancel} disabled={isSubmitting}>Cancel</Button>
+        <Button type="submit" size="sm" disabled={isSubmitting}>{lesson?.id ? 'Save Lesson' : 'Add Lesson'}</Button>
       </div>
     </form>
   );
@@ -116,34 +118,35 @@ const QuestionEditDialog = ({
   questionToEdit,
   onSaveQuestion,
   onCancel,
+  isSubmitting,
 }: {
-  questionToEdit: Partial<Question> & { options?: Partial<Option>[] };
-  onSaveQuestion: (question: Omit<Question, 'quizId'|'createdAt'|'updatedAt'> & { optionsToCreate?: Omit<Option,'questionId'|'createdAt'|'updatedAt'>[], correctOptionTextForNew?: string }) => void;
+  questionToEdit: Partial<Omit<Question, 'quizId'|'createdAt'|'updatedAt'>> & { options?: Partial<Omit<Option, 'questionId'|'createdAt'|'updatedAt'>>[], correctOptionId?: string | null };
+  onSaveQuestion: (questionData: Partial<Omit<Question, 'quizId'|'createdAt'|'updatedAt'>> & { options?: Partial<Omit<Option, 'questionId'|'createdAt'|'updatedAt'>>[], correctOptionTextForNew?: string }) => void;
   onCancel: () => void;
+  isSubmitting: boolean;
 }) => {
   const [questionText, setQuestionText] = useState(questionToEdit.text || '');
-  const [options, setOptions] = useState<(Partial<Option> & { isCorrect?: boolean })[]>(
+  const [currentOptions, setCurrentOptions] = useState<(Partial<Omit<Option, 'questionId'|'createdAt'|'updatedAt'>> & { isCorrect?: boolean })[]>(
     questionToEdit.options?.map(opt => ({...opt, isCorrect: opt.id === questionToEdit.correctOptionId })) || []
   );
   const [newOptionText, setNewOptionText] = useState('');
-  const [points, setPoints] = useState<number | undefined>(questionToEdit.points ?? undefined);
-  // @ts-ignore
+  const [points, setPoints] = useState<number | null>(questionToEdit.points ?? null);
   const [order, setOrder] = useState<number>(questionToEdit.order ?? 0);
 
   const handleAddOption = () => {
     if (newOptionText.trim() === '') return;
-    const newOption: Partial<Option> & { isCorrect?: boolean } = { id: generateOptionId(), text: newOptionText.trim(), isCorrect: false };
-    setOptions([...options, newOption]);
+    const newOpt: Partial<Omit<Option, 'questionId'|'createdAt'|'updatedAt'>> & { isCorrect?: boolean } = { id: generateOptionId(), text: newOptionText.trim(), isCorrect: false };
+    setCurrentOptions([...currentOptions, newOpt]);
     setNewOptionText('');
   };
 
   const handleDeleteOption = (optionId?: string) => {
     if (!optionId) return;
-    setOptions(options.filter(opt => opt.id !== optionId));
+    setCurrentOptions(currentOptions.filter(opt => opt.id !== optionId));
   };
 
   const handleSetCorrectOption = (optionId?: string) => {
-    setOptions(options.map(opt => ({ ...opt, isCorrect: opt.id === optionId })));
+    setCurrentOptions(currentOptions.map(opt => ({ ...opt, isCorrect: opt.id === optionId })));
   };
   
   const handleSave = () => {
@@ -151,31 +154,23 @@ const QuestionEditDialog = ({
       alert("Question text cannot be empty.");
       return;
     }
-    if (options.length < 2) {
-      alert("A question must have at least two options.");
+    if (currentOptions.length < 1) { // Changed from 2 to 1 for flexibility, can be adjusted
+      alert("A question must have at least one option.");
       return;
     }
-    const correctOption = options.find(opt => opt.isCorrect);
+    const correctOption = currentOptions.find(opt => opt.isCorrect);
     if (!correctOption) {
       alert("Please select a correct option.");
       return;
     }
 
-    const optionsToCreate = options.map(opt => ({ text: opt.text! }));
-    const correctOptionTextForNew = correctOption.text;
-
     onSaveQuestion({
-      id: questionToEdit.id || generateQuestionId(),
+      id: questionToEdit.id, // Preserve original ID if editing
       text: questionText,
+      order,
       points,
-      // @ts-ignore
-      order, 
-      optionsToCreate,
-      correctOptionTextForNew: correctOptionTextForNew,
-      // correctOptionId is handled by saveQuizWithQuestionsToDb
-      // @ts-ignore // options not expected on base Question type for save
-      options: [], // Send empty or reconstruct based on what onSaveQuestion expects
-      correctOptionId: correctOption?.id || '', // Pass correctOptionId directly
+      options: currentOptions.map(({ isCorrect, ...optData }) => optData), // Send only option data
+      correctOptionTextForNew: correctOption.text, // This will be used by dbUtils to find/link the ID
     });
   };
 
@@ -190,61 +185,60 @@ const QuestionEditDialog = ({
           <div className="space-y-4 py-2">
             <div>
               <Label htmlFor="questionText">Question Text</Label>
-              <Textarea id="questionText" value={questionText} onChange={e => setQuestionText(e.target.value)} rows={3} />
+              <Textarea id="questionText" value={questionText} onChange={e => setQuestionText(e.target.value)} rows={3} disabled={isSubmitting}/>
             </div>
              <div>
-               {/* @ts-ignore */}
               <Label htmlFor="questionOrder">Order</Label>
-              {/* @ts-ignore */}
-              <Input id="questionOrder" type="number" value={order} onChange={e => setOrder(Number(e.target.value))}/>
+              <Input id="questionOrder" type="number" value={order} onChange={e => setOrder(Number(e.target.value))} disabled={isSubmitting}/>
             </div>
             <div>
               <Label>Options (Mark one as correct)</Label>
-                {options.map((opt, index) => (
-                  <Card key={opt.id || `new-opt-${index}`} className="p-2.5 flex items-center justify-between bg-muted/30">
+                {currentOptions.map((opt, index) => (
+                  <Card key={opt.id || `new-opt-${index}`} className="p-2.5 flex items-center justify-between bg-muted/30 my-1.5">
                     <div className="flex items-center space-x-2 flex-grow mr-2">
                       <Checkbox 
                         id={`opt-correct-${opt.id || index}`} 
                         checked={opt.isCorrect} 
                         onCheckedChange={() => handleSetCorrectOption(opt.id)}
+                        disabled={isSubmitting}
                       />
                       <Input 
                         id={`opt-text-${opt.id || index}`} 
                         value={opt.text || ''}
                         onChange={(e) => {
-                            const newOpts = [...options];
-                            // @ts-ignore
+                            const newOpts = [...currentOptions];
                             newOpts[index].text = e.target.value;
-                            setOptions(newOpts);
+                            setCurrentOptions(newOpts);
                         }}
                         className="flex-grow"
+                        disabled={isSubmitting}
                       />
                     </div>
-                    <Button type="button" variant="ghost" size="icon_sm" onClick={() => handleDeleteOption(opt.id)}>
+                    <Button type="button" variant="ghost" size="icon_sm" onClick={() => handleDeleteOption(opt.id)} disabled={isSubmitting}>
                       <Trash2 className="h-3.5 w-3.5 text-destructive" />
                     </Button>
                   </Card>
                 ))}
-              {options.length === 0 && <p className="text-xs text-muted-foreground text-center py-2">No options added yet.</p>}
+              {currentOptions.length === 0 && <p className="text-xs text-muted-foreground text-center py-2">No options added yet.</p>}
             </div>
 
             <div className="space-y-1.5 pt-2 border-t">
               <Label htmlFor="newOptionText">Add New Option</Label>
               <div className="flex gap-2">
-                <Input id="newOptionText" value={newOptionText} onChange={e => setNewOptionText(e.target.value)} placeholder="Option text" />
-                <Button type="button" variant="outline" size="sm" onClick={handleAddOption} disabled={!newOptionText.trim()}>Add</Button>
+                <Input id="newOptionText" value={newOptionText} onChange={e => setNewOptionText(e.target.value)} placeholder="Option text" disabled={isSubmitting}/>
+                <Button type="button" variant="outline" size="sm" onClick={handleAddOption} disabled={!newOptionText.trim() || isSubmitting}>Add</Button>
               </div>
             </div>
             
             <div>
               <Label htmlFor="questionPoints">Points (optional)</Label>
-              <Input id="questionPoints" type="number" value={points ?? ''} onChange={e => setPoints(Number(e.target.value) || undefined)} />
+              <Input id="questionPoints" type="number" value={points ?? ''} onChange={e => setPoints(e.target.value === '' ? null : Number(e.target.value))} disabled={isSubmitting}/>
             </div>
           </div>
         </ScrollArea>
         <DialogFooter className="pt-4 border-t">
-          <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
-          <Button type="button" onClick={handleSave}>Save Question</Button>
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>Cancel</Button>
+          <Button type="button" onClick={handleSave} disabled={isSubmitting}>Save Question</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -256,21 +250,22 @@ const QuizQuestionsDialog = ({
   quiz,
   onSaveQuiz,
   onCancel,
+  isSavingQuiz,
 }: {
-  quiz: Quiz & { questions?: (Question & { options?: Option[] })[] };
-  onSaveQuiz: (updatedQuiz: Quiz & { questionsToUpsert?: (Omit<Question, 'quizId'|'createdAt'|'updatedAt'> & { optionsToCreate?: Omit<Option,'questionId'|'createdAt'|'updatedAt'>[], correctOptionTextForNew?: string, id?: string })[], questionIdsToDelete?: string[] }) => Promise<void>;
+  quiz: MockQuizType & { questions?: (MockQuestionType & { options?: MockOptionType[] })[] }; // Using mock types for form state
+  onSaveQuiz: (updatedQuiz: MockQuizType & { questionsToUpsert?: any[], questionIdsToDelete?: string[] }) => Promise<void>;
   onCancel: () => void;
+  isSavingQuiz: boolean;
 }) => {
-  const [currentQuizState, setCurrentQuizState] = useState<Quiz & { questions?: (Question & { options?: Option[] })[] }>(JSON.parse(JSON.stringify(quiz)));
-  const [editingQuestion, setEditingQuestion] = useState<Partial<Question> & { options?: Partial<Option>[] } | null>(null);
+  const [currentQuizState, setCurrentQuizState] = useState<MockQuizType & { questions?: (MockQuestionType & { options?: MockOptionType[] })[] }>(JSON.parse(JSON.stringify(quiz)));
+  const [editingQuestion, setEditingQuestion] = useState<Partial<MockQuestionType> & { options?: Partial<MockOptionType>[] } | null>(null);
   const [questionIdsToDelete, setQuestionIdsToDelete] = useState<string[]>([]);
 
   const handleAddNewQuestion = () => {
-    // @ts-ignore
-    setEditingQuestion({ text: '', order: (currentQuizState.questions?.length || 0) + 1, options: [] });
+    setEditingQuestion({ text: '', order: (currentQuizState.questions?.length || 0), options: [], points: 10 });
   };
 
-  const handleEditQuestion = (questionToEdit: Question & { options?: Option[] }) => {
+  const handleEditQuestion = (questionToEdit: MockQuestionType & { options?: MockOptionType[] }) => {
     setEditingQuestion(JSON.parse(JSON.stringify(questionToEdit)));
   };
 
@@ -279,38 +274,44 @@ const QuizQuestionsDialog = ({
       ...prev,
       questions: prev.questions?.filter(q => q.id !== questionId),
     }));
-    setQuestionIdsToDelete(prev => [...prev, questionId]);
+    // If the question ID is not a "new" one, mark it for deletion in DB
+    if (!questionId.startsWith('q-new-')) {
+      setQuestionIdsToDelete(prev => [...new Set([...prev, questionId])]);
+    }
   };
 
-  const handleSaveQuestionFromDialog = (questionData: Omit<Question, 'quizId'|'createdAt'|'updatedAt'> & { optionsToCreate?: Omit<Option,'questionId'|'createdAt'|'updatedAt'>[], correctOptionTextForNew?: string }) => {
+  const handleSaveQuestionFromDialog = (questionData: Partial<MockQuestionType> & { options?: Partial<MockOptionType>[], correctOptionTextForNew?: string }) => {
     setCurrentQuizState(prev => {
       const existingIndex = prev.questions?.findIndex(q => q.id === questionData.id);
-      let newQuestions;
+      let newQuestionsList;
+      const newQuestionEntry = {
+          ...questionData,
+          id: questionData.id || generateQuestionId(), // Ensure ID
+          options: questionData.options?.map(opt => ({ id: opt.id || generateOptionId(), text: opt.text! })) || [],
+          // correctOptionId will be set by correctOptionTextForNew in dbUtils.saveQuizWithQuestionsToDb
+      } as MockQuestionType & { options?: MockOptionType[] };
+      
       if (existingIndex !== undefined && existingIndex > -1 && prev.questions) {
-        newQuestions = [...prev.questions];
-        // @ts-ignore
-        newQuestions[existingIndex] = { ...newQuestions[existingIndex], ...questionData, options: questionData.optionsToCreate?.map(opt => ({text: opt.text, id: generateOptionId()})) || [] };
+        newQuestionsList = [...prev.questions];
+        newQuestionsList[existingIndex] = newQuestionEntry;
       } else {
-        // @ts-ignore
-        newQuestions = [...(prev.questions || []), { ...questionData, id: questionData.id || generateQuestionId(), options: questionData.optionsToCreate?.map(opt => ({text: opt.text, id: generateOptionId()})) || [] }];
+        newQuestionsList = [...(prev.questions || []), newQuestionEntry];
       }
-      return { ...prev, questions: newQuestions };
+      return { ...prev, questions: newQuestionsList };
     });
     setEditingQuestion(null);
   };
   
   const handleSaveAndClose = async () => {
     const questionsToUpsert = currentQuizState.questions?.map(q => {
-        const { createdAt, updatedAt, options, ...rest } = q; // quizId not on Question in mockData
-        const correctOpt = options?.find(o => (o as any).isCorrect || o.id === q.correctOptionId);
+        const { ...rest } = q; // Remove mock-specific fields if any before sending to backend
         return {
-            ...rest,
-            id: q.id.startsWith('q-') ? undefined : q.id,
-            optionsToCreate: options?.map(opt => ({ text: opt.text! })), // Ensure text is not undefined
-            correctOptionTextForNew: correctOpt?.text
+            ...rest, // Contains id, text, order, points
+            optionsToCreate: q.options?.map(opt => ({ id: opt.id.startsWith('opt-new-') ? undefined : opt.id, text: opt.text })),
+            correctOptionTextForNew: q.options?.find(o => o.id === q.correctOptionId)?.text,
+            id: q.id.startsWith('q-new-') ? undefined : q.id, // Send existing ID or undefined for new
         };
     });
-    // @ts-ignore // courseId not on Quiz in mockData
     await onSaveQuiz({ ...currentQuizState, questionsToUpsert, questionIdsToDelete });
   };
 
@@ -320,7 +321,7 @@ const QuizQuestionsDialog = ({
         <DialogContent className="sm:max-w-xl md:max-w-2xl lg:max-w-3xl">
           <DialogHeader>
             <DialogTitle className="font-headline text-xl">Manage Questions for: {currentQuizState.title}</DialogTitle>
-            <DialogDescription>Add, edit, or delete questions for this quiz.</DialogDescription>
+            <DialogDescription>Add, edit, or delete questions for this quiz. Changes are saved to the database.</DialogDescription>
           </DialogHeader>
           <ScrollArea className="h-[65vh] pr-3">
             <div className="space-y-3 py-2">
@@ -329,17 +330,16 @@ const QuizQuestionsDialog = ({
                   <Card key={q.id || index} className="p-3">
                     <div className="flex justify-between items-start">
                       <div className="flex-grow pr-2">
-                        {/* @ts-ignore */}
                         <p className="font-medium text-sm">{q.order || index + 1}. {q.text}</p>
                         <p className="text-xs text-muted-foreground">
                           Options: {q.options?.length || 0} | Correct: {q.options?.find(opt => opt.id === q.correctOptionId)?.text || 'N/A'}
                         </p>
                       </div>
                       <div className="flex space-x-1 shrink-0">
-                        <Button type="button" variant="ghost" size="icon_sm" onClick={() => handleEditQuestion(q)}>
+                        <Button type="button" variant="ghost" size="icon_sm" onClick={() => handleEditQuestion(q)} disabled={isSavingQuiz}>
                           <Edit3 className="h-4 w-4" />
                         </Button>
-                        <Button type="button" variant="ghost" size="icon_sm" onClick={() => handleDeleteQuestion(q.id)}>
+                        <Button type="button" variant="ghost" size="icon_sm" onClick={() => handleDeleteQuestion(q.id)} disabled={isSavingQuiz}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>
@@ -349,14 +349,17 @@ const QuizQuestionsDialog = ({
               ) : (
                 <p className="text-center text-muted-foreground py-4">No questions in this quiz yet.</p>
               )}
-               <Button type="button" variant="outline" onClick={handleAddNewQuestion} className="mt-4 w-full">
+               <Button type="button" variant="outline" onClick={handleAddNewQuestion} className="mt-4 w-full" disabled={isSavingQuiz}>
                 <PlusCircle className="mr-2 h-4 w-4" /> Add New Question
               </Button>
             </div>
           </ScrollArea>
           <DialogFooter className="pt-4 border-t">
-            <Button type="button" variant="outline" onClick={onCancel}>Cancel Changes</Button>
-            <Button type="button" onClick={handleSaveAndClose}>Done & Save Quiz</Button>
+            <Button type="button" variant="outline" onClick={onCancel} disabled={isSavingQuiz}>Cancel Changes</Button>
+            <Button type="button" onClick={handleSaveAndClose} disabled={isSavingQuiz}>
+              {isSavingQuiz ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Done & Save Quiz
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -366,6 +369,7 @@ const QuizQuestionsDialog = ({
           questionToEdit={editingQuestion}
           onSaveQuestion={handleSaveQuestionFromDialog}
           onCancel={() => setEditingQuestion(null)}
+          isSubmitting={isSavingQuiz}
         />
       )}
     </>
@@ -375,28 +379,48 @@ const QuizQuestionsDialog = ({
 
 const CourseForm = ({
   course,
+  categories,
   onSubmit,
   onCancel,
   isSubmitting,
 }: {
-  course?: Course & { modules?: (Module & { lessons?: Lesson[] })[], quizzes?: (Quiz & { questions?: (Question & { options?: Option[]})[] })[] };
-  onSubmit: (data: Omit<Course, 'id' | 'createdAt' | 'updatedAt' | 'categoryId' | 'categoryNameCache'> & { categoryName?: string, modulesData?: Array<Partial<Omit<Module, 'courseId' | 'createdAt' | 'updatedAt'>> & { id?: string, lessonsData?: Array<Partial<Omit<Lesson, 'moduleId' | 'createdAt' | 'updatedAt'>> & {id?: string}>}>, quizzesData?: Array<Partial<Omit<Quiz, 'courseId' | 'createdAt' | 'updatedAt'>> & {id?:string}> }) => Promise<void>;
+  course?: Course & { modules?: (Module & { lessons?: Lesson[] })[], quizzes?: (Quiz & { questions?: (Question & { options?: Option[]})[] })[] }; // Using Prisma types
+  categories: PrismaCategory[];
+  onSubmit: (data: Omit<Course, 'id' | 'createdAt' | 'updatedAt' | 'categoryId' | 'categoryNameCache'> & { categoryName: string, modules?: Array<Partial<Omit<Module, 'id'|'courseId'|'createdAt'|'updatedAt'>> & { lessons?: Array<Partial<Omit<Lesson, 'id'|'moduleId'|'createdAt'|'updatedAt'>>> }>, quizzes?: Array<Partial<Omit<Quiz, 'id'|'courseId'|'createdAt'|'updatedAt'>> & { questions?: Array<Partial<Omit<Question, 'id'|'quizId'|'createdAt'|'updatedAt'|'options'|'correctOptionId'>> & { options: Array<Partial<Omit<Option, 'id'|'questionId'|'createdAt'|'updatedAt'>>>, correctOptionText?: string }> }> }) => Promise<void>;
   onCancel: () => void;
   isSubmitting: boolean;
 }) => {
   const [title, setTitle] = useState(course?.title || '');
   const [description, setDescription] = useState(course?.description || '');
-  const [categoryNameCache, setCategoryNameCache] = useState(course?.category || ''); // Use 'category' from mock Course
+  const [categoryName, setCategoryName] = useState(course?.categoryNameCache || (categories.length > 0 ? categories[0].name : ''));
   const [instructor, setInstructor] = useState(course?.instructor || '');
   const [imageUrl, setImageUrl] = useState(course?.imageUrl || 'https://placehold.co/600x400.png');
   const [dataAiHint, setDataAiHint] = useState(course?.dataAiHint || 'education learning');
   const [price, setPrice] = useState<number | string>(course?.price ?? '');
   const [currency, setCurrency] = useState(course?.currency || 'USD');
   const [isFeatured, setIsFeatured] = useState(course?.isFeatured || false);
-  const [modules, setModules] = useState<(Module & { lessons?: Lesson[] })[]>(course?.modules || []);
   
-  const [quizzes, setQuizzes] = useState<(Quiz & { questions?: (Question & { options?: Option[]})[] })[]>(course?.quizzes || []);
-  const [editingQuizForQuestions, setEditingQuizForQuestions] = useState<(Quiz & { questions?: (Question & { options?: Option[]})[] }) | null>(null);
+  const [modules, setModules] = useState<(Partial<Omit<Module, 'courseId'|'createdAt'|'updatedAt'>> & { lessons?: Partial<Omit<Lesson, 'moduleId'|'createdAt'|'updatedAt'>>[] })[]>(course?.modules?.map(m => ({...m, lessons: m.lessons.map(l => ({...l}))})) || []);
+  
+  const [quizzes, setQuizzes] = useState<(MockQuizType & { questions?: (MockQuestionType & { options?: MockOptionType[] })[] })[]>(
+    // Map Prisma quiz structure to mock type for form state
+    course?.quizzes?.map(q => ({
+        id: q.id,
+        title: q.title,
+        quizType: q.quizType as MockQuizEnumType,
+        passingScore: q.passingScore ?? undefined,
+        questions: q.questions.map(ques => ({
+            id: ques.id,
+            text: ques.text,
+            order: ques.order,
+            points: ques.points ?? undefined,
+            options: ques.options.map(opt => ({id: opt.id, text: opt.text})),
+            correctOptionId: ques.correctOptionId || '',
+        }))
+    })) || []
+  );
+
+  const [editingQuizForQuestions, setEditingQuizForQuestions] = useState<(MockQuizType & { questions?: (MockQuestionType & { options?: MockOptionType[] })[] }) | null>(null);
 
 
   const [learningObjectives, setLearningObjectives] = useState(course?.learningObjectives?.join('\n') || '');
@@ -405,38 +429,35 @@ const CourseForm = ({
   const [estimatedTimeToComplete, setEstimatedTimeToComplete] = useState(course?.estimatedTimeToComplete || undefined);
 
 
-  const [editingLesson, setEditingLesson] = useState<{ moduleIndex: number, lessonIndex?: number, lesson?: Partial<Lesson> } | null>(null);
+  const [editingLesson, setEditingLesson] = useState<{ moduleIndex: number, lessonIndex?: number, lesson?: Partial<Omit<Lesson, 'moduleId'|'createdAt'|'updatedAt'>> } | null>(null);
 
   const [newQuizTitle, setNewQuizTitle] = useState('');
-  const [newQuizType, setNewQuizType] = useState<QuizType>('practice');
+  const [newQuizType, setNewQuizType] = useState<MockQuizEnumType>('practice');
 
-  const handleModuleChange = (index: number, field: keyof Module, value: string | number) => {
+  const handleModuleChange = (index: number, field: keyof Omit<Module, 'id'|'courseId'|'createdAt'|'updatedAt'>, value: string | number) => {
     const newModules = [...modules];
     (newModules[index] as any)[field] = value;
     setModules(newModules);
   };
 
   const addModule = () => {
-    // @ts-ignore
-    setModules([...modules, { id: `m${Date.now()}`, title: '', order: modules.length + 1, lessons: [] }]);
+    setModules([...modules, { title: '', order: modules.length, lessons: [] }]);
   };
 
   const removeModule = (moduleIndex: number) => {
-    setModules(modules.filter((_, i) => i !== moduleIndex)); // Corrected: Use moduleIndex
+    setModules(modules.filter((_, i) => i !== moduleIndex));
   };
   
 
-  const saveLesson = (lessonData: Omit<Lesson, 'moduleId'|'createdAt'|'updatedAt'>, moduleIndex: number, lessonIndex?: number) => {
+  const saveLesson = (lessonData: Partial<Omit<Lesson, 'moduleId'|'createdAt'|'updatedAt'>>, moduleIndex: number, lessonIndex?: number) => {
     const newModules = [...modules];
     const currentModule = newModules[moduleIndex];
     if (!currentModule.lessons) currentModule.lessons = [];
     
     if (lessonIndex !== undefined) {
-      // @ts-ignore
-      currentModule.lessons[lessonIndex] = { ...lessonData, moduleId: currentModule.id };
+      currentModule.lessons[lessonIndex] = { ...currentModule.lessons[lessonIndex], ...lessonData };
     } else {
-      // @ts-ignore
-      currentModule.lessons.push({ ...lessonData, moduleId: currentModule.id });
+      currentModule.lessons.push({id: `l-new-${Date.now()}`, ...lessonData });
     }
     setModules(newModules);
     setEditingLesson(null);
@@ -455,14 +476,14 @@ const CourseForm = ({
       alert("Quiz title cannot be empty."); 
       return;
     }
-    const newQuiz: Quiz & { questions?: (Question & { options?: Option[]})[] } = {
-      id: `quiz-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+    const newQuizEntry: MockQuizType & { questions?: (MockQuestionType & { options?: MockOptionType[] })[] } = {
+      id: `quiz-new-${Date.now()}`,
       title: newQuizTitle,
       quizType: newQuizType,
       questions: [],
       passingScore: newQuizType === 'graded' ? 70 : undefined,
     };
-    setQuizzes(prev => [...prev, newQuiz]);
+    setQuizzes(prev => [...prev, newQuizEntry]);
     setNewQuizTitle(''); 
     setNewQuizType('practice');
   };
@@ -471,26 +492,24 @@ const CourseForm = ({
     setQuizzes(prev => prev.filter(q => q.id !== quizId));
   };
 
-  const handleSaveQuizWithQuestions = async (quizToSave: Quiz & { questionsToUpsert?: any[], questionIdsToDelete?: string[] }) => {
-    if (!course?.id) { // course.id may not exist for a new course being created client-side
-        // For mock data, we'll just update the local state
+  const handleSaveQuizWithQuestions = async (quizToSave: MockQuizType & { questionsToUpsert?: any[], questionIdsToDelete?: string[] }) => {
+    if (!course?.id) { 
         setQuizzes(prevQuizzes => prevQuizzes.map(q => q.id === quizToSave.id ? quizToSave : q));
         setEditingQuizForQuestions(null);
-        toast({ title: "Quiz Structure Saved (Locally)", description: `Quiz "${quizToSave.title}" structure updated.` });
+        toast({ title: "Quiz Structure Saved (Locally)", description: `Quiz "${quizToSave.title}" structure updated. This will be saved with the course.` });
         return;
     }
+    // For existing courses, this will save to DB
     try {
-        // This would call the DB util in a real scenario
-        // For mock, we update the 'quizzes' state directly or via a helper if dbUtils modifies a global mock array.
-        // Since dbUtils.saveQuizWithQuestionsToDb is designed for Prisma, we adapt.
-        // Let's assume it updates the course's quizzes array in localStorage/mock array.
         const savedQuiz = await saveQuizWithQuestionsToDb(course.id, quizToSave);
-        setQuizzes(prevQuizzes => prevQuizzes.map(q => q.id === savedQuiz.id ? savedQuiz : q));
+        // Update local quizzes state to reflect DB changes (if course exists)
+        setQuizzes(prevQuizzes => prevQuizzes.map(q => q.id === savedQuiz.id ? 
+            {...savedQuiz, quizType: savedQuiz.quizType as MockQuizEnumType} : q)); // Map back to MockQuizType structure
         setEditingQuizForQuestions(null);
-        toast({ title: "Quiz Saved", description: `Quiz "${savedQuiz.title}" and its questions have been updated.` });
+        toast({ title: "Quiz Saved to DB", description: `Quiz "${savedQuiz.title}" and its questions have been updated.` });
     } catch (error) {
-        console.error("Error saving quiz with questions:", error);
-        toast({ variant: "destructive", title: "Quiz Save Error", description: "Could not save quiz questions." });
+        console.error("Error saving quiz with questions to DB:", error);
+        toast({ variant: "destructive", title: "Quiz Save Error", description: "Could not save quiz questions to database." });
     }
 };
 
@@ -500,53 +519,49 @@ const CourseForm = ({
     const courseDataSubmit = {
       title,
       description,
-      categoryName: categoryNameCache, 
+      categoryName: categoryName, 
       instructor,
       imageUrl,
       dataAiHint,
-      price: Number(price) || 0,
+      price: Number(price) || null, // Use null for Prisma if price is 0 or empty
       currency,
       isFeatured,
       learningObjectives: learningObjectives.split('\n').filter(s => s.trim() !== ''),
       targetAudience,
       prerequisites: prerequisites.split('\n').filter(s => s.trim() !== ''),
       estimatedTimeToComplete,
-      modulesData: modules.map(mod => ({ 
-        id: mod.id.startsWith('m') ? undefined : mod.id,
+      modules: modules.map(mod => ({ 
+        id: mod.id?.startsWith('m-new-') ? undefined : mod.id,
         title: mod.title,
-        // @ts-ignore
         order: mod.order, 
-        lessonsData: mod.lessons?.map(les => ({
-            id: les.id.startsWith('l') ? undefined : les.id,
+        lessons: mod.lessons?.map(les => ({
+            id: les.id?.startsWith('l-new-') ? undefined : les.id,
             title: les.title,
             duration: les.duration,
             description: les.description,
             embedUrl: les.embedUrl,
             imageUrl: les.imageUrl,
-            // @ts-ignore
             order: les.order, 
         }))
       })),
-      quizzesData: quizzes.map(q => ({
-          id: q.id.startsWith('quiz-') ? undefined : q.id,
+      quizzes: quizzes.map(q => ({ // Map form state (MockQuizType) to Prisma Quiz input
+          id: q.id.startsWith('quiz-new-') ? undefined : q.id,
           title: q.title,
           quizType: q.quizType,
           passingScore: q.passingScore,
-          questionsData: q.questions?.map(ques => ({
-              id: ques.id.startsWith('q-') ? undefined : ques.id,
+          questions: q.questions?.map(ques => ({
+              id: ques.id.startsWith('q-new-') ? undefined : ques.id,
               text: ques.text,
-              // @ts-ignore
               order: ques.order,
               points: ques.points,
-              optionsData: ques.options?.map(opt => ({
-                id: opt.id.startsWith('opt-') ? undefined: opt.id,
+              options: ques.options?.map(opt => ({
+                id: opt.id.startsWith('opt-new-') ? undefined: opt.id,
                 text: opt.text,
               })),
               correctOptionText: ques.options?.find(opt => opt.id === ques.correctOptionId)?.text,
           }))
       }))
     };
-    // @ts-ignore
     await onSubmit(courseDataSubmit);
   };
 
@@ -555,9 +570,9 @@ const CourseForm = ({
          <Dialog open={true} onOpenChange={(isOpen) => !isOpen && setEditingLesson(null)}>
             <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
-                    <DialogTitle>{editingLesson.lesson?.id ? 'Edit Lesson' : 'Add New Lesson'}</DialogTitle>
+                    <DialogTitle>{editingLesson.lesson?.id && !editingLesson.lesson.id.startsWith('l-new-') ? 'Edit Lesson' : 'Add New Lesson'}</DialogTitle>
                     <DialogDescription>
-                        {editingLesson.lesson?.id ? 'Modify the details of this lesson.' : 'Fill in the details for the new lesson.'}
+                        {editingLesson.lesson?.id && !editingLesson.lesson.id.startsWith('l-new-') ? 'Modify the details of this lesson.' : 'Fill in the details for the new lesson.'}
                     </DialogDescription>
                 </DialogHeader>
                  <LessonForm
@@ -566,6 +581,7 @@ const CourseForm = ({
                     onCancel={() => setEditingLesson(null)}
                     moduleIndex={editingLesson.moduleIndex}
                     lessonIndex={editingLesson.lessonIndex}
+                    isSubmitting={isSubmitting}
                 />
             </DialogContent>
         </Dialog>
@@ -588,8 +604,17 @@ const CourseForm = ({
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="categoryNameCache">Category Name</Label>
-              <Input id="categoryNameCache" value={categoryNameCache} onChange={e => setCategoryNameCache(e.target.value)} placeholder="e.g., Web Development" required disabled={isSubmitting} />
+              <Label htmlFor="categoryName">Category Name</Label>
+               <Select value={categoryName} onValueChange={setCategoryName} disabled={isSubmitting}>
+                <SelectTrigger id="categoryName">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map(cat => (
+                    <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label htmlFor="instructor">Instructor</Label>
@@ -662,13 +687,12 @@ const CourseForm = ({
 
           <div className="space-y-4 pt-4 border-t">
             <h3 className="text-lg font-semibold flex items-center"><BookOpen className="mr-2 h-5 w-5 text-primary"/> Modules</h3>
-            <Accordion type="multiple" className="w-full" defaultValue={modules.map(m => m.id)}>
+            <Accordion type="multiple" className="w-full" defaultValue={modules.map((m, idx) => m.id || `module-${idx}`)}>
               {modules.map((module, moduleIndex) => (
                 <AccordionItem value={module.id || `module-${moduleIndex}`} key={module.id || `module-item-${moduleIndex}`}>
                   <AccordionTrigger className="hover:no-underline">
                     <Input
-                      value={module.title}
-                       // @ts-ignore
+                      value={module.title || ''}
                       onChange={e => handleModuleChange(moduleIndex, 'title', e.target.value)}
                       placeholder={`Module ${moduleIndex + 1} Title`}
                       className="text-md font-medium flex-grow mr-2"
@@ -696,7 +720,7 @@ const CourseForm = ({
                            </div>
                         </Card>
                       ))}
-                      <Button type="button" variant="outline" size="sm" onClick={() => setEditingLesson({ moduleIndex, lesson: { title: '', duration: '', order: (module.lessons?.length || 0) +1 } })} disabled={isSubmitting}>
+                      <Button type="button" variant="outline" size="sm" onClick={() => setEditingLesson({ moduleIndex, lesson: { title: '', duration: '', order: (module.lessons?.length || 0) } })} disabled={isSubmitting}>
                         <PlusCircle className="mr-2 h-4 w-4" /> Add Lesson
                       </Button>
                     </div>
@@ -731,7 +755,7 @@ const CourseForm = ({
                 disabled={isSubmitting}
               />
               <Label htmlFor="newQuizType">Quiz Type</Label>
-              <Select value={newQuizType} onValueChange={(value: QuizType) => setNewQuizType(value)} disabled={isSubmitting}>
+              <Select value={newQuizType} onValueChange={(value: MockQuizEnumType) => setNewQuizType(value)} disabled={isSubmitting}>
                 <SelectTrigger id="newQuizType">
                   <SelectValue placeholder="Select quiz type" />
                 </SelectTrigger>
@@ -787,6 +811,7 @@ const CourseForm = ({
           quiz={editingQuizForQuestions}
           onSaveQuiz={handleSaveQuizWithQuestions}
           onCancel={() => setEditingQuizForQuestions(null)}
+          isSavingQuiz={isSubmitting} // Pass form submitting state
         />
     )}
     </>
@@ -794,7 +819,8 @@ const CourseForm = ({
 };
 
 export default function CourseManagement() {
-  const [courses, setCourses] = useState<Course[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]); // Prisma Course type
+  const [categories, setCategories] = useState<PrismaCategory[]>([]);
   const [editingCourse, setEditingCourse] = useState<(Course & { modules?: (Module & { lessons?: Lesson[] })[], quizzes?: (Quiz & { questions?: (Question & { options?: Option[]})[] })[] }) | undefined>(undefined);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
@@ -802,41 +828,50 @@ export default function CourseManagement() {
   const { toast } = useToast();
 
   useEffect(() => {
-    const loadCourses = async () => {
+    const loadInitialData = async () => {
       setIsLoadingData(true);
-      const mockCrs = await getCoursesFromDb(); // Now from mock data / localStorage
-      setCourses(mockCrs);
+      try {
+        const [dbCourses, dbCategories] = await Promise.all([
+            getCoursesFromDb(),
+            getCategoriesFromDb()
+        ]);
+        setCourses(dbCourses);
+        setCategories(dbCategories);
+      } catch (error) {
+        console.error("Error loading courses or categories:", error);
+        toast({ variant: "destructive", title: "Load Error", description: "Could not load courses or categories." });
+      }
       setIsLoadingData(false);
     };
-    loadCourses();
-  }, []);
+    loadInitialData();
+  }, [toast]);
 
-  const handleAddCourse = async (data: Omit<Course, 'id' | 'createdAt' | 'updatedAt'| 'categoryId' | 'categoryNameCache'> & { categoryName?: string, modulesData?: any[], quizzesData?: any[] }) => {
+  const handleAddCourse = async (data: Omit<Course, 'id' | 'createdAt' | 'updatedAt'| 'categoryId' | 'categoryNameCache'> & { categoryName: string, modules?: any[], quizzes?: any[] }) => {
     setIsSubmittingForm(true);
     try {
       const newCourse = await addCourseToDb(data);
       setCourses(prev => [newCourse, ...prev].sort((a, b) => a.title.localeCompare(b.title)));
       closeForm();
-      toast({ title: "Course Added", description: `${data.title} has been successfully added (in-memory/localStorage).` });
+      toast({ title: "Course Added", description: `"${data.title}" has been successfully added.` });
     } catch (error) {
       console.error("Error adding course:", error);
-      toast({ variant: "destructive", title: "Error Adding Course", description: "Could not add course." });
+      toast({ variant: "destructive", title: "Error Adding Course", description: (error as Error).message || "Could not add course." });
     } finally {
       setIsSubmittingForm(false);
     }
   };
 
-  const handleEditCourse = async (data: Partial<Omit<Course, 'id' | 'createdAt' | 'updatedAt' | 'categoryId'| 'categoryNameCache'>> & { categoryName?: string, modulesData?: any[], quizzesData?: any[] }) => {
+  const handleEditCourse = async (data: Partial<Omit<Course, 'id' | 'createdAt' | 'updatedAt' | 'categoryId'| 'categoryNameCache'>> & { categoryName?: string, modules?: any[], quizzes?: any[] }) => {
     if (!editingCourse || !editingCourse.id) return;
     setIsSubmittingForm(true);
     try {
       const updatedCourse = await updateCourseInDb(editingCourse.id, data);
       setCourses(prev => prev.map(c => c.id === editingCourse.id ? updatedCourse : c).sort((a,b) => a.title.localeCompare(b.title)));
       closeForm();
-      toast({ title: "Course Updated", description: `${data.title} has been successfully updated (in-memory/localStorage).` });
+      toast({ title: "Course Updated", description: `"${data.title}" has been successfully updated.` });
     } catch (error) {
       console.error("Error updating course:", error);
-      toast({ variant: "destructive", title: "Error Updating Course", description: "Could not update course." });
+      toast({ variant: "destructive", title: "Error Updating Course", description: (error as Error).message || "Could not update course." });
     } finally {
       setIsSubmittingForm(false);
     }
@@ -847,7 +882,7 @@ export default function CourseManagement() {
     try {
       await deleteCourseFromDb(courseId);
       setCourses(prev => prev.filter(c => c.id !== courseId));
-      toast({ title: "Course Deleted", description: `${courseToDelete?.title ?? 'Course'} has been deleted (in-memory/localStorage).`, variant: "destructive" });
+      toast({ title: "Course Deleted", description: `"${courseToDelete?.title ?? 'Course'}" has been deleted.`, variant: "destructive" });
     } catch (error) {
       toast({ variant: "destructive", title: "Error Deleting Course", description: "Could not delete course." });
     }
@@ -855,9 +890,8 @@ export default function CourseManagement() {
 
   const openForm = async (courseId?: string) => {
     if (courseId) {
-        const courseToEdit = await getCourseByIdFromDb(courseId);
+        const courseToEdit = await getCourseByIdFromDb(courseId); // Fetches full course details
         if (courseToEdit) {
-            // @ts-ignore
             setEditingCourse(courseToEdit);
         } else {
             toast({variant: "destructive", title: "Error", description: "Could not fetch course details for editing."});
@@ -880,13 +914,13 @@ export default function CourseManagement() {
         <CardTitle className="flex items-center text-xl md:text-2xl font-headline">
           <GraduationCap className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Course Management
         </CardTitle>
-        <CardDescription>Add, edit, or delete courses. Data is managed in-memory and/or localStorage for this session.</CardDescription>
+        <CardDescription>Add, edit, or delete courses. Data is stored in your Neon/Postgres database via Prisma.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="mb-6 text-right">
           <Dialog open={isFormOpen} onOpenChange={(isOpen) => { if(!isOpen) closeForm(); else setIsFormOpen(true);}}>
             <DialogTrigger asChild>
-              <Button onClick={() => openForm()} className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-md hover:shadow-sm active:translate-y-px transition-all duration-150 w-full sm:w-auto">
+              <Button onClick={() => openForm()} className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-md hover:shadow-sm active:translate-y-px transition-all duration-150 w-full sm:w-auto" disabled={isLoadingData}>
                 <PlusCircle className="mr-2 h-5 w-5" /> Add New Course
               </Button>
             </DialogTrigger>
@@ -897,14 +931,16 @@ export default function CourseManagement() {
                   {editingCourse ? 'Modify the details of the existing course.' : 'Fill in the details for the new course.'}
                 </DialogDescription>
               </DialogHeader>
-              {isFormOpen && 
+              {(isFormOpen && !isLoadingData) && 
                 <CourseForm
                     course={editingCourse}
+                    categories={categories}
                     onSubmit={editingCourse ? handleEditCourse : handleAddCourse}
                     onCancel={closeForm}
                     isSubmitting={isSubmittingForm}
                 />
               }
+               {isLoadingData && isFormOpen && <div className="flex justify-center items-center p-10"><Loader2 className="h-6 w-6 animate-spin text-primary"/> Initializing form...</div>}
             </DialogContent>
           </Dialog>
         </div>
@@ -930,7 +966,7 @@ export default function CourseManagement() {
                   </h3>
                   <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{course.description}</p>
                   <div className="text-xs text-muted-foreground mt-1">
-                    <span>Category: {course.category}</span> | <span>Instructor: {course.instructor}</span>
+                    <span>Category: {course.categoryNameCache}</span> | <span>Instructor: {course.instructor}</span>
                   </div>
                   <div className="text-xs text-muted-foreground">
                     Modules: {course.modules?.length || 0} | Quizzes: {course.quizzes?.length || 0} | Price: {course.price && course.price > 0 ? `${course.price} ${course.currency}` : 'Free'}
@@ -968,9 +1004,12 @@ export default function CourseManagement() {
             ))}
           </ul>
         ) : (
-          <p className="text-center text-muted-foreground py-4">No courses available. Seed data or add new courses.</p>
+          <p className="text-center text-muted-foreground py-4">No courses found in your database. Add some or use the seeder!</p>
         )}
       </CardContent>
     </Card>
   );
 }
+
+
+    

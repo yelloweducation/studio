@@ -7,24 +7,25 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { ImageIcon, Save, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { Course, Video, Category, LearningPath } from '@/lib/dbUtils'; // Use Prisma types from dbUtils
+import type { Course, Category, LearningPath } from '@prisma/client'; // Prisma types
+import type { Video as MockVideoType } from '@/data/mockData'; // Mock type for Video
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
 import { 
   getCoursesFromDb, updateCourseInDb,
-  getVideosFromDb, updateVideoInDb,
+  getVideosFromDb, updateVideoInDb, // Still uses localStorage for videos
   getCategoriesFromDb, updateCategoryInDb,
   getLearningPathsFromDb, updateLearningPathInDb
-} from '@/lib/dbUtils'; // Use Prisma-based functions from dbUtils
+} from '@/lib/dbUtils'; 
 
 export default function ImageManagement() {
   const [courses, setCourses] = useState<Course[]>([]);
-  const [videos, setVideos] = useState<Video[]>([]);
+  const [videos, setVideos] = useState<MockVideoType[]>([]); // Videos still use mock type
   const [categories, setCategories] = useState<Category[]>([]);
   const [learningPaths, setLearningPaths] = useState<LearningPath[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState<Record<string, boolean>>({}); // To track saving state per item
+  const [isSaving, setIsSaving] = useState<Record<string, boolean>>({}); 
   const { toast } = useToast();
 
   useEffect(() => {
@@ -33,7 +34,7 @@ export default function ImageManagement() {
       try {
         const [dbCourses, dbVideos, dbCategories, dbLearningPaths] = await Promise.all([
           getCoursesFromDb(),
-          getVideosFromDb(),
+          getVideosFromDb(), // This will fetch from localStorage
           getCategoriesFromDb(),
           getLearningPathsFromDb(),
         ]);
@@ -54,7 +55,7 @@ export default function ImageManagement() {
     setStateFunc: React.Dispatch<React.SetStateAction<T[]>>,
     itemId: string,
     field: keyof T,
-    value: string | null // Allow null for optional fields
+    value: string | null 
   ) => {
     setStateFunc(prevItems =>
       prevItems.map(item =>
@@ -68,7 +69,7 @@ export default function ImageManagement() {
     itemId: string
   ) => {
     setIsSaving(prev => ({ ...prev, [itemId]: true }));
-    let itemToSave: Course | Video | Category | LearningPath | undefined;
+    let itemToSave: Course | MockVideoType | Category | LearningPath | undefined;
     let updateFunction: (id: string, data: Partial<any>) => Promise<any>; 
     let itemName = '';
 
@@ -79,7 +80,7 @@ export default function ImageManagement() {
           updateFunction = updateCourseInDb;
           itemName = itemToSave?.title || 'Course';
           break;
-        case 'video':
+        case 'video': // Videos still use localStorage based update
           itemToSave = videos.find(v => v.id === itemId);
           updateFunction = updateVideoInDb;
           itemName = itemToSave?.title || 'Video';
@@ -99,28 +100,37 @@ export default function ImageManagement() {
       }
 
       if (itemToSave) {
-        const dataToUpdate: { imageUrl?: string | null, dataAiHint?: string | null } = { 
-          imageUrl: itemToSave.imageUrl || null,
+        // For Prisma items, ensure only imageUrl and dataAiHint are passed
+        // For Video (mock), it expects similar structure
+        const dataToUpdate: { imageUrl?: string | null, dataAiHint?: string | null, thumbnailUrl?: string | null } = { 
           dataAiHint: itemToSave.dataAiHint || null,
         };
+        if (itemType === 'video') {
+            dataToUpdate.thumbnailUrl = (itemToSave as MockVideoType).thumbnailUrl || null;
+        } else {
+            dataToUpdate.imageUrl = itemToSave.imageUrl || null;
+        }
+
         await updateFunction(itemId, dataToUpdate);
         toast({ title: `${itemType.charAt(0).toUpperCase() + itemType.slice(1)} Image Updated`, description: `Image details for "${itemName}" saved.` });
       }
     } catch (error) {
-      toast({ variant: "destructive", title: "Save Failed", description: `Could not save image details for "${itemName}".` });
+      toast({ variant: "destructive", title: "Save Failed", description: `Could not save image details for "${itemName}". ${(error as Error).message}` });
     } finally {
       setIsSaving(prev => ({ ...prev, [itemId]: false }));
     }
   };
 
-  const renderImageForm = <T extends { id: string, title?: string | null, name?: string | null, imageUrl?: string | null, dataAiHint?: string | null }>(
+  const renderImageForm = <T extends { id: string, title?: string | null, name?: string | null, imageUrl?: string | null, thumbnailUrl?: string | null, dataAiHint?: string | null }>(
     item: T,
     itemType: 'course' | 'video' | 'category' | 'learningPath',
     setStateFunc: React.Dispatch<React.SetStateAction<T[]>>
   ) => {
     const title = item.title || item.name || 'Item';
+    const currentImageUrl = itemType === 'video' ? item.thumbnailUrl : item.imageUrl;
     const aspectClass = itemType === 'video' ? 'aspect-[9/16]' : 'aspect-video';
     const placeholderImage = itemType === 'video' ? 'https://placehold.co/360x640.png' : 'https://placehold.co/600x400.png';
+    const imageFieldKey = itemType === 'video' ? 'thumbnailUrl' : 'imageUrl';
 
     return (
       <Card key={item.id}>
@@ -133,18 +143,18 @@ export default function ImageManagement() {
               <div className={`w-full sm:w-1/3 flex-shrink-0 ${itemType === 'video' ? 'max-w-[150px] sm:max-w-full' : ''}`}>
                 <Label htmlFor={`${itemType}ImageUrl-${item.id}`}>Current Image</Label>
                 <div className={`mt-1 w-full relative border rounded-md overflow-hidden bg-muted ${aspectClass}`}>
-                  {(item.imageUrl || placeholderImage) && (
-                    <Image src={item.imageUrl || placeholderImage} alt={title ?? 'Placeholder'} layout="fill" objectFit="cover" key={item.imageUrl || 'placeholder'} />
+                  {(currentImageUrl || placeholderImage) && (
+                    <Image src={currentImageUrl || placeholderImage} alt={title ?? 'Placeholder'} layout="fill" objectFit="cover" key={currentImageUrl || 'placeholder'} />
                   )}
                 </div>
               </div>
               <div className="w-full sm:w-2/3 space-y-4">
                 <div>
-                  <Label htmlFor={`${itemType}ImageUrlInput-${item.id}`}>Image URL</Label>
+                  <Label htmlFor={`${itemType}ImageUrlInput-${item.id}`}>{itemType === 'video' ? 'Thumbnail URL' : 'Image URL'}</Label>
                   <Input
                     id={`${itemType}ImageUrlInput-${item.id}`}
-                    value={item.imageUrl || ''}
-                    onChange={e => handleFieldChange(setStateFunc, item.id, 'imageUrl' as keyof T, e.target.value)}
+                    value={currentImageUrl || ''}
+                    onChange={e => handleFieldChange(setStateFunc, item.id, imageFieldKey as keyof T, e.target.value)}
                     disabled={isSaving[item.id]}
                   />
                 </div>
@@ -179,7 +189,7 @@ export default function ImageManagement() {
           <CardTitle className="flex items-center text-xl md:text-2xl font-headline">
             <ImageIcon className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Image Management
           </CardTitle>
-          <CardDescription>Loading image data from your database...</CardDescription>
+          <CardDescription>Loading image data...</CardDescription>
         </CardHeader>
         <CardContent className="py-10">
           <div className="flex justify-center items-center">
@@ -196,13 +206,13 @@ export default function ImageManagement() {
         <CardTitle className="flex items-center text-xl md:text-2xl font-headline">
           <ImageIcon className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Image Management
         </CardTitle>
-        <CardDescription>Manage image URLs and AI hints. Changes are saved to your Neon/Postgres database via Prisma.</CardDescription>
+        <CardDescription>Manage image URLs and AI hints. Courses, Categories, Learning Paths use Neon/Postgres via Prisma. Videos use localStorage.</CardDescription>
       </CardHeader>
       <CardContent>
         <ScrollArea className="h-[calc(100vh-20rem)] pr-3">
           <div className="space-y-8">
             <section>
-              <h3 className="text-xl font-semibold mb-4 font-headline">Course Images</h3>
+              <h3 className="text-xl font-semibold mb-4 font-headline">Course Images (Prisma)</h3>
               {courses.length > 0 ? (
                 <div className="space-y-6">
                   {courses.map(course => renderImageForm(course, 'course', setCourses))}
@@ -211,7 +221,7 @@ export default function ImageManagement() {
             </section>
 
             <section>
-              <h3 className="text-xl font-semibold mb-4 font-headline">Video Thumbnails</h3>
+              <h3 className="text-xl font-semibold mb-4 font-headline">Video Thumbnails (localStorage)</h3>
               {videos.length > 0 ? (
                 <div className="space-y-6">
                   {videos.map(video => renderImageForm(video, 'video', setVideos))}
@@ -220,7 +230,7 @@ export default function ImageManagement() {
             </section>
 
             <section>
-              <h3 className="text-xl font-semibold mb-4 font-headline">Category Images</h3>
+              <h3 className="text-xl font-semibold mb-4 font-headline">Category Images (Prisma)</h3>
               {categories.length > 0 ? (
                 <div className="space-y-6">
                   {categories.map(category => renderImageForm(category, 'category', setCategories))}
@@ -229,7 +239,7 @@ export default function ImageManagement() {
             </section>
 
             <section>
-              <h3 className="text-xl font-semibold mb-4 font-headline">Learning Path Images</h3>
+              <h3 className="text-xl font-semibold mb-4 font-headline">Learning Path Images (Prisma)</h3>
               {learningPaths.length > 0 ? (
                 <div className="space-y-6">
                   {learningPaths.map(lp => renderImageForm(lp, 'learningPath', setLearningPaths))}
@@ -242,3 +252,6 @@ export default function ImageManagement() {
     </Card>
   );
 }
+
+
+    

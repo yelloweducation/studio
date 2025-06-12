@@ -3,16 +3,16 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { DatabaseZap, BookText, FolderKanban, VideoIcon, Users, Loader2, Settings } from 'lucide-react'; // Added Settings
+import { DatabaseZap, BookText, FolderKanban, VideoIcon, Users, Loader2, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { 
   seedCoursesToDb, 
   seedCategoriesToDb, 
-  seedVideosToDb, 
+  seedVideosToDb, // Still uses localStorage
   seedLearningPathsToDb,
-  seedPaymentSettingsToDb // For payment settings
-} from '@/lib/dbUtils'; // dbUtils now seeds to localStorage
-import { seedInitialUsersToLocalStorage } from '@/lib/authUtils'; // authUtils seeds users to localStorage
+  seedPaymentSettingsToDb // Still uses localStorage
+} from '@/lib/dbUtils'; 
+import { seedInitialUsersToLocalStorage } from '@/lib/authUtils'; // Seeds users to in-memory store
 
 type SeedOperation = 'courses' | 'categories' | 'videos' | 'learningPaths' | 'users' | 'paymentSettings';
 
@@ -28,11 +28,14 @@ export default function DataSeeding() {
   const { toast } = useToast();
 
   const handleSeedOperation = async (operation: SeedOperation) => {
-    if (typeof window === 'undefined') {
+    // For Videos and PaymentSettings, they still use localStorage and require browser environment.
+    // Courses, Categories, LearningPaths, and Users are now DB/server-side handled by Prisma and in-memory store,
+    // so they don't strictly need the window check but it doesn't hurt.
+    if (typeof window === 'undefined' && (operation === 'videos' || operation === 'paymentSettings')) {
       toast({
         variant: "destructive",
         title: "Seeding Unavailable",
-        description: "Data seeding can only be performed in the browser environment.",
+        description: `Seeding ${operation} can only be performed in the browser environment.`,
       });
       return;
     }
@@ -46,19 +49,19 @@ export default function DataSeeding() {
     try {
       switch (operation) {
         case 'courses':
-          result = await seedCoursesToDb(); // Seeds to localStorage
+          result = await seedCoursesToDb(); // Seeds to Neon DB
           break;
         case 'categories':
-          result = await seedCategoriesToDb(); // Seeds to localStorage
+          result = await seedCategoriesToDb(); // Seeds to Neon DB
           break;
         case 'videos':
           result = await seedVideosToDb(); // Seeds to localStorage
           break;
         case 'learningPaths':
-          result = await seedLearningPathsToDb(); // Seeds to localStorage
+          result = await seedLearningPathsToDb(); // Seeds to Neon DB
           break;
         case 'users':
-          result = seedInitialUsersToLocalStorage(); // Seeds to localStorage via authUtils
+          result = await seedInitialUsersToLocalStorage(); // Seeds to in-memory store
           break;
         case 'paymentSettings':
           result = await seedPaymentSettingsToDb(); // Seeds to localStorage
@@ -68,9 +71,10 @@ export default function DataSeeding() {
       }
 
       if (result) {
+        const storageType = (operation === 'videos' || operation === 'paymentSettings') ? 'localStorage' : (operation === 'users' ? 'in-memory store' : 'database (Neon)');
         toast({
           title: `${operationName} Seeding Complete`,
-          description: `Successfully seeded/updated: ${result.successCount}, Skipped: ${result.skippedCount}, Errors: ${result.errorCount}. Data is in localStorage.`,
+          description: `Successfully seeded/updated: ${result.successCount}, Skipped: ${result.skippedCount}, Errors: ${result.errorCount}. Data is in ${storageType}.`,
           duration: 7000,
         });
       }
@@ -86,23 +90,23 @@ export default function DataSeeding() {
   };
 
   const seedButtons = [
-    { operation: 'categories' as SeedOperation, label: 'Seed Categories', Icon: FolderKanban },
-    { operation: 'courses' as SeedOperation, label: 'Seed Courses (Basic)', Icon: BookText },
-    { operation: 'videos' as SeedOperation, label: 'Seed Videos', Icon: VideoIcon },
-    { operation: 'learningPaths' as SeedOperation, label: 'Seed Learning Paths', Icon: DatabaseZap }, // Changed icon to DatabaseZap for paths
-    { operation: 'users' as SeedOperation, label: 'Seed Initial Users', Icon: Users },
-    { operation: 'paymentSettings' as SeedOperation, label: 'Seed Payment Settings', Icon: Settings }, // Changed icon to Settings
+    { operation: 'categories' as SeedOperation, label: 'Seed Categories to DB', Icon: FolderKanban },
+    { operation: 'courses' as SeedOperation, label: 'Seed Courses to DB', Icon: BookText },
+    { operation: 'learningPaths' as SeedOperation, label: 'Seed Learning Paths to DB', Icon: DatabaseZap },
+    { operation: 'users' as SeedOperation, label: 'Seed Initial Users (In-Memory)', Icon: Users },
+    { operation: 'videos' as SeedOperation, label: 'Seed Videos (localStorage)', Icon: VideoIcon },
+    { operation: 'paymentSettings' as SeedOperation, label: 'Seed Payment Settings (localStorage)', Icon: Settings },
   ];
 
   return (
     <Card className="shadow-lg">
       <CardHeader>
         <CardTitle className="flex items-center text-xl md:text-2xl font-headline">
-          <DatabaseZap className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Local Data Seeding (localStorage)
+          <DatabaseZap className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Data Seeding
         </CardTitle>
         <CardDescription>
-          Populate your browser's localStorage with initial mock data. This is useful for testing without a backend.
-          Data will persist in your browser until cleared.
+          Populate your application with initial mock data. Categories, Courses, and Learning Paths will be seeded into your Neon PostgreSQL database.
+          Users are seeded into an in-memory store on the server. Videos and Payment Settings are seeded into browser localStorage.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -130,9 +134,12 @@ export default function DataSeeding() {
           </Card>
         ))}
          <p className="text-xs text-muted-foreground text-center pt-4">
-            Note: Seeding courses will use the basic mock data entries. Complex relations like modules/lessons are part of the mock course structure.
+            Note: Seeding will attempt to create entries from mock data. If entries with the same unique identifiers (like ID or name for categories) already exist in the database, they might be skipped.
         </p>
       </CardContent>
     </Card>
   );
 }
+
+
+    

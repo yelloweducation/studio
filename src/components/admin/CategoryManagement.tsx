@@ -2,7 +2,7 @@
 "use client";
 import { useState, useEffect, type FormEvent } from 'react';
 import Image from 'next/image';
-import type { Category } from '@/lib/dbUtils'; // Updated import path for type
+import type { Category } from '@prisma/client'; // Use Prisma type
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,9 +25,9 @@ import {
   addCategoryToDb, 
   updateCategoryInDb, 
   deleteCategoryFromDb 
-} from '@/lib/dbUtils'; // Updated import path for functions
+} from '@/lib/dbUtils'; // Uses Prisma functions
 
-const isValidLucideIcon = (iconName: string | undefined): iconName is keyof typeof LucideIcons => {
+const isValidLucideIcon = (iconName: string | undefined | null): iconName is keyof typeof LucideIcons => {
   return typeof iconName === 'string' && iconName in LucideIcons;
 };
 
@@ -38,7 +38,7 @@ const CategoryForm = ({
   isSubmitting
 }: {
   category?: Category,
-  onSubmit: (data: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>,
+  onSubmit: (data: Omit<Category, 'id' | 'createdAt' | 'updatedAt' | 'courses'>) => Promise<void>,
   onCancel: () => void,
   isSubmitting: boolean
 }) => {
@@ -49,9 +49,9 @@ const CategoryForm = ({
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const categoryData: Omit<Category, 'id' | 'createdAt' | 'updatedAt'> = {
+    const categoryData: Omit<Category, 'id' | 'createdAt' | 'updatedAt'| 'courses'> = {
       name,
-      imageUrl: imageUrl || null, // Ensure null if empty
+      imageUrl: imageUrl || null, 
       dataAiHint: dataAiHint || null,
       iconName: iconName || null,
     };
@@ -131,7 +131,7 @@ export default function CategoryManagement() {
     loadCategories();
   }, []);
 
-  const handleAddCategory = async (data: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const handleAddCategory = async (data: Omit<Category, 'id' | 'createdAt' | 'updatedAt' | 'courses'>) => {
     setIsSubmittingForm(true);
     try {
       const newCategory = await addCategoryToDb(data);
@@ -145,7 +145,7 @@ export default function CategoryManagement() {
     }
   };
 
-  const handleEditCategory = async (data: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const handleEditCategory = async (data: Omit<Category, 'id' | 'createdAt' | 'updatedAt' | 'courses'>) => {
     if (!editingCategory || !editingCategory.id) return;
     setIsSubmittingForm(true);
     try {
@@ -187,7 +187,7 @@ export default function CategoryManagement() {
         <CardTitle className="flex items-center text-xl md:text-2xl font-headline">
           <Shapes className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Category Management
         </CardTitle>
-        <CardDescription>Add, edit, or delete course categories. Data is stored in your Postgres database via Prisma.</CardDescription>
+        <CardDescription>Add, edit, or delete course categories. Data is stored in your Neon/Postgres database via Prisma.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="mb-6 text-right">
@@ -270,9 +270,12 @@ export default function CategoryManagement() {
             })}
           </ul>
         ) : (
-          <p className="text-center text-muted-foreground py-4">No categories found in the database. Add some!</p>
+          <p className="text-center text-muted-foreground py-4">No categories found in the database. Add some or use the seeder!</p>
         )}
       </CardContent>
     </Card>
   );
 }
+
+
+    
