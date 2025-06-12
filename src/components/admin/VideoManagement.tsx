@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Edit3, Trash2, Video as VideoIconLucide, Link as LinkIcon, Loader2 } from 'lucide-react'; // Renamed VideoIcon to VideoIconLucide
+import { PlusCircle, Edit3, Trash2, Video as VideoIconLucide, Link as LinkIcon, Loader2 } from 'lucide-react'; 
 import {
   Dialog,
   DialogContent,
@@ -20,7 +20,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
-import { serverGetVideos, serverAddVideo, serverUpdateVideo, serverDeleteVideo } from '@/actions/adminDataActions'; // Use Server Actions
+import { serverGetVideos, serverAddVideo, serverUpdateVideo, serverDeleteVideo } from '@/actions/adminDataActions'; 
 import { Label } from '../ui/label';
 
 const VideoForm = ({
@@ -83,7 +83,7 @@ const VideoForm = ({
                     placeholder="e.g., https://www.youtube.com/watch?v=..."
                     className="pl-8"
                     disabled={isSubmitting}
-                    required // Embed URL is now required
+                    required 
                 />
                 <LinkIcon className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             </div>
@@ -122,7 +122,14 @@ export default function VideoManagement() {
       setIsLoadingData(true);
       try {
         const dbVideos = await serverGetVideos(); 
-        setVideos(dbVideos);
+        // Sort by createdAt if available, otherwise by title
+        const sortedVideos = dbVideos.sort((a, b) => {
+            if (a.createdAt && b.createdAt) {
+                 return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+            }
+            return a.title.localeCompare(b.title);
+        });
+        setVideos(sortedVideos);
       } catch (error) {
         console.error("Error loading videos: ", error);
         toast({ variant: "destructive", title: "Error", description: "Could not load videos."});
@@ -136,7 +143,10 @@ export default function VideoManagement() {
     setIsSubmittingForm(true);
     try {
       const newVideo = await serverAddVideo(data); 
-      setVideos(prev => [newVideo, ...prev].sort((a, b) => (new Date(b.createdAt!) as any) - (new Date(a.createdAt!) as any) || 0));
+      setVideos(prev => [newVideo, ...prev].sort((a, b) => {
+        if (a.createdAt && b.createdAt) return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        return a.title.localeCompare(b.title);
+      }));
       closeForm();
       toast({ title: "Video Added", description: `${data.title} has been successfully added.` });
     } catch (error) {
@@ -151,7 +161,10 @@ export default function VideoManagement() {
     setIsSubmittingForm(true);
     try {
       const updatedVideo = await serverUpdateVideo(editingVideo.id, data); 
-      setVideos(prev => prev.map(v => v.id === editingVideo.id ? updatedVideo : v).sort((a,b) => (new Date(b.createdAt!) as any) - (new Date(a.createdAt!) as any) || 0));
+      setVideos(prev => prev.map(v => v.id === editingVideo.id ? updatedVideo : v).sort((a,b) => {
+        if (a.createdAt && b.createdAt) return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        return a.title.localeCompare(b.title);
+      }));
       closeForm();
       toast({ title: "Video Updated", description: `${data.title} has been successfully updated.` });
     } catch (error) {
@@ -233,6 +246,7 @@ export default function VideoManagement() {
                   <h3 className="font-semibold font-headline text-md md:text-lg">{video.title}</h3>
                   <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{video.description}</p>
                   {video.embedUrl && <p className="text-xs text-accent truncate">Embed: {video.embedUrl}</p>}
+                  {video.createdAt && <p className="text-xs text-muted-foreground">Added: {new Date(video.createdAt).toLocaleDateString()}</p>}
                 </div>
                 <div className="flex flex-col sm:flex-row sm:space-x-2 gap-2 sm:gap-0 w-full sm:w-auto sm:items-center mt-2 sm:mt-0 shrink-0">
                   <Button variant="outline" size="sm" onClick={() => openForm(video)} className="w-full sm:w-auto hover:border-primary hover:text-primary">
@@ -272,3 +286,4 @@ export default function VideoManagement() {
     </Card>
   );
 }
+

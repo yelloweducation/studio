@@ -1,183 +1,24 @@
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  // directUrl = env("DATABASE_URL_UNPOOLED") // Optional, for migrations if DATABASE_URL is pooled
-  // shadowDatabaseUrl = env("SHADOW_DATABASE_URL") // Optional, for Prisma Migrate
+  // directUrl = env("DATABASE_URL_UNPOOLED") // For Prisma Migrate and introspection. Commented out for Netlify db push.
 }
 
 generator client {
   provider = "prisma-client-js"
 }
 
-model Category {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  imageUrl  String?
-  dataAiHint String?
-  iconName  String?
-  courses   Course[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Course {
-  id                       String                @id @default(cuid())
-  title                    String
-  description              String                @db.Text
-  categoryNameCache        String? // Denormalized for convenience
-  instructor               String
-  imageUrl                 String?
-  dataAiHint               String?
-  price                    Float?
-  currency                 String?
-  isFeatured               Boolean?              @default(false)
-  learningObjectives       String[]
-  targetAudience           String?
-  prerequisites            String[]
-  estimatedTimeToComplete  String?
-  modules                  Module[]
-  quizzes                  Quiz[]
-  categoryId               String?
-  category                 Category?             @relation(fields: [categoryId], references: [id], onDelete: SetNull) // Allow setting category to null if deleted
-  learningPathCourses      LearningPathCourse[]
-  enrollments              Enrollment[]
-  paymentSubmissions       PaymentSubmission[]
-
-  createdAt                DateTime              @default(now())
-  updatedAt                DateTime              @updatedAt
-
-  @@index([categoryId])
-}
-
-model Module {
-  id        String   @id @default(cuid())
-  courseId  String
-  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  title     String
-  order     Int      @default(0)
-  lessons   Lesson[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([courseId])
-}
-
-model Lesson {
-  id          String  @id @default(cuid())
-  moduleId    String
-  module      Module  @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  title       String
-  duration    String?
-  description String? @db.Text
-  embedUrl    String?
-  imageUrl    String?
-  order       Int     @default(0)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([moduleId])
-}
-
-enum QuizType {
-  PRACTICE
-  GRADED
-}
-
-model Quiz {
-  id           String     @id @default(cuid())
-  courseId     String
-  course       Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  title        String
-  quizType     QuizType   @default(PRACTICE)
-  passingScore Int?
-  questions    Question[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([courseId])
-}
-
-model Question {
-  id              String   @id @default(cuid())
-  quizId          String
-  quiz            Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  text            String
-  order           Int      @default(0)
-  points          Int?
-  options         Option[] // One-to-many: A question has many options
-  correctOption   Option?  @relation("CorrectOption", fields: [correctOptionId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  correctOptionId String?  @unique // One-to-one: A question has one correct option (which is one of its options)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([quizId])
-}
-
-model Option {
-  id          String    @id @default(cuid())
-  text        String
-  question    Question  @relation(fields: [questionId], references: [id], onDelete: Cascade) // Many-to-one: An option belongs to one question
-  questionId  String
-
-  // Back-relation for the "CorrectOption" one-to-one defined in Question
-  // An Option can be the correctOption for zero or one Question.
-  questionWhereThisIsCorrectOption Question? @relation("CorrectOption")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([questionId])
-}
-
-model LearningPath {
-  id                  String               @id @default(cuid())
-  title               String
-  description         String               @db.Text
-  icon                String?
-  imageUrl            String?
-  dataAiHint          String?
-  learningPathCourses LearningPathCourse[]
-
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
-}
-
-model LearningPathCourse {
-  id             String       @id @default(cuid())
-  learningPathId String
-  learningPath   LearningPath @relation(fields: [learningPathId], references: [id], onDelete: Cascade)
-  courseId       String
-  course         Course       @relation(fields: [courseId], references: [id], onDelete: Cascade) // If a course is deleted, this link is removed
-  order          Int
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([learningPathId, courseId])
-  @@index([learningPathId])
-  @@index([courseId])
-}
-
-// User model - Placeholder for now, details depend on auth provider
-// For mock auth, this will likely be managed by authUtils.ts and not directly by Prisma for now.
-// If migrating auth to DB, uncomment and define fully.
 model User {
-  id                 String              @id @default(cuid())
-  email              String              @unique
-  name               String?
-  passwordHash       String? // Only if using custom auth with password
-  role               Role                @default(STUDENT)
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
+  id                 String                @id @default(cuid())
+  name               String
+  email              String                @unique
+  passwordHash       String
+  role               Role                  @default(STUDENT)
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
   enrollments        Enrollment[]
   paymentSubmissions PaymentSubmission[]
-
-  // @@index([email]) // Already unique, index is implicit
+  // Add other user-related fields if needed, e.g., profilePictureUrl
 }
 
 enum Role {
@@ -185,22 +26,161 @@ enum Role {
   ADMIN
 }
 
-model Enrollment {
-  id           String   @id @default(cuid())
-  userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  courseId     String
-  course       Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  progress     Int      @default(0) // Percentage, 0-100
-  enrolledDate DateTime @default(now())
-  completedAt  DateTime?
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  imageUrl    String?
+  dataAiHint  String? // For AI-assisted image search/generation
+  iconName    String?  // Lucide icon name
+  courses     Course[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
 
+model Course {
+  id                        String                @id @default(cuid())
+  title                     String
+  description               String                @db.Text
+  instructor                String
+  imageUrl                  String?
+  dataAiHint                String?
+  price                     Float?
+  currency                  String?               @default("USD")
+  isFeatured                Boolean?              @default(false)
+  learningObjectives      Json? // Or String[] if you prefer Prisma array type directly
+  targetAudience            String?
+  prerequisites             Json? // Or String[]
+  estimatedTimeToComplete   String?
+  createdAt                 DateTime              @default(now())
+  updatedAt                 DateTime              @updatedAt
+  modules                   Module[]
+  quizzes                   Quiz[]
+  categoryId                String
+  categoryNameCache         String? // Denormalized for easier display
+  category                  Category              @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  learningPathCourses       LearningPathCourse[]
+  enrollments               Enrollment[]
+  paymentSubmissions        PaymentSubmission[]
+}
+
+model Module {
+  id        String   @id @default(cuid())
+  title     String
+  order     Int      @default(0)
+  lessons   Lesson[]
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
 
-  @@unique([userId, courseId])
-  @@index([userId])
-  @@index([courseId])
+model Lesson {
+  id          String   @id @default(cuid())
+  title       String
+  duration    String?
+  description String?  @db.Text
+  embedUrl    String?
+  imageUrl    String?
+  order       Int      @default(0)
+  moduleId    String
+  module      Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Quiz {
+  id           String     @id @default(cuid())
+  title        String
+  quizType     QuizType   @default(PRACTICE)
+  passingScore Int?
+  questions    Question[]
+  courseId     String
+  course       Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+enum QuizType {
+  PRACTICE
+  GRADED
+}
+
+model Question {
+  id              String   @id @default(cuid())
+  text            String   @db.Text
+  order           Int      @default(0)
+  points          Int?
+  options         Option[]
+  correctOption   Option?   @relation("CorrectOption", fields: [correctOptionId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  correctOptionId String?   @unique // Added @unique and changed onDelete/onUpdate for the relation
+  quizId          String
+  quiz            Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Option {
+  id                               String   @id @default(cuid())
+  text                             String
+  questionId                       String
+  question                         Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  createdAt                        DateTime @default(now())
+  updatedAt                        DateTime @updatedAt
+  questionWhereThisIsCorrectOption Question? @relation("CorrectOption") // Back-relation for the correct option
+}
+
+model LearningPath {
+  id                  String               @id @default(cuid())
+  title               String
+  description         String               @db.Text
+  icon                String? // Lucide icon name
+  imageUrl            String?
+  dataAiHint          String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  learningPathCourses LearningPathCourse[]
+}
+
+model LearningPathCourse {
+  id             String       @id @default(cuid()) // Added an ID field
+  learningPathId String
+  courseId       String
+  order          Int          @default(0)
+  learningPath   LearningPath @relation(fields: [learningPathId], references: [id], onDelete: Cascade)
+  course         Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([learningPathId, courseId])
+}
+
+model Video {
+  id            String   @id @default(cuid())
+  title         String
+  description   String   @db.Text
+  thumbnailUrl  String?
+  embedUrl      String // YouTube or TikTok video URL
+  dataAiHint    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// For payment processing proof & tracking
+model PaymentSubmission {
+  id            String                  @id @default(cuid())
+  userId        String
+  user          User                    @relation(fields: [userId], references: [id])
+  courseId      String
+  course        Course                  @relation(fields: [courseId], references: [id])
+  amount        Float
+  currency      String
+  screenshotUrl String                  @db.Text // Changed from String to String @db.Text
+  status        PaymentSubmissionStatus @default(PENDING)
+  submittedAt   DateTime                @default(now())
+  reviewedAt    DateTime?
+  adminNotes    String?                 @db.Text
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
 }
 
 enum PaymentSubmissionStatus {
@@ -209,54 +189,36 @@ enum PaymentSubmissionStatus {
   REJECTED
 }
 
-model PaymentSubmission {
-  id             String                  @id @default(cuid())
-  userId         String
-  user           User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  courseId       String
-  course         Course                  @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  amount         Float
-  currency       String
-  screenshotUrl  String
-  status         PaymentSubmissionStatus @default(PENDING)
-  submittedAt    DateTime                @default(now())
-  reviewedAt     DateTime?
-  adminNotes     String?                 @db.Text
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([userId])
-  @@index([courseId])
-  @@index([status])
-}
-
-model Video {
-  id            String   @id @default(cuid())
-  title         String
-  description   String   @db.Text
-  thumbnailUrl  String?
-  embedUrl      String // YouTube or TikTok URL
-  dataAiHint    String?  // For AI image generation hints for thumbnail
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
+// For storing global payment settings configured by admin
 model PaymentSettings {
-  id                     String   @id @default("global") // Singleton record
+  id                     String    @id @default("global") // Only one record with id "global"
   bankName               String?
   accountNumber          String?
   accountHolderName      String?
-  additionalInstructions String?  @db.Text
-
-  updatedAt DateTime @updatedAt
+  additionalInstructions String?   @db.Text
+  updatedAt              DateTime  @updatedAt
 }
 
+// For tracking student enrollments and progress
+model Enrollment {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  courseId     String
+  course       Course   @relation(fields: [courseId], references: [id])
+  progress     Int      @default(0) // Percentage completion
+  enrolledDate DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([userId, courseId]) // A user can only enroll in a course once
+}
+
+// For dynamic site content (About, Privacy, Terms)
 model SitePage {
-  id        String        @id @default(cuid())
-  slug      String        @unique // e.g., "about-us", "privacy-policy"
+  id        String   @id @default(cuid())
+  slug      String   @unique // e.g., "about-us", "privacy-policy"
   title     String
-  content   Json // Store structured content or HTML string
-  updatedAt DateTime      @updatedAt
+  content   Json // Store HTML or structured JSON
+  updatedAt DateTime @updatedAt
 }

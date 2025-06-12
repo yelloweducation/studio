@@ -7,15 +7,14 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { ImageIcon, Save, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { Course, Category, LearningPath } from '@prisma/client'; 
-import type { Video as PrismaVideo } from '@/lib/dbUtils'; // Videos now use Prisma type
+import type { Course, Category, LearningPath, Video as PrismaVideo } from '@prisma/client'; // Use Prisma types
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
 import { 
   serverGetCourses, serverUpdateCourse,
   serverGetCategories, serverUpdateCategory,
   serverGetLearningPaths, serverUpdateLearningPath,
-  serverGetVideos, serverUpdateVideo // Added server actions for videos
+  serverGetVideos, serverUpdateVideo 
 } from '@/actions/adminDataActions'; 
 
 export default function ImageManagement() {
@@ -32,20 +31,21 @@ export default function ImageManagement() {
     const loadAllData = async () => {
       setIsLoading(true);
       try {
-        // Fetch all data concurrently
+        console.log("[ImageManagement] Fetching all data...");
         const [dbCourses, dbVideos, dbCategories, dbLearningPaths] = await Promise.all([
-          serverGetCourses().catch(e => { console.error("Failed to fetch courses for img mgmt:", e); throw e; }),
-          serverGetVideos().catch(e => { console.error("Failed to fetch videos for img mgmt:", e); throw e; }),    
-          serverGetCategories().catch(e => { console.error("Failed to fetch categories for img mgmt:", e); throw e; }), 
-          serverGetLearningPaths().catch(e => { console.error("Failed to fetch learning paths for img mgmt:", e); throw e; }), 
+          serverGetCourses().catch(e => { console.error("Failed to fetch courses for img mgmt:", e); throw new Error(`Courses: ${(e as Error).message}`); }),
+          serverGetVideos().catch(e => { console.error("Failed to fetch videos for img mgmt:", e); throw new Error(`Videos: ${(e as Error).message}`); }),    
+          serverGetCategories().catch(e => { console.error("Failed to fetch categories for img mgmt:", e); throw new Error(`Categories: ${(e as Error).message}`); }), 
+          serverGetLearningPaths().catch(e => { console.error("Failed to fetch learning paths for img mgmt:", e); throw new Error(`Learning Paths: ${(e as Error).message}`); }), 
         ]);
+        console.log("[ImageManagement] Data fetched successfully.");
         setCourses(dbCourses);
         setVideos(dbVideos);
         setCategories(dbCategories);
-        setLearningPaths(dbLearningPaths as any); 
+        setLearningPaths(dbLearningPaths); 
       } catch (error) {
         console.error("Error loading data for Image Management:", error);
-        toast({ variant: "destructive", title: "Error Loading Data", description: "Could not fetch all items for image management. Check console for details." });
+        toast({ variant: "destructive", title: "Error Loading Data", description: `Could not fetch all items for image management. Details: ${(error as Error).message}` });
       }
       setIsLoading(false);
     };
@@ -101,7 +101,7 @@ export default function ImageManagement() {
       }
 
       if (itemToSave) {
-        const dataToUpdate: { imageUrl?: string | null, dataAiHint?: string | null, thumbnailUrl?: string | null } = { 
+        const dataToUpdate: { imageUrl?: string | null; dataAiHint?: string | null; thumbnailUrl?: string | null } = { 
           dataAiHint: itemToSave.dataAiHint || null,
         };
         if (itemType === 'video') {
@@ -109,11 +109,14 @@ export default function ImageManagement() {
         } else {
             dataToUpdate.imageUrl = (itemToSave as Course | Category | LearningPath).imageUrl || null;
         }
-
+        console.log(`[ImageManagement] Saving ${itemType} ID ${itemId}, Data:`, dataToUpdate);
         await updateFunction(itemId, dataToUpdate);
         toast({ title: `${itemType.charAt(0).toUpperCase() + itemType.slice(1)} Image Updated`, description: `Image details for "${itemName}" saved.` });
+      } else {
+        throw new Error(`Item ${itemId} of type ${itemType} not found in local state.`);
       }
     } catch (error) {
+      console.error(`[ImageManagement] Error saving ${itemType} ID ${itemId}:`, error);
       toast({ variant: "destructive", title: "Save Failed", description: `Could not save image details for "${itemName}". ${(error as Error).message}` });
     } finally {
       setIsSaving(prev => ({ ...prev, [itemId]: false }));
