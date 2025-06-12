@@ -55,6 +55,7 @@ const CategoryForm = ({
       dataAiHint: dataAiHint || null,
       iconName: iconName || null,
     };
+    console.log("[CategoryForm] Submitting category data:", JSON.stringify(categoryData, null, 2));
     await onSubmit(categoryData);
   };
 
@@ -124,22 +125,32 @@ export default function CategoryManagement() {
   useEffect(() => {
     const loadCategories = async () => {
       setIsLoadingData(true);
-      const dbCategories = await getCategoriesFromDb();
-      setCategories(dbCategories);
+      console.log("[CategoryManagement] Fetching categories...");
+      try {
+        const dbCategories = await getCategoriesFromDb();
+        console.log("[CategoryManagement] Fetched categories:", dbCategories.length);
+        setCategories(dbCategories);
+      } catch (error) {
+        console.error("[CategoryManagement] Error fetching categories:", error);
+        toast({ title: "Error Loading Categories", description: (error as Error).message || "Could not load categories.", variant: "destructive" });
+      }
       setIsLoadingData(false);
     };
     loadCategories();
-  }, []);
+  }, [toast]);
 
   const handleAddCategory = async (data: Omit<Category, 'id' | 'createdAt' | 'updatedAt' | 'courses'>) => {
     setIsSubmittingForm(true);
+    console.log("[CategoryManagement] handleAddCategory called with data:", JSON.stringify(data, null, 2));
     try {
       const newCategory = await addCategoryToDb(data);
+      console.log("[CategoryManagement] Category added, response:", JSON.stringify(newCategory, null, 2));
       setCategories(prev => [newCategory, ...prev].sort((a, b) => a.name.localeCompare(b.name)));
       closeForm();
       toast({ title: "Category Added", description: `${data.name} has been successfully added.` });
     } catch (error) {
-      toast({ title: "Error Adding Category", description: "Could not add category. Please try again.", variant: "destructive" });
+      console.error("[CategoryManagement] Error in handleAddCategory:", error);
+      toast({ title: "Error Adding Category", description: (error as Error).message || "Could not add category. Please try again.", variant: "destructive" });
     } finally {
       setIsSubmittingForm(false);
     }
@@ -148,13 +159,16 @@ export default function CategoryManagement() {
   const handleEditCategory = async (data: Omit<Category, 'id' | 'createdAt' | 'updatedAt' | 'courses'>) => {
     if (!editingCategory || !editingCategory.id) return;
     setIsSubmittingForm(true);
+    console.log(`[CategoryManagement] handleEditCategory called for ID ${editingCategory.id} with data:`, JSON.stringify(data, null, 2));
     try {
       const updatedCategory = await updateCategoryInDb(editingCategory.id, data);
+      console.log("[CategoryManagement] Category updated, response:", JSON.stringify(updatedCategory, null, 2));
       setCategories(prev => prev.map(c => c.id === updatedCategory.id ? updatedCategory : c).sort((a,b) => a.name.localeCompare(b.name)));
       closeForm();
       toast({ title: "Category Updated", description: `${data.name} has been successfully updated.` });
     } catch (error) {
-      toast({ title: "Error Updating Category", description: "Could not update category. Please try again.", variant: "destructive" });
+      console.error("[CategoryManagement] Error in handleEditCategory:", error);
+      toast({ title: "Error Updating Category", description: (error as Error).message || "Could not update category. Please try again.", variant: "destructive" });
     } finally {
       setIsSubmittingForm(false);
     }
@@ -162,12 +176,15 @@ export default function CategoryManagement() {
 
   const handleDeleteCategory = async (categoryId: string) => {
     const categoryToDelete = categories.find(c => c.id === categoryId);
+    console.log(`[CategoryManagement] handleDeleteCategory called for ID ${categoryId}`);
     try {
       await deleteCategoryFromDb(categoryId);
+      console.log(`[CategoryManagement] Category ID ${categoryId} deleted.`);
       setCategories(prev => prev.filter(c => c.id !== categoryId));
       toast({ title: "Category Deleted", description: `${categoryToDelete?.name} has been deleted.`, variant: "destructive" });
     } catch (error) {
-      toast({ title: "Error Deleting Category", description: "Could not delete category. Please try again.", variant: "destructive" });
+      console.error("[CategoryManagement] Error in handleDeleteCategory:", error);
+      toast({ title: "Error Deleting Category", description: (error as Error).message || "Could not delete category. Please try again.", variant: "destructive" });
     }
   };
 
@@ -276,6 +293,3 @@ export default function CategoryManagement() {
     </Card>
   );
 }
-
-
-    
