@@ -2,7 +2,7 @@
 "use client";
 import { useState, useEffect, type FormEvent } from 'react';
 import Image from 'next/image';
-import { type LearningPath, type Course } from '@prisma/client'; // Using Prisma types
+import { type LearningPath, type Course } from '@prisma/client'; 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -23,7 +23,14 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import * as LucideIcons from 'lucide-react';
-import { getLearningPathsFromDb, addLearningPathToDb, updateLearningPathInDb, deleteLearningPathFromDb, getCoursesFromDb } from '@/lib/dbUtils'; // Uses Prisma functions
+// Use Server Actions
+import { 
+  serverGetLearningPaths, 
+  serverAddLearningPath, 
+  serverUpdateLearningPath, 
+  serverDeleteLearningPath, 
+  serverGetCourses 
+} from '@/actions/adminDataActions';
 
 const isValidLucideIcon = (iconName: string | undefined | null): iconName is keyof typeof LucideIcons => {
   return typeof iconName === 'string' && iconName in LucideIcons;
@@ -36,7 +43,7 @@ const LearningPathForm = ({
   onCancel,
   isSubmitting,
 }: {
-  path?: LearningPath & { learningPathCourses?: { course: Course }[] }; // Prisma type structure
+  path?: LearningPath & { learningPathCourses?: { course: Course, courseId: string }[] }; // Adjusted type
   allCourses: Course[];
   onSubmit: (data: Omit<LearningPath, 'id' | 'createdAt' | 'updatedAt' | 'learningPathCourses'> & { courseIdsToConnect?: string[] }) => Promise<void>;
   onCancel: () => void;
@@ -147,9 +154,9 @@ const LearningPathForm = ({
 };
 
 export default function LearningPathManagement() {
-  const [learningPaths, setLearningPaths] = useState<LearningPath[]>([]);
+  const [learningPaths, setLearningPaths] = useState<(LearningPath & { learningPathCourses?: { course: Course, courseId: string }[] })[]>([]);
   const [allCourses, setAllCourses] = useState<Course[]>([]);
-  const [editingPath, setEditingPath] = useState<(LearningPath & { learningPathCourses?: { course: Course }[] }) | undefined>(undefined);
+  const [editingPath, setEditingPath] = useState<(LearningPath & { learningPathCourses?: { course: Course, courseId: string }[] }) | undefined>(undefined);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [isSubmittingForm, setIsSubmittingForm] = useState(false);
@@ -160,10 +167,10 @@ export default function LearningPathManagement() {
       setIsLoadingData(true);
       try {
         const [pathsFromDb, coursesFromDb] = await Promise.all([
-          getLearningPathsFromDb(),
-          getCoursesFromDb()
+          serverGetLearningPaths(), // Use server action
+          serverGetCourses()       // Use server action
         ]);
-        setLearningPaths(pathsFromDb);
+        setLearningPaths(pathsFromDb as any); // Cast as any if Prisma's include structure differs slightly from form expectation
         setAllCourses(coursesFromDb);
       } catch (error) {
         console.error("Error loading learning paths or courses:", error);
@@ -177,12 +184,12 @@ export default function LearningPathManagement() {
   const handleAddPath = async (data: Omit<LearningPath, 'id' | 'createdAt' | 'updatedAt' | 'learningPathCourses'> & { courseIdsToConnect?: string[] }) => {
     setIsSubmittingForm(true);
     try {
-      const newPath = await addLearningPathToDb(data);
-      setLearningPaths(prev => [newPath, ...prev].sort((a, b) => a.title.localeCompare(b.title)));
+      const newPath = await serverAddLearningPath(data); // Use server action
+      setLearningPaths(prev => [newPath as any, ...prev].sort((a, b) => a.title.localeCompare(b.title)));
       closeForm();
       toast({ title: "Learning Path Added", description: `"${data.title}" created.` });
     } catch (error) {
-      toast({ variant: "destructive", title: "Error Adding Path", description: "Could not add learning path." });
+      toast({ variant: "destructive", title: "Error Adding Path", description: (error as Error).message || "Could not add learning path." });
     } finally {
       setIsSubmittingForm(false);
     }
@@ -192,12 +199,12 @@ export default function LearningPathManagement() {
     if (!editingPath || !editingPath.id) return;
     setIsSubmittingForm(true);
     try {
-      const updatedPath = await updateLearningPathInDb(editingPath.id, data);
-      setLearningPaths(prev => prev.map(p => (p.id === editingPath.id ? updatedPath : p)).sort((a,b) => a.title.localeCompare(b.title)));
+      const updatedPath = await serverUpdateLearningPath(editingPath.id, data); // Use server action
+      setLearningPaths(prev => prev.map(p => (p.id === editingPath.id ? updatedPath as any : p)).sort((a,b) => a.title.localeCompare(b.title)));
       closeForm();
       toast({ title: "Learning Path Updated", description: `"${data.title}" updated.` });
     } catch (error) {
-      toast({ variant: "destructive", title: "Error Updating Path", description: "Could not update learning path." });
+      toast({ variant: "destructive", title: "Error Updating Path", description: (error as Error).message || "Could not update learning path." });
     } finally {
       setIsSubmittingForm(false);
     }
@@ -206,15 +213,15 @@ export default function LearningPathManagement() {
   const handleDeletePath = async (pathId: string) => {
     const pathToDelete = learningPaths.find(p => p.id === pathId);
     try {
-      await deleteLearningPathFromDb(pathId);
+      await serverDeleteLearningPath(pathId); // Use server action
       setLearningPaths(prev => prev.filter(p => p.id !== pathId));
       toast({ title: "Learning Path Deleted", description: `"${pathToDelete?.title}" deleted.`, variant: "destructive" });
     } catch (error) {
-      toast({ variant: "destructive", title: "Error Deleting Path", description: "Could not delete learning path." });
+      toast({ variant: "destructive", title: "Error Deleting Path", description: (error as Error).message || "Could not delete learning path." });
     }
   };
 
-  const openForm = (path?: LearningPath & { learningPathCourses?: { course: Course }[] }) => {
+  const openForm = (path?: LearningPath & { learningPathCourses?: { course: Course, courseId: string }[] }) => {
     setEditingPath(path ? JSON.parse(JSON.stringify(path)) : undefined);
     setIsFormOpen(true);
   };
@@ -283,10 +290,10 @@ export default function LearningPathManagement() {
                       {path.title}
                     </h3>
                     <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{path.description}</p>
-                    <p className="text-xs text-muted-foreground mt-1">Courses: {(path as any).learningPathCourses?.length || 0}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Courses: {path.learningPathCourses?.length || 0}</p>
                   </div>
                   <div className="flex flex-col sm:flex-row sm:space-x-2 gap-2 sm:gap-0 w-full sm:w-auto sm:items-center mt-2 sm:mt-0 shrink-0 self-start sm:self-center">
-                    <Button variant="outline" size="sm" onClick={() => openForm(path as any)} className="w-full sm:w-auto hover:border-primary hover:text-primary">
+                    <Button variant="outline" size="sm" onClick={() => openForm(path)} className="w-full sm:w-auto hover:border-primary hover:text-primary">
                       <Edit3 className="mr-1 h-4 w-4" /> Edit
                     </Button>
                     <Dialog>
@@ -320,6 +327,3 @@ export default function LearningPathManagement() {
     </Card>
   );
 }
-
-
-    

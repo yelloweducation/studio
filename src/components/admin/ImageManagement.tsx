@@ -7,20 +7,22 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { ImageIcon, Save, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { Course, Category, LearningPath } from '@prisma/client'; // Prisma types
-import type { Video as MockVideoType } from '@/data/mockData'; // Mock type for Video
+import type { Course, Category, LearningPath } from '@prisma/client'; 
+import type { Video as MockVideoType } from '@/data/mockData'; 
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
 import { 
-  getCoursesFromDb, updateCourseInDb,
-  getVideosFromDb, updateVideoInDb, // Still uses localStorage for videos
-  getCategoriesFromDb, updateCategoryInDb,
-  getLearningPathsFromDb, updateLearningPathInDb
+  serverGetCourses, serverUpdateCourse,
+  serverGetCategories, serverUpdateCategory,
+  serverGetLearningPaths, serverUpdateLearningPath
+} from '@/actions/adminDataActions'; // Use Server Actions for Prisma entities
+import { 
+  getVideosFromDb, updateVideoInDb, // Videos still use client-side localStorage utils
 } from '@/lib/dbUtils'; 
 
 export default function ImageManagement() {
   const [courses, setCourses] = useState<Course[]>([]);
-  const [videos, setVideos] = useState<MockVideoType[]>([]); // Videos still use mock type
+  const [videos, setVideos] = useState<MockVideoType[]>([]); 
   const [categories, setCategories] = useState<Category[]>([]);
   const [learningPaths, setLearningPaths] = useState<LearningPath[]>([]);
 
@@ -33,15 +35,15 @@ export default function ImageManagement() {
       setIsLoading(true);
       try {
         const [dbCourses, dbVideos, dbCategories, dbLearningPaths] = await Promise.all([
-          getCoursesFromDb(),
-          getVideosFromDb(), // This will fetch from localStorage
-          getCategoriesFromDb(),
-          getLearningPathsFromDb(),
+          serverGetCourses(), // Server Action
+          getVideosFromDb(),    // Client-side localStorage
+          serverGetCategories(), // Server Action
+          serverGetLearningPaths(), // Server Action
         ]);
         setCourses(dbCourses);
         setVideos(dbVideos);
         setCategories(dbCategories);
-        setLearningPaths(dbLearningPaths);
+        setLearningPaths(dbLearningPaths as any); // Cast if Prisma include differs
       } catch (error) {
         console.error("Error loading data for Image Management:", error);
         toast({ variant: "destructive", title: "Error Loading Data", description: "Could not fetch all items for image management." });
@@ -77,22 +79,22 @@ export default function ImageManagement() {
       switch (itemType) {
         case 'course':
           itemToSave = courses.find(c => c.id === itemId);
-          updateFunction = updateCourseInDb;
+          updateFunction = serverUpdateCourse; // Server Action
           itemName = itemToSave?.title || 'Course';
           break;
-        case 'video': // Videos still use localStorage based update
+        case 'video': 
           itemToSave = videos.find(v => v.id === itemId);
-          updateFunction = updateVideoInDb;
+          updateFunction = updateVideoInDb; // Client-side util for localStorage
           itemName = itemToSave?.title || 'Video';
           break;
         case 'category':
           itemToSave = categories.find(cat => cat.id === itemId);
-          updateFunction = updateCategoryInDb;
+          updateFunction = serverUpdateCategory; // Server Action
           itemName = (itemToSave as Category)?.name || 'Category';
           break;
         case 'learningPath':
           itemToSave = learningPaths.find(lp => lp.id === itemId);
-          updateFunction = updateLearningPathInDb;
+          updateFunction = serverUpdateLearningPath; // Server Action
           itemName = itemToSave?.title || 'Learning Path';
           break;
         default:
@@ -100,15 +102,13 @@ export default function ImageManagement() {
       }
 
       if (itemToSave) {
-        // For Prisma items, ensure only imageUrl and dataAiHint are passed
-        // For Video (mock), it expects similar structure
         const dataToUpdate: { imageUrl?: string | null, dataAiHint?: string | null, thumbnailUrl?: string | null } = { 
           dataAiHint: itemToSave.dataAiHint || null,
         };
         if (itemType === 'video') {
             dataToUpdate.thumbnailUrl = (itemToSave as MockVideoType).thumbnailUrl || null;
         } else {
-            dataToUpdate.imageUrl = itemToSave.imageUrl || null;
+            dataToUpdate.imageUrl = (itemToSave as Course | Category | LearningPath).imageUrl || null;
         }
 
         await updateFunction(itemId, dataToUpdate);
@@ -252,6 +252,3 @@ export default function ImageManagement() {
     </Card>
   );
 }
-
-
-    

@@ -2,8 +2,7 @@
 "use client";
 import { useState, useEffect, type FormEvent, type ChangeEvent } from 'react';
 import Image from 'next/image';
-// Use types from Prisma where applicable, or mock types for form data structure if simpler
-import type { Course, Module, Lesson, Quiz, Question, Option, QuizType, Category as PrismaCategory } from '@prisma/client';
+import type { Course, Module, Lesson, Quiz, Question, Option, Category as PrismaCategory } from '@prisma/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -25,17 +24,16 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '../ui/label';
 import { Checkbox } from '../ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-// Use dbUtils functions that now operate on Prisma
+// Use Server Actions
 import { 
-    getCoursesFromDb, 
-    addCourseToDb, 
-    updateCourseInDb, 
-    deleteCourseFromDb,
-    saveQuizWithQuestionsToDb,
-    getCourseByIdFromDb, 
-    getCategoriesFromDb, // To fetch categories for the dropdown
-} from '@/lib/dbUtils'; 
+    serverGetCourses, 
+    serverAddCourse, 
+    serverUpdateCourse, 
+    serverDeleteCourse,
+    serverSaveQuizWithQuestions,
+    serverGetCourseById, 
+    serverGetCategories,
+} from '@/actions/adminDataActions'; 
 import type { Course as MockCourseType, Module as MockModuleType, Lesson as MockLessonType, Quiz as MockQuizType, Question as MockQuestionType, Option as MockOptionType, QuizType as MockQuizEnumType } from '@/data/mockData';
 
 
@@ -51,7 +49,7 @@ const LessonForm = ({
   lessonIndex,
   isSubmitting,
 }: {
-  lesson?: Partial<Omit<Lesson, 'moduleId'|'createdAt'|'updatedAt'>>; // Prisma Lesson type
+  lesson?: Partial<Omit<Lesson, 'moduleId'|'createdAt'|'updatedAt'>>;
   onSave: (lesson: Partial<Omit<Lesson, 'moduleId'|'createdAt'|'updatedAt'>>, moduleIndex: number, lessonIndex?: number) => void;
   onCancel: () => void;
   moduleIndex: number;
@@ -154,7 +152,7 @@ const QuestionEditDialog = ({
       alert("Question text cannot be empty.");
       return;
     }
-    if (currentOptions.length < 1) { // Changed from 2 to 1 for flexibility, can be adjusted
+    if (currentOptions.length < 1) { 
       alert("A question must have at least one option.");
       return;
     }
@@ -165,12 +163,12 @@ const QuestionEditDialog = ({
     }
 
     onSaveQuestion({
-      id: questionToEdit.id, // Preserve original ID if editing
+      id: questionToEdit.id, 
       text: questionText,
       order,
       points,
-      options: currentOptions.map(({ isCorrect, ...optData }) => optData), // Send only option data
-      correctOptionTextForNew: correctOption.text, // This will be used by dbUtils to find/link the ID
+      options: currentOptions.map(({ isCorrect, ...optData }) => optData), 
+      correctOptionTextForNew: correctOption.text, 
     });
   };
 
@@ -252,7 +250,7 @@ const QuizQuestionsDialog = ({
   onCancel,
   isSavingQuiz,
 }: {
-  quiz: MockQuizType & { questions?: (MockQuestionType & { options?: MockOptionType[] })[] }; // Using mock types for form state
+  quiz: MockQuizType & { questions?: (MockQuestionType & { options?: MockOptionType[] })[] };
   onSaveQuiz: (updatedQuiz: MockQuizType & { questionsToUpsert?: any[], questionIdsToDelete?: string[] }) => Promise<void>;
   onCancel: () => void;
   isSavingQuiz: boolean;
@@ -274,7 +272,6 @@ const QuizQuestionsDialog = ({
       ...prev,
       questions: prev.questions?.filter(q => q.id !== questionId),
     }));
-    // If the question ID is not a "new" one, mark it for deletion in DB
     if (!questionId.startsWith('q-new-')) {
       setQuestionIdsToDelete(prev => [...new Set([...prev, questionId])]);
     }
@@ -286,9 +283,9 @@ const QuizQuestionsDialog = ({
       let newQuestionsList;
       const newQuestionEntry = {
           ...questionData,
-          id: questionData.id || generateQuestionId(), // Ensure ID
+          id: questionData.id || generateQuestionId(), 
           options: questionData.options?.map(opt => ({ id: opt.id || generateOptionId(), text: opt.text! })) || [],
-          // correctOptionId will be set by correctOptionTextForNew in dbUtils.saveQuizWithQuestionsToDb
+          correctOptionId: questionData.options?.find(opt => opt.text === questionData.correctOptionTextForNew)?.id || '', // This is tricky, correctOptionId might need server-side linking
       } as MockQuestionType & { options?: MockOptionType[] };
       
       if (existingIndex !== undefined && existingIndex > -1 && prev.questions) {
@@ -304,12 +301,11 @@ const QuizQuestionsDialog = ({
   
   const handleSaveAndClose = async () => {
     const questionsToUpsert = currentQuizState.questions?.map(q => {
-        const { ...rest } = q; // Remove mock-specific fields if any before sending to backend
         return {
-            ...rest, // Contains id, text, order, points
+            ...q, 
             optionsToCreate: q.options?.map(opt => ({ id: opt.id.startsWith('opt-new-') ? undefined : opt.id, text: opt.text })),
             correctOptionTextForNew: q.options?.find(o => o.id === q.correctOptionId)?.text,
-            id: q.id.startsWith('q-new-') ? undefined : q.id, // Send existing ID or undefined for new
+            id: q.id.startsWith('q-new-') ? undefined : q.id, 
         };
     });
     await onSaveQuiz({ ...currentQuizState, questionsToUpsert, questionIdsToDelete });
@@ -384,7 +380,7 @@ const CourseForm = ({
   onCancel,
   isSubmitting,
 }: {
-  course?: Course & { modules?: (Module & { lessons?: Lesson[] })[], quizzes?: (Quiz & { questions?: (Question & { options?: Option[]})[] })[] }; // Using Prisma types
+  course?: Course & { modules?: (Module & { lessons?: Lesson[] })[], quizzes?: (Quiz & { questions?: (Question & { options?: Option[]})[] })[] };
   categories: PrismaCategory[];
   onSubmit: (data: Omit<Course, 'id' | 'createdAt' | 'updatedAt' | 'categoryId' | 'categoryNameCache'> & { categoryName: string, modules?: Array<Partial<Omit<Module, 'id'|'courseId'|'createdAt'|'updatedAt'>> & { lessons?: Array<Partial<Omit<Lesson, 'id'|'moduleId'|'createdAt'|'updatedAt'>>> }>, quizzes?: Array<Partial<Omit<Quiz, 'id'|'courseId'|'createdAt'|'updatedAt'>> & { questions?: Array<Partial<Omit<Question, 'id'|'quizId'|'createdAt'|'updatedAt'|'options'|'correctOptionId'>> & { options: Array<Partial<Omit<Option, 'id'|'questionId'|'createdAt'|'updatedAt'>>>, correctOptionText?: string }> }> }) => Promise<void>;
   onCancel: () => void;
@@ -403,7 +399,6 @@ const CourseForm = ({
   const [modules, setModules] = useState<(Partial<Omit<Module, 'courseId'|'createdAt'|'updatedAt'>> & { lessons?: Partial<Omit<Lesson, 'moduleId'|'createdAt'|'updatedAt'>>[] })[]>(course?.modules?.map(m => ({...m, lessons: m.lessons.map(l => ({...l}))})) || []);
   
   const [quizzes, setQuizzes] = useState<(MockQuizType & { questions?: (MockQuestionType & { options?: MockOptionType[] })[] })[]>(
-    // Map Prisma quiz structure to mock type for form state
     course?.quizzes?.map(q => ({
         id: q.id,
         title: q.title,
@@ -496,20 +491,18 @@ const CourseForm = ({
     if (!course?.id) { 
         setQuizzes(prevQuizzes => prevQuizzes.map(q => q.id === quizToSave.id ? quizToSave : q));
         setEditingQuizForQuestions(null);
-        toast({ title: "Quiz Structure Saved (Locally)", description: `Quiz "${quizToSave.title}" structure updated. This will be saved with the course.` });
+        // toast({ title: "Quiz Structure Saved (Locally)", description: `Quiz "${quizToSave.title}" structure updated. This will be saved with the course.` });
         return;
     }
-    // For existing courses, this will save to DB
     try {
-        const savedQuiz = await saveQuizWithQuestionsToDb(course.id, quizToSave);
-        // Update local quizzes state to reflect DB changes (if course exists)
+        const savedQuiz = await serverSaveQuizWithQuestions(course.id, quizToSave); // Use server action
         setQuizzes(prevQuizzes => prevQuizzes.map(q => q.id === savedQuiz.id ? 
-            {...savedQuiz, quizType: savedQuiz.quizType as MockQuizEnumType} : q)); // Map back to MockQuizType structure
+            {...savedQuiz, quizType: savedQuiz.quizType as MockQuizEnumType, questions: savedQuiz.questions as any[]} : q));
         setEditingQuizForQuestions(null);
-        toast({ title: "Quiz Saved to DB", description: `Quiz "${savedQuiz.title}" and its questions have been updated.` });
+        // toast({ title: "Quiz Saved to DB", description: `Quiz "${savedQuiz.title}" and its questions have been updated.` });
     } catch (error) {
         console.error("Error saving quiz with questions to DB:", error);
-        toast({ variant: "destructive", title: "Quiz Save Error", description: "Could not save quiz questions to database." });
+        // toast({ variant: "destructive", title: "Quiz Save Error", description: "Could not save quiz questions to database." });
     }
 };
 
@@ -523,7 +516,7 @@ const CourseForm = ({
       instructor,
       imageUrl,
       dataAiHint,
-      price: Number(price) || null, // Use null for Prisma if price is 0 or empty
+      price: Number(price) || null, 
       currency,
       isFeatured,
       learningObjectives: learningObjectives.split('\n').filter(s => s.trim() !== ''),
@@ -544,7 +537,7 @@ const CourseForm = ({
             order: les.order, 
         }))
       })),
-      quizzes: quizzes.map(q => ({ // Map form state (MockQuizType) to Prisma Quiz input
+      quizzes: quizzes.map(q => ({ 
           id: q.id.startsWith('quiz-new-') ? undefined : q.id,
           title: q.title,
           quizType: q.quizType,
@@ -811,7 +804,7 @@ const CourseForm = ({
           quiz={editingQuizForQuestions}
           onSaveQuiz={handleSaveQuizWithQuestions}
           onCancel={() => setEditingQuizForQuestions(null)}
-          isSavingQuiz={isSubmitting} // Pass form submitting state
+          isSavingQuiz={isSubmitting} 
         />
     )}
     </>
@@ -819,7 +812,7 @@ const CourseForm = ({
 };
 
 export default function CourseManagement() {
-  const [courses, setCourses] = useState<Course[]>([]); // Prisma Course type
+  const [courses, setCourses] = useState<Course[]>([]); 
   const [categories, setCategories] = useState<PrismaCategory[]>([]);
   const [editingCourse, setEditingCourse] = useState<(Course & { modules?: (Module & { lessons?: Lesson[] })[], quizzes?: (Quiz & { questions?: (Question & { options?: Option[]})[] })[] }) | undefined>(undefined);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -832,8 +825,8 @@ export default function CourseManagement() {
       setIsLoadingData(true);
       try {
         const [dbCourses, dbCategories] = await Promise.all([
-            getCoursesFromDb(),
-            getCategoriesFromDb()
+            serverGetCourses(), // Use server action
+            serverGetCategories() // Use server action
         ]);
         setCourses(dbCourses);
         setCategories(dbCategories);
@@ -849,7 +842,7 @@ export default function CourseManagement() {
   const handleAddCourse = async (data: Omit<Course, 'id' | 'createdAt' | 'updatedAt'| 'categoryId' | 'categoryNameCache'> & { categoryName: string, modules?: any[], quizzes?: any[] }) => {
     setIsSubmittingForm(true);
     try {
-      const newCourse = await addCourseToDb(data);
+      const newCourse = await serverAddCourse(data); // Use server action
       setCourses(prev => [newCourse, ...prev].sort((a, b) => a.title.localeCompare(b.title)));
       closeForm();
       toast({ title: "Course Added", description: `"${data.title}" has been successfully added.` });
@@ -865,7 +858,7 @@ export default function CourseManagement() {
     if (!editingCourse || !editingCourse.id) return;
     setIsSubmittingForm(true);
     try {
-      const updatedCourse = await updateCourseInDb(editingCourse.id, data);
+      const updatedCourse = await serverUpdateCourse(editingCourse.id, data); // Use server action
       setCourses(prev => prev.map(c => c.id === editingCourse.id ? updatedCourse : c).sort((a,b) => a.title.localeCompare(b.title)));
       closeForm();
       toast({ title: "Course Updated", description: `"${data.title}" has been successfully updated.` });
@@ -880,7 +873,7 @@ export default function CourseManagement() {
   const handleDeleteCourse = async (courseId: string) => {
     const courseToDelete = courses.find(c => c.id === courseId);
     try {
-      await deleteCourseFromDb(courseId);
+      await serverDeleteCourse(courseId); // Use server action
       setCourses(prev => prev.filter(c => c.id !== courseId));
       toast({ title: "Course Deleted", description: `"${courseToDelete?.title ?? 'Course'}" has been deleted.`, variant: "destructive" });
     } catch (error) {
@@ -890,7 +883,7 @@ export default function CourseManagement() {
 
   const openForm = async (courseId?: string) => {
     if (courseId) {
-        const courseToEdit = await getCourseByIdFromDb(courseId); // Fetches full course details
+        const courseToEdit = await serverGetCourseById(courseId); // Use server action
         if (courseToEdit) {
             setEditingCourse(courseToEdit);
         } else {
@@ -1010,6 +1003,3 @@ export default function CourseManagement() {
     </Card>
   );
 }
-
-
-    
