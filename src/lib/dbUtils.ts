@@ -4,16 +4,16 @@ import type { Prisma } from '@prisma/client'; // Import Prisma for Json types
 import { 
   mockCoursesForSeeding,
   mockCategoriesForSeeding,
-  mockVideosForSeeding, 
+  mockVideosForSeeding as mockVideosForSeedingData, // Renamed to avoid conflict
   mockLearningPathsForSeeding,
-  initialPaymentSettings as mockDefaultPaymentSettings, 
+  initialPaymentSettings as mockDefaultPaymentSettingsData, // Renamed
 } from '@/data/mockData';
 import { QuizType as PrismaQuizTypeEnum, type SitePage, type Course, type Category, type LearningPath, type Module, type Lesson, type Quiz, type Question, type Option, type QuizType as PrismaQuizTypeTypeAlias, type Video, type PaymentSettings, type PaymentSubmission, type Enrollment, type User, type PaymentSubmissionStatus as PrismaPaymentStatus } from '@prisma/client';
 import { z } from 'zod';
 
-console.log("[dbUtils] Loading dbUtils.ts module. DATABASE_URL from env (initial check):", process.env.DATABASE_URL ? "Exists" : "NOT FOUND/EMPTY");
+console.log("[dbUtils-Prisma] Loading dbUtils.ts module. DATABASE_URL from env (initial check):", process.env.DATABASE_URL ? "Exists" : "NOT FOUND/EMPTY");
 if (process.env.DATABASE_URL) {
-  console.log("[dbUtils] DATABASE_URL (first 30 chars for initial check):", process.env.DATABASE_URL.substring(0, 30) + "...");
+  console.log("[dbUtils-Prisma] DATABASE_URL (first 30 chars for initial check):", process.env.DATABASE_URL.substring(0, 30) + "...");
 }
 
 export type { 
@@ -92,8 +92,8 @@ const VideoInputSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().min(1, "Description is required"),
   thumbnailUrl: z.string().url("Invalid thumbnail URL").optional().nullable(),
-  embedUrl: z.string().min(1, "Embed URL is required").url("Invalid embed URL").refine(val => val.includes("youtube.com") || val.includes("tiktok.com"), {
-    message: "Embed URL must be a valid YouTube or TikTok URL."
+  embedUrl: z.string().min(1, "Embed URL is required").url("Invalid embed URL").refine(val => val.includes("youtube.com") || val.includes("tiktok.com") || val.includes("drive.google.com"), { // Added Google Drive
+    message: "Embed URL must be a valid YouTube, TikTok, or Google Drive URL."
   }),
   dataAiHint: z.string().max(100, "AI hint too long").optional().nullable(),
 });
@@ -117,6 +117,13 @@ const PaymentSubmissionInputSchema = z.object({
   }),
 });
 
+const PaymentSettingsInputSchema = z.object({
+  bankName: z.string().optional().nullable(),
+  accountNumber: z.string().optional().nullable(),
+  accountHolderName: z.string().optional().nullable(),
+  additionalInstructions: z.string().optional().nullable(),
+});
+
 const SitePageInputSchema = z.object({
   title: z.string().min(1, "Title is required"),
   content: z.any(), 
@@ -125,64 +132,64 @@ const SitePageInputSchema = z.object({
 
 // --- Category Functions (Using Prisma) ---
 export const getCategoriesFromDb = async (): Promise<Category[]> => {
-  console.log("[dbUtils] getCategoriesFromDb: Fetching categories...");
+  console.log("[dbUtils-Prisma] getCategoriesFromDb: Fetching categories...");
   try {
     const categories = await prisma.category.findMany({ orderBy: { name: 'asc' } });
-    console.log("[dbUtils] getCategoriesFromDb: Found categories:", categories.length);
+    console.log("[dbUtils-Prisma] getCategoriesFromDb: Found categories:", categories.length);
     return categories;
   } catch (error) {
-    console.error("[dbUtils] getCategoriesFromDb: Error fetching categories:", error);
+    console.error("[dbUtils-Prisma] getCategoriesFromDb: Error fetching categories:", error);
     throw error;
   }
 };
 export const addCategoryToDb = async (categoryData: Omit<Category, 'id' | 'createdAt' | 'updatedAt' | 'courses'>): Promise<Category> => {
-  console.log("[dbUtils] addCategoryToDb: Attempting to add category. Data:", JSON.stringify(categoryData, null, 1));
+  console.log("[dbUtils-Prisma] addCategoryToDb: Attempting to add category. Data:", JSON.stringify(categoryData, null, 1));
   const validation = CategoryInputSchema.safeParse(categoryData);
   if (!validation.success) {
-    console.error("[dbUtils] addCategoryToDb: Category validation failed:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
+    console.error("[dbUtils-Prisma] addCategoryToDb: Category validation failed:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
     throw new Error(validation.error.flatten().fieldErrors._errors?.join(', ') || "Invalid category data.");
   }
-  console.log("[dbUtils] addCategoryToDb: Validation successful. Data for Prisma:", JSON.stringify(validation.data, null, 1));
+  console.log("[dbUtils-Prisma] addCategoryToDb: Validation successful. Data for Prisma:", JSON.stringify(validation.data, null, 1));
   try {
     const newCategory = await prisma.category.create({ data: validation.data });
-    console.log("[dbUtils] addCategoryToDb: Category created successfully in DB:", JSON.stringify(newCategory, null, 1));
+    console.log("[dbUtils-Prisma] addCategoryToDb: Category created successfully in DB:", JSON.stringify(newCategory, null, 1));
     return newCategory;
   } catch (error) {
-    console.error("[dbUtils] addCategoryToDb: Error creating category in DB:", error);
+    console.error("[dbUtils-Prisma] addCategoryToDb: Error creating category in DB:", error);
     throw error;
   }
 };
 export const updateCategoryInDb = async (categoryId: string, categoryData: Partial<Omit<Category, 'id' | 'createdAt' | 'updatedAt' | 'courses'>>): Promise<Category> => {
-  console.log(`[dbUtils] updateCategoryInDb: Attempting to update category ID ${categoryId}. Data:`, JSON.stringify(categoryData, null, 1));
+  console.log(`[dbUtils-Prisma] updateCategoryInDb: Attempting to update category ID ${categoryId}. Data:`, JSON.stringify(categoryData, null, 1));
   const validation = CategoryInputSchema.partial().safeParse(categoryData);
   if (!validation.success) {
-    console.error("[dbUtils] updateCategoryInDb: Category validation failed:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
+    console.error("[dbUtils-Prisma] updateCategoryInDb: Category validation failed:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
     throw new Error(validation.error.flatten().fieldErrors._errors?.join(', ') || "Invalid category data for update.");
   }
-  console.log("[dbUtils] updateCategoryInDb: Validation successful. Data for Prisma:", JSON.stringify(validation.data, null, 1));
+  console.log("[dbUtils-Prisma] updateCategoryInDb: Validation successful. Data for Prisma:", JSON.stringify(validation.data, null, 1));
   try {
     const updatedCategory = await prisma.category.update({ where: { id: categoryId }, data: validation.data });
-    console.log("[dbUtils] updateCategoryInDb: Category updated successfully in DB:", JSON.stringify(updatedCategory, null, 1));
+    console.log("[dbUtils-Prisma] updateCategoryInDb: Category updated successfully in DB:", JSON.stringify(updatedCategory, null, 1));
     return updatedCategory;
   } catch (error) {
-    console.error(`[dbUtils] updateCategoryInDb: Error updating category ID ${categoryId} in DB:`, error);
+    console.error(`[dbUtils-Prisma] updateCategoryInDb: Error updating category ID ${categoryId} in DB:`, error);
     throw error;
   }
 };
 export const deleteCategoryFromDb = async (categoryId: string): Promise<void> => {
-  console.log(`[dbUtils] deleteCategoryFromDb: Attempting to delete category ID ${categoryId}.`);
+  console.log(`[dbUtils-Prisma] deleteCategoryFromDb: Attempting to delete category ID ${categoryId}.`);
   try {
     await prisma.category.delete({ where: { id: categoryId } });
-    console.log(`[dbUtils] deleteCategoryFromDb: Category ID ${categoryId} deleted successfully from DB.`);
+    console.log(`[dbUtils-Prisma] deleteCategoryFromDb: Category ID ${categoryId} deleted successfully from DB.`);
   } catch (error) {
-    console.error(`[dbUtils] deleteCategoryFromDb: Error deleting category ID ${categoryId} from DB:`, error);
+    console.error(`[dbUtils-Prisma] deleteCategoryFromDb: Error deleting category ID ${categoryId} from DB:`, error);
     throw error;
   }
 };
 
 // --- Course Functions (Using Prisma) ---
 export const getCoursesFromDb = async (): Promise<Course[]> => {
-  console.log("[dbUtils] getCoursesFromDb: Fetching courses...");
+  console.log("[dbUtils-Prisma] getCoursesFromDb: Fetching courses...");
   try {
     const courses = await prisma.course.findMany({
       include: { 
@@ -192,15 +199,15 @@ export const getCoursesFromDb = async (): Promise<Course[]> => {
       },
       orderBy: { title: 'asc' }
     });
-    console.log("[dbUtils] getCoursesFromDb: Found courses:", courses.length);
+    console.log("[dbUtils-Prisma] getCoursesFromDb: Found courses:", courses.length);
     return courses;
   } catch (error) {
-    console.error("[dbUtils] getCoursesFromDb: Error fetching courses:", error);
+    console.error("[dbUtils-Prisma] getCoursesFromDb: Error fetching courses:", error);
     throw error;
   }
 };
 export const getCourseByIdFromDb = async (courseId: string): Promise<Course | null> => {
-  console.log(`[dbUtils] getCourseByIdFromDb: Fetching course ID ${courseId}.`);
+  console.log(`[dbUtils-Prisma] getCourseByIdFromDb: Fetching course ID ${courseId}.`);
   try {
     const course = await prisma.course.findUnique({
       where: { id: courseId },
@@ -210,10 +217,10 @@ export const getCourseByIdFromDb = async (courseId: string): Promise<Course | nu
         quizzes: { include: { questions: { include: { options: true, correctOption: true }, orderBy: {order: 'asc'} } } }
       }
     });
-    console.log(`[dbUtils] getCourseByIdFromDb: Course ${courseId} ${course ? 'found' : 'not found'}.`);
+    console.log(`[dbUtils-Prisma] getCourseByIdFromDb: Course ${courseId} ${course ? 'found' : 'not found'}.`);
     return course;
   } catch (error) {
-    console.error(`[dbUtils] getCourseByIdFromDb: Error fetching course ID ${courseId}:`, error);
+    console.error(`[dbUtils-Prisma] getCourseByIdFromDb: Error fetching course ID ${courseId}:`, error);
     throw error;
   }
 };
@@ -224,25 +231,25 @@ export const addCourseToDb = async (
     quizzes?: Array<Partial<Omit<Quiz, 'id'|'courseId'|'createdAt'|'updatedAt'|'questions'>> & { quizType: PrismaQuizTypeEnum, questions?: Array<Partial<Omit<Question, 'id'|'quizId'|'createdAt'|'updatedAt'|'options'|'correctOptionId'>> & { options: Array<Partial<Omit<Option, 'id'|'questionId'|'createdAt'|'updatedAt'>>>, correctOptionText?: string }> }>
   }
 ): Promise<Course> => {
-  console.log("[dbUtils] addCourseToDb: Function called.");
-  console.log("[dbUtils] addCourseToDb: Attempting to add course. Data (first 500 chars):", JSON.stringify(courseData).substring(0, 500) + "...");
+  console.log("[dbUtils-Prisma] addCourseToDb: Function called.");
+  console.log("[dbUtils-Prisma] addCourseToDb: Attempting to add course. Data (first 500 chars):", JSON.stringify(courseData).substring(0, 500) + "...");
   
   const validation = CourseInputSchema.safeParse(courseData);
   if (!validation.success) {
-    console.error("[dbUtils] addCourseToDb: Course validation failed:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
+    console.error("[dbUtils-Prisma] addCourseToDb: Course validation failed:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
     throw new Error(validation.error.flatten().fieldErrors._errors?.join(', ') || "Invalid course data.");
   }
-  console.log("[dbUtils] addCourseToDb: Zod validation successful. Validated data (first 500 chars):", JSON.stringify(validation.data).substring(0,500) + "...");
+  console.log("[dbUtils-Prisma] addCourseToDb: Zod validation successful. Validated data (first 500 chars):", JSON.stringify(validation.data).substring(0,500) + "...");
   const { categoryName, modules, quizzes, ...mainCourseData } = validation.data;
 
   try {
     let category = await prisma.category.findUnique({ where: { name: categoryName } });
     if (!category) {
-      console.log(`[dbUtils] addCourseToDb: Category "${categoryName}" not found, creating it.`);
+      console.log(`[dbUtils-Prisma] addCourseToDb: Category "${categoryName}" not found, creating it.`);
       category = await prisma.category.create({ data: { name: categoryName, iconName: 'Shapes' } });
-      console.log(`[dbUtils] addCourseToDb: Category "${categoryName}" created with ID: ${category.id}`);
+      console.log(`[dbUtils-Prisma] addCourseToDb: Category "${categoryName}" created with ID: ${category.id}`);
     } else {
-      console.log(`[dbUtils] addCourseToDb: Found existing category "${categoryName}" with ID: ${category.id}`);
+      console.log(`[dbUtils-Prisma] addCourseToDb: Found existing category "${categoryName}" with ID: ${category.id}`);
     }
 
     const prismaCourseData: any = {
@@ -270,7 +277,7 @@ export const addCourseToDb = async (
       quizzes: quizzes ? {
         create: quizzes.map((quizData) => ({
           title: quizData.title!,
-          quizType: quizData.quizType!, // This is now uppercase due to Zod transform
+          quizType: quizData.quizType!, 
           passingScore: quizData.passingScore,
           questions: quizData.questions ? {
             create: quizData.questions.map(q => ({
@@ -284,70 +291,70 @@ export const addCourseToDb = async (
       } : undefined,
     };
     
-    console.log("[dbUtils] addCourseToDb: Prepared prismaCourseData (first 500 chars):", JSON.stringify(prismaCourseData).substring(0,500) + "...");
-    console.log("[dbUtils] addCourseToDb: Attempting prisma.course.create...");
+    console.log("[dbUtils-Prisma] addCourseToDb: Prepared prismaCourseData (first 500 chars):", JSON.stringify(prismaCourseData).substring(0,500) + "...");
+    console.log("[dbUtils-Prisma] addCourseToDb: Attempting prisma.course.create...");
     const createdCourse = await prisma.course.create({
       data: prismaCourseData,
       include: { category: true, modules: { include: { lessons: true } }, quizzes: { include: { questions: { include: { options: true } } } } }
     });
-    console.log("[dbUtils] addCourseToDb: Course created with ID:", createdCourse.id);
+    console.log("[dbUtils-Prisma] addCourseToDb: Course created with ID:", createdCourse.id);
 
     if (createdCourse.quizzes && quizzes) { 
-      console.log("[dbUtils] addCourseToDb: Starting correctOptionId update loop for new quizzes.");
+      console.log("[dbUtils-Prisma] addCourseToDb: Starting correctOptionId update loop for new quizzes.");
       for (let i = 0; i < createdCourse.quizzes.length; i++) {
           const dbQuiz = createdCourse.quizzes[i];
           const formQuiz = quizzes[i]; 
-          console.log(`[dbUtils] addCourseToDb: Processing quiz index ${i}, DB Quiz ID: ${dbQuiz.id}, Form Quiz Title: ${formQuiz?.title}`);
+          console.log(`[dbUtils-Prisma] addCourseToDb: Processing quiz index ${i}, DB Quiz ID: ${dbQuiz.id}, Form Quiz Title: ${formQuiz?.title}`);
           if (dbQuiz.questions && formQuiz?.questions) {
               for (let j = 0; j < dbQuiz.questions.length; j++) {
                   const dbQuestion = dbQuiz.questions[j];
                   const formQuestion = formQuiz.questions[j];
-                  console.log(`[dbUtils] addCourseToDb:   Processing question index ${j}, DB Question ID: ${dbQuestion.id}, Form Question Text: ${formQuestion?.text}`);
+                  console.log(`[dbUtils-Prisma] addCourseToDb:   Processing question index ${j}, DB Question ID: ${dbQuestion.id}, Form Question Text: ${formQuestion?.text}`);
                   if (formQuestion?.correctOptionText && dbQuestion.options.length > 0) {
                       const correctDbOption = dbQuestion.options.find(opt => opt.text === formQuestion.correctOptionText);
                       if (correctDbOption) {
-                          console.log(`[dbUtils] addCourseToDb:     Found correct option for question ${dbQuestion.id} by text "${formQuestion.correctOptionText}", DB Option ID: ${correctDbOption.id}`);
+                          console.log(`[dbUtils-Prisma] addCourseToDb:     Found correct option for question ${dbQuestion.id} by text "${formQuestion.correctOptionText}", DB Option ID: ${correctDbOption.id}`);
                           if (dbQuestion.correctOptionId !== correctDbOption.id) {
                             await prisma.question.update({
                                 where: { id: dbQuestion.id },
                                 data: { correctOptionId: correctDbOption.id }
                             });
-                            console.log(`[dbUtils] addCourseToDb:       Updated correctOptionId for question ${dbQuestion.id} to ${correctDbOption.id}`);
+                            console.log(`[dbUtils-Prisma] addCourseToDb:       Updated correctOptionId for question ${dbQuestion.id} to ${correctDbOption.id}`);
                           } else {
-                            console.log(`[dbUtils] addCourseToDb:       correctOptionId for question ${dbQuestion.id} is already set correctly.`);
+                            console.log(`[dbUtils-Prisma] addCourseToDb:       correctOptionId for question ${dbQuestion.id} is already set correctly.`);
                           }
                       } else {
-                        console.warn(`[dbUtils] addCourseToDb:     Could not find correct option by text "${formQuestion.correctOptionText}" for question ${dbQuestion.id}`);
+                        console.warn(`[dbUtils-Prisma] addCourseToDb:     Could not find correct option by text "${formQuestion.correctOptionText}" for question ${dbQuestion.id}`);
                       }
                   } else {
-                    console.log(`[dbUtils] addCourseToDb:     No correctOptionText provided or no options for question ${dbQuestion.id}`);
+                    console.log(`[dbUtils-Prisma] addCourseToDb:     No correctOptionText provided or no options for question ${dbQuestion.id}`);
                   }
               }
           }
       }
-      console.log("[dbUtils] addCourseToDb: Finished correctOptionId update loop.");
+      console.log("[dbUtils-Prisma] addCourseToDb: Finished correctOptionId update loop.");
     }
     
-    console.log("[dbUtils] addCourseToDb: Fetching final course details for ID:", createdCourse.id);
+    console.log("[dbUtils-Prisma] addCourseToDb: Fetching final course details for ID:", createdCourse.id);
     const finalCourse = await getCourseByIdFromDb(createdCourse.id);
     if (!finalCourse) {
-        console.error("[dbUtils] addCourseToDb: CRITICAL - Course just created but not found by getCourseByIdFromDb. ID:", createdCourse.id);
+        console.error("[dbUtils-Prisma] addCourseToDb: CRITICAL - Course just created but not found by getCourseByIdFromDb. ID:", createdCourse.id);
         throw new Error("Failed to retrieve newly created course details.");
     }
-    console.log("[dbUtils] addCourseToDb: Successfully added and retrieved course:", finalCourse.id);
+    console.log("[dbUtils-Prisma] addCourseToDb: Successfully added and retrieved course:", finalCourse.id);
     return finalCourse;
 
   } catch (error) {
-    console.error("[dbUtils] addCourseToDb: CAUGHT ERROR DURING PRISMA OPERATION OR SUBSEQUENT LOGIC:", error);
+    console.error("[dbUtils-Prisma] addCourseToDb: CAUGHT ERROR DURING PRISMA OPERATION OR SUBSEQUENT LOGIC:", error);
     if (error instanceof Error) {
-        console.error("[dbUtils] addCourseToDb: Error Name:", error.name);
-        console.error("[dbUtils] addCourseToDb: Error Message:", error.message);
-        console.error("[dbUtils] addCourseToDb: Error Stack:", error.stack);
+        console.error("[dbUtils-Prisma] addCourseToDb: Error Name:", error.name);
+        console.error("[dbUtils-Prisma] addCourseToDb: Error Message:", error.message);
+        console.error("[dbUtils-Prisma] addCourseToDb: Error Stack:", error.stack);
     }
     // @ts-ignore
-    if (error.code) {  console.error("[dbUtils] addCourseToDb: Prisma Error Code:", error.code); }
+    if (error.code) {  console.error("[dbUtils-Prisma] addCourseToDb: Prisma Error Code:", error.code); }
     // @ts-ignore
-    if (error.meta) { console.error("[dbUtils] addCourseToDb: Prisma Error Meta:", JSON.stringify(error.meta, null, 1)); }
+    if (error.meta) { console.error("[dbUtils-Prisma] addCourseToDb: Prisma Error Meta:", JSON.stringify(error.meta, null, 1)); }
     throw error; 
   }
 };
@@ -359,13 +366,13 @@ export const updateCourseInDb = async (
     quizzes?: Array<Partial<Omit<Quiz, 'id'|'courseId'|'createdAt'|'updatedAt'|'questions'>> & { id?: string, quizType: PrismaQuizTypeEnum, questions?: Array<Partial<Omit<Question, 'id'|'quizId'|'createdAt'|'updatedAt'|'options'|'correctOptionId'>> & { id?: string, options: Array<Partial<Omit<Option, 'id'|'questionId'|'createdAt'|'updatedAt'>> & {id?:string}>, correctOptionText?: string }> }>
   }
 ): Promise<Course> => {
-  console.log(`[dbUtils] updateCourseInDb: Attempting to update course ID ${courseId}. Data (first 500 chars):`, JSON.stringify(courseData).substring(0,500)+"...");
+  console.log(`[dbUtils-Prisma] updateCourseInDb: Attempting to update course ID ${courseId}. Data (first 500 chars):`, JSON.stringify(courseData).substring(0,500)+"...");
   const validation = CourseInputSchema.partial().safeParse(courseData);
   if (!validation.success) {
-    console.error("[dbUtils] updateCourseInDb: Course validation failed:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
+    console.error("[dbUtils-Prisma] updateCourseInDb: Course validation failed:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
     throw new Error(validation.error.flatten().fieldErrors._errors?.join(', ') || "Invalid course data for update.");
   }
-  console.log("[dbUtils] updateCourseInDb: Zod validation successful. Validated data (first 500 chars):", JSON.stringify(validation.data).substring(0,500) + "...");
+  console.log("[dbUtils-Prisma] updateCourseInDb: Zod validation successful. Validated data (first 500 chars):", JSON.stringify(validation.data).substring(0,500) + "...");
   const { categoryName, modules, quizzes, ...mainCourseData } = validation.data;
   
   try {
@@ -381,7 +388,7 @@ export const updateCourseInDb = async (
       categoryNameToCache = category.name;
     }
     
-    console.log(`[dbUtils] updateCourseInDb: Deleting existing modules and quizzes for course ID ${courseId}.`);
+    console.log(`[dbUtils-Prisma] updateCourseInDb: Deleting existing modules and quizzes for course ID ${courseId}.`);
     await prisma.module.deleteMany({ where: { courseId: courseId } }); 
     await prisma.quiz.deleteMany({where: {courseId: courseId }}); 
 
@@ -418,7 +425,7 @@ export const updateCourseInDb = async (
       prismaCourseUpdateData.quizzes = {
         create: quizzes.map((quizData) => ({
             title: quizData.title!,
-            quizType: quizData.quizType!, // This is now uppercase due to Zod transform
+            quizType: quizData.quizType!, 
             passingScore: quizData.passingScore,
             questions: quizData.questions ? {
               create: quizData.questions.map(q => ({
@@ -432,13 +439,13 @@ export const updateCourseInDb = async (
       };
     }
     
-    console.log(`[dbUtils] updateCourseInDb: Prepared prismaCourseUpdateData for course ${courseId} (first 500 chars):`, JSON.stringify(prismaCourseUpdateData).substring(0,500)+"...");
+    console.log(`[dbUtils-Prisma] updateCourseInDb: Prepared prismaCourseUpdateData for course ${courseId} (first 500 chars):`, JSON.stringify(prismaCourseUpdateData).substring(0,500)+"...");
     const updatedCourse = await prisma.course.update({
       where: { id: courseId },
       data: prismaCourseUpdateData,
       include: { category: true, modules: { include: { lessons: true } }, quizzes: { include: { questions: { include: { options: true } } } } }
     });
-    console.log(`[dbUtils] updateCourseInDb: Course ${courseId} updated. Starting correctOptionId update loop for its quizzes.`);
+    console.log(`[dbUtils-Prisma] updateCourseInDb: Course ${courseId} updated. Starting correctOptionId update loop for its quizzes.`);
     
     if (updatedCourse.quizzes && quizzes) { 
         for (let i = 0; i < updatedCourse.quizzes.length; i++) {
@@ -455,50 +462,50 @@ export const updateCourseInDb = async (
                                 where: { id: dbQuestion.id },
                                 data: { correctOptionId: correctDbOption.id }
                             });
-                            console.log(`[dbUtils] updateCourseInDb:   Updated correctOptionId for question ${dbQuestion.id} to ${correctDbOption.id}`);
+                            console.log(`[dbUtils-Prisma] updateCourseInDb:   Updated correctOptionId for question ${dbQuestion.id} to ${correctDbOption.id}`);
                         }
                     }
                 }
             }
         }
     }
-    console.log(`[dbUtils] updateCourseInDb: Finished correctOptionId update loop for course ${courseId}. Fetching final details.`);
+    console.log(`[dbUtils-Prisma] updateCourseInDb: Finished correctOptionId update loop for course ${courseId}. Fetching final details.`);
     const finalCourse = await getCourseByIdFromDb(updatedCourse.id);
     if (!finalCourse) {
-        console.error("[dbUtils] updateCourseInDb: CRITICAL - Course just updated but not found by getCourseByIdFromDb. ID:", updatedCourse.id);
+        console.error("[dbUtils-Prisma] updateCourseInDb: CRITICAL - Course just updated but not found by getCourseByIdFromDb. ID:", updatedCourse.id);
         throw new Error("Failed to retrieve newly updated course details.");
     }
-    console.log(`[dbUtils] updateCourseInDb: Successfully updated and retrieved course ${courseId}.`);
+    console.log(`[dbUtils-Prisma] updateCourseInDb: Successfully updated and retrieved course ${courseId}.`);
     return finalCourse;
 
   } catch (error) {
-    console.error(`[dbUtils] updateCourseInDb: CAUGHT ERROR updating course ID ${courseId} in DB:`, error);
+    console.error(`[dbUtils-Prisma] updateCourseInDb: CAUGHT ERROR updating course ID ${courseId} in DB:`, error);
      if (error instanceof Error) {
-        console.error("[dbUtils] updateCourseInDb: Error Name:", error.name);
-        console.error("[dbUtils] updateCourseInDb: Error Message:", error.message);
-        console.error("[dbUtils] updateCourseInDb: Error Stack:", error.stack);
+        console.error("[dbUtils-Prisma] updateCourseInDb: Error Name:", error.name);
+        console.error("[dbUtils-Prisma] updateCourseInDb: Error Message:", error.message);
+        console.error("[dbUtils-Prisma] updateCourseInDb: Error Stack:", error.stack);
     }
     // @ts-ignore
-    if (error.code) {  console.error("[dbUtils] updateCourseInDb: Prisma Error Code:", error.code); }
+    if (error.code) {  console.error("[dbUtils-Prisma] updateCourseInDb: Prisma Error Code:", error.code); }
     // @ts-ignore
-    if (error.meta) { console.error("[dbUtils] updateCourseInDb: Prisma Error Meta:", JSON.stringify(error.meta, null, 1)); }
+    if (error.meta) { console.error("[dbUtils-Prisma] updateCourseInDb: Prisma Error Meta:", JSON.stringify(error.meta, null, 1)); }
     throw error;
   }
 };
 export const deleteCourseFromDb = async (courseId: string): Promise<void> => {
-  console.log(`[dbUtils] deleteCourseFromDb: Attempting to delete course ID ${courseId}.`);
+  console.log(`[dbUtils-Prisma] deleteCourseFromDb: Attempting to delete course ID ${courseId}.`);
   try {
     await prisma.course.delete({ where: { id: courseId } });
-    console.log(`[dbUtils] deleteCourseFromDb: Course ID ${courseId} deleted successfully from DB.`);
+    console.log(`[dbUtils-Prisma] deleteCourseFromDb: Course ID ${courseId} deleted successfully from DB.`);
   } catch (error) {
-    console.error(`[dbUtils] deleteCourseFromDb: Error deleting course ID ${courseId} from DB:`, error);
+    console.error(`[dbUtils-Prisma] deleteCourseFromDb: Error deleting course ID ${courseId} from DB:`, error);
     throw error;
   }
 };
 
 // --- LearningPath Functions (Using Prisma) ---
 export const getLearningPathsFromDb = async (): Promise<LearningPath[]> => {
-  console.log("[dbUtils] getLearningPathsFromDb: Fetching learning paths...");
+  console.log("[dbUtils-Prisma] getLearningPathsFromDb: Fetching learning paths...");
   try {
     const paths = await prisma.learningPath.findMany({
       include: {
@@ -509,20 +516,20 @@ export const getLearningPathsFromDb = async (): Promise<LearningPath[]> => {
       },
       orderBy: { title: 'asc' }
     });
-    console.log("[dbUtils] getLearningPathsFromDb: Found learning paths:", paths.length);
+    console.log("[dbUtils-Prisma] getLearningPathsFromDb: Found learning paths:", paths.length);
     return paths;
   } catch (error) {
-    console.error("[dbUtils] getLearningPathsFromDb: Error fetching learning paths:", error);
+    console.error("[dbUtils-Prisma] getLearningPathsFromDb: Error fetching learning paths:", error);
     throw error;
   }
 };
 export const addLearningPathToDb = async (
   pathData: Omit<LearningPath, 'id'|'createdAt'|'updatedAt'|'learningPathCourses'> & { courseIdsToConnect?: string[] }
 ): Promise<LearningPath> => {
-  console.log("[dbUtils] addLearningPathToDb: Attempting to add learning path. Data:", JSON.stringify(pathData, null, 1));
+  console.log("[dbUtils-Prisma] addLearningPathToDb: Attempting to add learning path. Data:", JSON.stringify(pathData, null, 1));
   const validation = LearningPathInputSchema.safeParse(pathData);
   if (!validation.success) {
-    console.error("[dbUtils] addLearningPathToDb: Learning Path validation failed:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
+    console.error("[dbUtils-Prisma] addLearningPathToDb: Learning Path validation failed:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
     throw new Error(validation.error.flatten().fieldErrors._errors?.join(', ') || "Invalid learning path data.");
   }
   const { courseIdsToConnect, ...restData } = validation.data;
@@ -541,7 +548,7 @@ export const addLearningPathToDb = async (
     });
     return newPath;
   } catch (error) {
-    console.error("[dbUtils] addLearningPathToDb: Error creating learning path in DB:", error);
+    console.error("[dbUtils-Prisma] addLearningPathToDb: Error creating learning path in DB:", error);
     throw error;
   }
 };
@@ -549,7 +556,7 @@ export const updateLearningPathInDb = async (
   pathId: string, 
   pathData: Partial<Omit<LearningPath, 'id'|'createdAt'|'updatedAt'|'learningPathCourses'>> & { courseIdsToConnect?: string[] }
 ): Promise<LearningPath> => {
-  console.log(`[dbUtils] updateLearningPathInDb: Attempting to update LP ID ${pathId}. Data:`, JSON.stringify(pathData, null, 1));
+  console.log(`[dbUtils-Prisma] updateLearningPathInDb: Attempting to update LP ID ${pathId}. Data:`, JSON.stringify(pathData, null, 1));
   const validation = LearningPathInputSchema.partial().safeParse(pathData);
   if (!validation.success) {
     throw new Error(validation.error.flatten().fieldErrors._errors?.join(', ') || "Invalid learning path data for update.");
@@ -572,16 +579,16 @@ export const updateLearningPathInDb = async (
     });
     return updatedPath;
   } catch (error) {
-    console.error(`[dbUtils] updateLearningPathInDb: Error updating learning path ID ${pathId} in DB:`, error);
+    console.error(`[dbUtils-Prisma] updateLearningPathInDb: Error updating learning path ID ${pathId} in DB:`, error);
     throw error;
   }
 };
 export const deleteLearningPathFromDb = async (pathId: string): Promise<void> => {
-  console.log(`[dbUtils] deleteLearningPathFromDb: Attempting to delete LP ID ${pathId}.`);
+  console.log(`[dbUtils-Prisma] deleteLearningPathFromDb: Attempting to delete LP ID ${pathId}.`);
   try {
     await prisma.learningPath.delete({ where: { id: pathId } });
   } catch (error) {
-    console.error(`[dbUtils] deleteLearningPathFromDb: Error deleting learning path ID ${pathId} from DB:`, error);
+    console.error(`[dbUtils-Prisma] deleteLearningPathFromDb: Error deleting learning path ID ${pathId} from DB:`, error);
     throw error;
   }
 };
@@ -591,18 +598,18 @@ export const saveQuizWithQuestionsToDb = async (
     courseIdForQuiz: string, 
     quizData: Pick<Quiz, 'id'|'title'|'quizType'|'passingScore'> & { questionsToUpsert?: any[], questionIdsToDelete?: string[] } 
 ): Promise<Quiz> => { 
-    console.log(`[dbUtils] saveQuizWithQuestionsToDb: Saving quiz for course ${courseIdForQuiz}. Quiz Title: ${quizData.title}`);
+    console.log(`[dbUtils-Prisma] saveQuizWithQuestionsToDb: Saving quiz for course ${courseIdForQuiz}. Quiz Title: ${quizData.title}`);
     try {
         let existingQuiz = quizData.id && !quizData.id.startsWith('quiz-new-') 
             ? await prisma.quiz.findUnique({ where: { id: quizData.id }, include: { questions: { include: { options: true } } } }) 
             : null;
 
         if (existingQuiz) {
-            console.log(`[dbUtils] saveQuizWithQuestionsToDb: Updating existing quiz ID ${existingQuiz.id}`);
+            console.log(`[dbUtils-Prisma] saveQuizWithQuestionsToDb: Updating existing quiz ID ${existingQuiz.id}`);
             if (quizData.questionIdsToDelete && quizData.questionIdsToDelete.length > 0) {
                 const validIdsToDelete = quizData.questionIdsToDelete.filter(id => !id.startsWith('q-new-'));
                 if (validIdsToDelete.length > 0) {
-                   console.log(`[dbUtils] saveQuizWithQuestionsToDb: Deleting questions for quiz ${existingQuiz.id}:`, validIdsToDelete);
+                   console.log(`[dbUtils-Prisma] saveQuizWithQuestionsToDb: Deleting questions for quiz ${existingQuiz.id}:`, validIdsToDelete);
                    await prisma.question.deleteMany({ where: { id: { in: validIdsToDelete }, quizId: existingQuiz.id } });
                 }
             }
@@ -613,7 +620,7 @@ export const saveQuizWithQuestionsToDb = async (
                 let savedQuestion: Question & { options: Option[] };
 
                 if (qData.id && !qData.id.startsWith('q-new-')) { 
-                    console.log(`[dbUtils] saveQuizWithQuestionsToDb: Updating question ID ${qData.id}`);
+                    console.log(`[dbUtils-Prisma] saveQuizWithQuestionsToDb: Updating question ID ${qData.id}`);
                     await prisma.option.deleteMany({where: {questionId: qData.id}});
                     savedQuestion = await prisma.question.update({
                         where: { id: qData.id },
@@ -621,7 +628,7 @@ export const saveQuizWithQuestionsToDb = async (
                         include: { options: true }
                     });
                 } else { 
-                    console.log(`[dbUtils] saveQuizWithQuestionsToDb: Creating new question for quiz ${existingQuiz!.id}`);
+                    console.log(`[dbUtils-Prisma] saveQuizWithQuestionsToDb: Creating new question for quiz ${existingQuiz!.id}`);
                     savedQuestion = await prisma.question.create({
                         data: { ...questionPayload, quizId: existingQuiz!.id, options: { create: optionsPayload } },
                         include: { options: true }
@@ -631,7 +638,7 @@ export const saveQuizWithQuestionsToDb = async (
                     const correctOpt = savedQuestion.options.find(opt => opt.text === qData.correctOptionTextForNew);
                     if(correctOpt && savedQuestion.correctOptionId !== correctOpt.id){
                         await prisma.question.update({where: {id: savedQuestion.id}, data: {correctOptionId: correctOpt.id}});
-                         console.log(`[dbUtils] saveQuizWithQuestionsToDb:   Updated correctOptionId for question ${savedQuestion.id} to ${correctOpt.id}`);
+                         console.log(`[dbUtils-Prisma] saveQuizWithQuestionsToDb:   Updated correctOptionId for question ${savedQuestion.id} to ${correctOpt.id}`);
                     }
                 }
                 return savedQuestion;
@@ -643,10 +650,10 @@ export const saveQuizWithQuestionsToDb = async (
                 data: { title: quizData.title, quizType: quizData.quizType as PrismaQuizTypeEnum, passingScore: quizData.passingScore },
                 include: { questions: { include: { options: true, correctOption: true }, orderBy: {order: 'asc'} } }
             });
-            console.log(`[dbUtils] saveQuizWithQuestionsToDb: Quiz ID ${existingQuiz.id} updated successfully.`);
+            console.log(`[dbUtils-Prisma] saveQuizWithQuestionsToDb: Quiz ID ${existingQuiz.id} updated successfully.`);
             return updatedQuiz;
         } else {
-            console.log(`[dbUtils] saveQuizWithQuestionsToDb: Creating new quiz for course ${courseIdForQuiz}`);
+            console.log(`[dbUtils-Prisma] saveQuizWithQuestionsToDb: Creating new quiz for course ${courseIdForQuiz}`);
             const createdQuiz = await prisma.quiz.create({
                 data: {
                     courseId: courseIdForQuiz,
@@ -670,91 +677,144 @@ export const saveQuizWithQuestionsToDb = async (
                         const correctOpt = dbQuestion.options.find(opt => opt.text === formQuestion.correctOptionTextForNew);
                         if(correctOpt && dbQuestion.correctOptionId !== correctOpt.id){
                             await prisma.question.update({where: {id: dbQuestion.id}, data: {correctOptionId: correctOpt.id}});
-                            console.log(`[dbUtils] saveQuizWithQuestionsToDb:   Updated correctOptionId for new question ${dbQuestion.id} to ${correctOpt.id}`);
+                            console.log(`[dbUtils-Prisma] saveQuizWithQuestionsToDb:   Updated correctOptionId for new question ${dbQuestion.id} to ${correctOpt.id}`);
                         }
                     }
                 }
             }
             const finalQuiz = await prisma.quiz.findUniqueOrThrow({where: {id: createdQuiz.id}, include: {questions: {include: {options: true, correctOption: true}}}});
-            console.log(`[dbUtils] saveQuizWithQuestionsToDb: New quiz created with ID ${finalQuiz.id}.`);
+            console.log(`[dbUtils-Prisma] saveQuizWithQuestionsToDb: New quiz created with ID ${finalQuiz.id}.`);
             return finalQuiz;
         }
     } catch (error) {
-        console.error("[dbUtils] saveQuizWithQuestionsToDb: CAUGHT ERROR saving quiz to DB:", error);
+        console.error("[dbUtils-Prisma] saveQuizWithQuestionsToDb: CAUGHT ERROR saving quiz to DB:", error);
         if (error instanceof Error) {
-            console.error("[dbUtils] saveQuizWithQuestionsToDb: Error Name:", error.name);
-            console.error("[dbUtils] saveQuizWithQuestionsToDb: Error Message:", error.message);
-            console.error("[dbUtils] saveQuizWithQuestionsToDb: Error Stack:", error.stack);
+            console.error("[dbUtils-Prisma] saveQuizWithQuestionsToDb: Error Name:", error.name);
+            console.error("[dbUtils-Prisma] saveQuizWithQuestionsToDb: Error Message:", error.message);
+            console.error("[dbUtils-Prisma] saveQuizWithQuestionsToDb: Error Stack:", error.stack);
         }
         // @ts-ignore
-        if (error.code) {  console.error("[dbUtils] saveQuizWithQuestionsToDb: Prisma Error Code:", error.code); }
+        if (error.code) {  console.error("[dbUtils-Prisma] saveQuizWithQuestionsToDb: Prisma Error Code:", error.code); }
         // @ts-ignore
-        if (error.meta) { console.error("[dbUtils] saveQuizWithQuestionsToDb: Prisma Error Meta:", JSON.stringify(error.meta, null, 1)); }
+        if (error.meta) { console.error("[dbUtils-Prisma] saveQuizWithQuestionsToDb: Prisma Error Meta:", JSON.stringify(error.meta, null, 1)); }
         throw error;
     }
 };
 
 // --- Video Functions (Using Prisma) ---
 export const getVideosFromDb = async (): Promise<Video[]> => {
-  console.log("[dbUtils] getVideosFromDb: Fetching videos...");
-  return prisma.video.findMany({ orderBy: { createdAt: 'desc' } });
+  console.log("[dbUtils-Prisma] getVideosFromDb: Fetching videos from DB...");
+  try {
+    const videos = await prisma.video.findMany({ orderBy: { createdAt: 'desc' } });
+    console.log("[dbUtils-Prisma] getVideosFromDb: Found videos:", videos.length);
+    return videos;
+  } catch (error) {
+    console.error("[dbUtils-Prisma] getVideosFromDb: Error fetching videos:", error);
+    throw error;
+  }
 };
 export const addVideoToDb = async (videoData: Omit<Video, 'id' | 'createdAt' | 'updatedAt'>): Promise<Video> => {
-  console.log("[dbUtils] addVideoToDb: Adding video. Data:", JSON.stringify(videoData, null, 1));
+  console.log("[dbUtils-Prisma] addVideoToDb: Adding video to DB. Data:", JSON.stringify(videoData, null, 1));
   const validation = VideoInputSchema.safeParse(videoData);
   if (!validation.success) {
-    console.error("[dbUtils] addVideoToDb: Video validation failed:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
+    console.error("[dbUtils-Prisma] addVideoToDb: Video validation failed:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
     throw new Error(validation.error.flatten().fieldErrors._errors?.join(', ') || "Invalid video data.");
   }
-  return prisma.video.create({ data: validation.data });
+  try {
+    const newVideo = await prisma.video.create({ data: validation.data });
+    console.log("[dbUtils-Prisma] addVideoToDb: Video created successfully in DB:", JSON.stringify(newVideo, null, 1));
+    return newVideo;
+  } catch (error) {
+    console.error("[dbUtils-Prisma] addVideoToDb: Error creating video in DB:", error);
+    throw error;
+  }
 };
 export const updateVideoInDb = async (videoId: string, videoData: Partial<Omit<Video, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Video> => {
-  console.log(`[dbUtils] updateVideoInDb: Updating video ID ${videoId}. Data:`, JSON.stringify(videoData, null, 1));
+  console.log(`[dbUtils-Prisma] updateVideoInDb: Updating video ID ${videoId}. Data:`, JSON.stringify(videoData, null, 1));
   const validation = VideoInputSchema.partial().safeParse(videoData);
   if (!validation.success) {
-     console.error("[dbUtils] updateVideoInDb: Video validation failed:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
+     console.error("[dbUtils-Prisma] updateVideoInDb: Video validation failed:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
     throw new Error(validation.error.flatten().fieldErrors._errors?.join(', ') || "Invalid video data for update.");
   }
-  return prisma.video.update({ where: { id: videoId }, data: validation.data });
+  try {
+    const updatedVideo = await prisma.video.update({ where: { id: videoId }, data: validation.data });
+    console.log("[dbUtils-Prisma] updateVideoInDb: Video updated successfully in DB:", JSON.stringify(updatedVideo, null, 1));
+    return updatedVideo;
+  } catch (error) {
+    console.error(`[dbUtils-Prisma] updateVideoInDb: Error updating video ID ${videoId} in DB:`, error);
+    throw error;
+  }
 };
 export const deleteVideoFromDb = async (videoId: string): Promise<void> => {
-  console.log(`[dbUtils] deleteVideoFromDb: Deleting video ID ${videoId}.`);
-  await prisma.video.delete({ where: { id: videoId } });
+  console.log(`[dbUtils-Prisma] deleteVideoFromDb: Deleting video ID ${videoId} from DB.`);
+  try {
+    await prisma.video.delete({ where: { id: videoId } });
+    console.log(`[dbUtils-Prisma] deleteVideoFromDb: Video ID ${videoId} deleted successfully from DB.`);
+  } catch (error) {
+    console.error(`[dbUtils-Prisma] deleteVideoFromDb: Error deleting video ID ${videoId} from DB:`, error);
+    throw error;
+  }
 };
 
 // --- PaymentSettings (Using Prisma) ---
 export const getPaymentSettingsFromDb = async (): Promise<PaymentSettings | null> => {
-  console.log("[dbUtils] getPaymentSettingsFromDb: Fetching payment settings.");
-  return prisma.paymentSettings.findUnique({ where: { id: 'global' } });
+  console.log("[dbUtils-Prisma] getPaymentSettingsFromDb: Fetching payment settings from DB.");
+  try {
+    const settings = await prisma.paymentSettings.findUnique({ where: { id: 'global' } });
+    console.log("[dbUtils-Prisma] getPaymentSettingsFromDb: Payment settings found:", !!settings);
+    return settings;
+  } catch (error) {
+    console.error("[dbUtils-Prisma] getPaymentSettingsFromDb: Error fetching payment settings:", error);
+    throw error;
+  }
 };
 export const savePaymentSettingsToDb = async (settingsData: Omit<PaymentSettings, 'id'| 'updatedAt'>): Promise<PaymentSettings> => {
-  console.log("[dbUtils] savePaymentSettingsToDb: Saving payment settings. Data:", JSON.stringify(settingsData, null, 1));
-  return prisma.paymentSettings.upsert({
-    where: { id: 'global' },
-    update: settingsData,
-    create: { id: 'global', ...settingsData },
-  });
+  console.log("[dbUtils-Prisma] savePaymentSettingsToDb: Saving payment settings to DB. Data:", JSON.stringify(settingsData, null, 1));
+  const validation = PaymentSettingsInputSchema.safeParse(settingsData);
+  if (!validation.success) {
+    console.error("[dbUtils-Prisma] savePaymentSettingsToDb: Validation failed:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
+    throw new Error(validation.error.flatten().fieldErrors._errors?.join(', ') || "Invalid payment settings data.");
+  }
+  try {
+    const savedSettings = await prisma.paymentSettings.upsert({
+      where: { id: 'global' },
+      update: validation.data,
+      create: { id: 'global', ...validation.data },
+    });
+    console.log("[dbUtils-Prisma] savePaymentSettingsToDb: Payment settings saved successfully.");
+    return savedSettings;
+  } catch (error) {
+    console.error("[dbUtils-Prisma] savePaymentSettingsToDb: Error saving payment settings:", error);
+    throw error;
+  }
 };
 
 // --- PaymentSubmission (Using Prisma) ---
 export const getPaymentSubmissionsFromDb = async (filter?: { userId?: string }): Promise<PaymentSubmission[]> => {
-  console.log("[dbUtils] getPaymentSubmissionsFromDb: Fetching payment submissions. Filter:", filter);
-  return prisma.paymentSubmission.findMany({
-    where: filter,
-    include: { user: {select: {id:true, name:true, email:true}}, course: {select: {id:true, title: true}} }, 
-    orderBy: { submittedAt: 'desc' }
-  });
+  console.log("[dbUtils-Prisma] getPaymentSubmissionsFromDb: Fetching payment submissions from DB. Filter:", filter);
+  try {
+    const submissions = await prisma.paymentSubmission.findMany({
+      where: filter,
+      include: { user: {select: {id:true, name:true, email:true}}, course: {select: {id:true, title: true}} }, 
+      orderBy: { submittedAt: 'desc' }
+    });
+    console.log("[dbUtils-Prisma] getPaymentSubmissionsFromDb: Found submissions:", submissions.length);
+    return submissions;
+  } catch (error) {
+    console.error("[dbUtils-Prisma] getPaymentSubmissionsFromDb: Error fetching submissions:", error);
+    throw error;
+  }
 };
 export const addPaymentSubmissionToDb = async (
   submissionData: Omit<PaymentSubmission, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'submittedAt' | 'reviewedAt' | 'adminNotes' | 'user' | 'course'> & { userId: string, courseId: string }
 ): Promise<PaymentSubmission> => {
-  console.log("[dbUtils] addPaymentSubmissionToDb: Received data:", JSON.stringify(submissionData, null, 2));
+  console.log("[dbUtils-Prisma] addPaymentSubmissionToDb: Received data:", JSON.stringify(submissionData, null, 2));
   const validation = PaymentSubmissionInputSchema.safeParse(submissionData);
   if (!validation.success) {
-    console.error("[dbUtils] addPaymentSubmissionToDb: Zod validation failed:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
+    console.error("[dbUtils-Prisma] addPaymentSubmissionToDb: Zod validation failed:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
     throw new Error(validation.error.flatten().fieldErrors._errors?.join(', ') || "Invalid payment submission data. Zod validation failed.");
   }
-  console.log("[dbUtils] addPaymentSubmissionToDb: Zod validation successful. Data for Prisma:", JSON.stringify(validation.data, null, 2));
+  console.log("[dbUtils-Prisma] addPaymentSubmissionToDb: Zod validation successful. Data for Prisma:", JSON.stringify(validation.data, null, 2));
   try {
     const newSubmission = await prisma.paymentSubmission.create({
       data: {
@@ -764,14 +824,14 @@ export const addPaymentSubmissionToDb = async (
       },
       include: { user: {select: {id:true, name:true, email:true}}, course: {select: {id:true, title: true}} }
     });
-    console.log("[dbUtils] addPaymentSubmissionToDb: Successfully created submission in DB:", JSON.stringify(newSubmission, null, 2));
+    console.log("[dbUtils-Prisma] addPaymentSubmissionToDb: Successfully created submission in DB:", JSON.stringify(newSubmission, null, 2));
     return newSubmission;
   } catch (error) {
-    console.error("[dbUtils] addPaymentSubmissionToDb: Prisma error creating submission:", error);
+    console.error("[dbUtils-Prisma] addPaymentSubmissionToDb: Prisma error creating submission:", error);
     // @ts-ignore
-    if (error.code) {  console.error("[dbUtils] addPaymentSubmissionToDb: Prisma Error Code:", error.code); }
+    if (error.code) {  console.error("[dbUtils-Prisma] addPaymentSubmissionToDb: Prisma Error Code:", error.code); }
     // @ts-ignore
-    if (error.meta) { console.error("[dbUtils] addPaymentSubmissionToDb: Prisma Error Meta:", JSON.stringify(error.meta, null, 2)); }
+    if (error.meta) { console.error("[dbUtils-Prisma] addPaymentSubmissionToDb: Prisma Error Meta:", JSON.stringify(error.meta, null, 2)); }
     if (error instanceof Error) {
       throw new Error(`Prisma error: ${error.message}`);
     }
@@ -782,7 +842,7 @@ export const updatePaymentSubmissionInDb = async (
   submissionId: string, 
   dataToUpdate: { status: PrismaPaymentStatus, adminNotes?: string | null, reviewedAt?: Date }
 ): Promise<PaymentSubmission> => {
-  console.log(`[dbUtils] updatePaymentSubmissionInDb: Updating submission ID ${submissionId}. Data:`, JSON.stringify(dataToUpdate, null, 1));
+  console.log(`[dbUtils-Prisma] updatePaymentSubmissionInDb: Updating submission ID ${submissionId}. Data:`, JSON.stringify(dataToUpdate, null, 1));
   try {
     const updatedSubmission = await prisma.paymentSubmission.update({
       where: { id: submissionId },
@@ -793,25 +853,24 @@ export const updatePaymentSubmissionInDb = async (
       },
       include: { user: {select: {id: true, name:true, email:true}}, course: {select: {id:true, title: true}} }
     });
-    console.log(`[dbUtils] updatePaymentSubmissionInDb: Successfully updated submission ID ${submissionId}.`);
+    console.log(`[dbUtils-Prisma] updatePaymentSubmissionInDb: Successfully updated submission ID ${submissionId}.`);
     return updatedSubmission;
   } catch (error) {
-    console.error(`[dbUtils] updatePaymentSubmissionInDb: Error updating submission ID ${submissionId}:`, error);
+    console.error(`[dbUtils-Prisma] updatePaymentSubmissionInDb: Error updating submission ID ${submissionId}:`, error);
     throw error;
   }
 };
 
-
 // --- Enrollment (Using Prisma) ---
 export const getEnrollmentForUserAndCourseFromDb = async (userId: string, courseId: string): Promise<Enrollment | null> => {
-  console.log(`[dbUtils] getEnrollmentForUserAndCourseFromDb: Fetching for user ${userId}, course ${courseId}.`);
+  console.log(`[dbUtils-Prisma] getEnrollmentForUserAndCourseFromDb: Fetching for user ${userId}, course ${courseId}.`);
   return prisma.enrollment.findUnique({
     where: { userId_courseId: { userId, courseId } },
     include: { course: true } 
   });
 };
 export const createEnrollmentInDb = async (userId: string, courseId: string): Promise<Enrollment> => {
-  console.log(`[dbUtils] createEnrollmentInDb: Creating for user ${userId}, course ${courseId}.`);
+  console.log(`[dbUtils-Prisma] createEnrollmentInDb: Creating for user ${userId}, course ${courseId}.`);
   return prisma.enrollment.create({
     data: {
       userId,
@@ -823,7 +882,7 @@ export const createEnrollmentInDb = async (userId: string, courseId: string): Pr
   });
 };
 export const updateEnrollmentProgressInDb = async (enrollmentId: string, progress: number): Promise<Enrollment> => {
-  console.log(`[dbUtils] updateEnrollmentProgressInDb: Updating enrollment ${enrollmentId} to progress ${progress}.`);
+  console.log(`[dbUtils-Prisma] updateEnrollmentProgressInDb: Updating enrollment ${enrollmentId} to progress ${progress}.`);
   return prisma.enrollment.update({
     where: { id: enrollmentId },
     data: { progress },
@@ -831,7 +890,7 @@ export const updateEnrollmentProgressInDb = async (enrollmentId: string, progres
   });
 };
 export const getEnrollmentsByUserIdFromDb = async (userId: string): Promise<Enrollment[]> => {
-  console.log(`[dbUtils] getEnrollmentsByUserIdFromDb: Fetching for user ${userId}.`);
+  console.log(`[dbUtils-Prisma] getEnrollmentsByUserIdFromDb: Fetching for user ${userId}.`);
   return prisma.enrollment.findMany({
     where: { userId },
     include: { course: true },
@@ -839,16 +898,15 @@ export const getEnrollmentsByUserIdFromDb = async (userId: string): Promise<Enro
   });
 };
 
-
 // --- Site Page Content Functions (Using Prisma) ---
 export const getSitePageBySlug = async (slug: string): Promise<SitePage | null> => {
-  console.log(`[dbUtils] getSitePageBySlug: Fetching page with slug "${slug}".`);
+  console.log(`[dbUtils-Prisma] getSitePageBySlug: Fetching page with slug "${slug}".`);
   try {
     const page = await prisma.sitePage.findUnique({ where: { slug } });
-    console.log(`[dbUtils] getSitePageBySlug: Page "${slug}" ${page ? 'found' : 'not found'}.`);
+    console.log(`[dbUtils-Prisma] getSitePageBySlug: Page "${slug}" ${page ? 'found' : 'not found'}.`);
     return page;
   } catch (error) {
-    console.error(`[dbUtils] getSitePageBySlug: Error fetching page "${slug}":`, error);
+    console.error(`[dbUtils-Prisma] getSitePageBySlug: Error fetching page "${slug}":`, error);
     throw error;
   }
 };
@@ -858,10 +916,10 @@ export const upsertSitePage = async (
   title: string,
   content: Prisma.JsonValue | string 
 ): Promise<SitePage> => {
-  console.log(`[dbUtils] upsertSitePage: Upserting page with slug "${slug}".`);
+  console.log(`[dbUtils-Prisma] upsertSitePage: Upserting page with slug "${slug}".`);
   const validation = SitePageInputSchema.safeParse({ title, content });
   if (!validation.success) {
-    console.error("[dbUtils] upsertSitePage: SitePage validation failed:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
+    console.error("[dbUtils-Prisma] upsertSitePage: SitePage validation failed:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
     throw new Error(validation.error.flatten().fieldErrors._errors?.join(', ') || "Invalid site page data.");
   }
   
@@ -877,33 +935,32 @@ export const upsertSitePage = async (
       update: dataToUpsert,
       create: dataToUpsert,
     });
-    console.log(`[dbUtils] upsertSitePage: Page "${slug}" upserted successfully.`);
+    console.log(`[dbUtils-Prisma] upsertSitePage: Page "${slug}" upserted successfully.`);
     return sitePage;
   } catch (error) {
-    console.error(`[dbUtils] upsertSitePage: Error upserting page "${slug}":`, error);
+    console.error(`[dbUtils-Prisma] upsertSitePage: Error upserting page "${slug}":`, error);
     throw error;
   }
 };
 
-
 // --- Seeding Functions (Updated for Prisma) ---
 export const seedCategoriesToDb = async (): Promise<{ successCount: number; errorCount: number; skippedCount: number }> => {
-  console.log("[dbUtils] seedCategoriesToDb: Seeding categories to DB.");
+  console.log("[dbUtils-Prisma] seedCategoriesToDb: Seeding categories to DB.");
   let successCount = 0, errorCount = 0, skippedCount = 0;
   for (const catData of mockCategoriesForSeeding) {
     try {
       const existing = await prisma.category.findUnique({ where: { name: catData.name } });
       if (existing) { skippedCount++; continue; }
-      await prisma.category.create({ data: { name: catData.name, imageUrl: catData.imageUrl, dataAiHint: catData.dataAiHint, iconName: catData.iconName } });
+      await prisma.category.create({ data: { id:catData.id, name: catData.name, imageUrl: catData.imageUrl, dataAiHint: catData.dataAiHint, iconName: catData.iconName } });
       successCount++;
     } catch (error) { console.error(`Error seeding category ${catData.name}:`, error); errorCount++; }
   }
-  console.log(`[dbUtils] seedCategoriesToDb: Done. Success: ${successCount}, Errors: ${errorCount}, Skipped: ${skippedCount}`);
+  console.log(`[dbUtils-Prisma] seedCategoriesToDb: Done. Success: ${successCount}, Errors: ${errorCount}, Skipped: ${skippedCount}`);
   return { successCount, errorCount, skippedCount };
 };
 
 export const seedCoursesToDb = async (): Promise<{ successCount: number; errorCount: number; skippedCount: number }> => {
-  console.log("[dbUtils] seedCoursesToDb: Seeding courses to DB.");
+  console.log("[dbUtils-Prisma] seedCoursesToDb: Seeding courses to DB.");
   let s=0,e=0,sk=0;
   for(const cd of mockCoursesForSeeding){
     try{
@@ -915,12 +972,12 @@ export const seedCoursesToDb = async (): Promise<{ successCount: number; errorCo
       await prisma.course.create({data:pcd});s++;
     }catch(err){console.error(`Err seed course ${cd.title}:`,err);e++;}
   }
-  console.log(`[dbUtils] seedCoursesToDb: Done. Success: ${s}, Errors: ${e}, Skipped: ${sk}`);
+  console.log(`[dbUtils-Prisma] seedCoursesToDb: Done. Success: ${s}, Errors: ${e}, Skipped: ${sk}`);
   return {successCount:s,errorCount:e,skippedCount:sk};
 };
 
 export const seedLearningPathsToDb = async (): Promise<{ successCount: number; errorCount: number; skippedCount: number }> => {
-  console.log("[dbUtils] seedLearningPathsToDb: Seeding learning paths to DB.");
+  console.log("[dbUtils-Prisma] seedLearningPathsToDb: Seeding learning paths to DB.");
   let s=0,e=0,sk=0;
   for(const lpd of mockLearningPathsForSeeding){
     try{
@@ -929,33 +986,33 @@ export const seedLearningPathsToDb = async (): Promise<{ successCount: number; e
       await prisma.learningPath.create({data:{...restOfLpData,id:lpd.id,learningPathCourses:{create:courseIds.map((ci,i)=>({courseId:ci,order:i}))}}});s++;
     }catch(err){console.error(`Err seed LP ${lpd.title}:`,err);e++;}
   }
-  console.log(`[dbUtils] seedLearningPathsToDb: Done. Success: ${s}, Errors: ${e}, Skipped: ${sk}`);
+  console.log(`[dbUtils-Prisma] seedLearningPathsToDb: Done. Success: ${s}, Errors: ${e}, Skipped: ${sk}`);
   return {successCount:s,errorCount:e,skippedCount:sk};
 };
 
 export const seedVideosToDb = async (): Promise<{ successCount: number; errorCount: number; skippedCount: number }> => {
-  console.log("[dbUtils] seedVideosToDb: Seeding videos to DB.");
+  console.log("[dbUtils-Prisma] seedVideosToDb: Seeding videos to DB.");
   let s=0,e=0,sk=0;
-  for(const vd of mockVideosForSeeding){
+  for(const vd of mockVideosForSeedingData){ // Use renamed import
     try{
-      if(await prisma.video.findUnique({where:{id:vd.id}})){sk++;continue;}
-      const {createdAt,updatedAt,videoUrl, ...restOfVd} = vd; 
+      const existing = await prisma.video.findUnique({where:{id:vd.id}});
+      if(existing){sk++;continue;}
+      const { createdAt,updatedAt,videoUrl, ...restOfVd } = vd; // videoUrl is not in Video model
       await prisma.video.create({data:{...restOfVd,id:vd.id}});s++;
     }catch(err){console.error(`Err seed Video ${vd.title}:`,err);e++;}
   }
-  console.log(`[dbUtils] seedVideosToDb: Done. Success: ${s}, Errors: ${e}, Skipped: ${sk}`);
+  console.log(`[dbUtils-Prisma] seedVideosToDb: Done. Success: ${s}, Errors: ${e}, Skipped: ${sk}`);
   return {successCount:s,errorCount:e,skippedCount:sk};
 };
 
 export const seedPaymentSettingsToDb = async (): Promise<{ successCount: number; errorCount: number; skippedCount: number }> => {
-  console.log("[dbUtils] seedPaymentSettingsToDb: Seeding payment settings to DB.");
+  console.log("[dbUtils-Prisma] seedPaymentSettingsToDb: Seeding payment settings to DB.");
   try{
-    const {updatedAt, ...restOfSettings} = mockDefaultPaymentSettings; 
+    const {updatedAt, ...restOfSettings} = mockDefaultPaymentSettingsData; // Use renamed import
     await prisma.paymentSettings.upsert({where:{id:'global'},update:restOfSettings,create:{id:'global',...restOfSettings}});
-    console.log(`[dbUtils] seedPaymentSettingsToDb: Done. Success: 1`);
+    console.log(`[dbUtils-Prisma] seedPaymentSettingsToDb: Done. Success: 1`);
     return{successCount:1,errorCount:0,skippedCount:0};
   }catch(err){console.error('Err seed PaymentSettings:',err);return{successCount:0,errorCount:1,skippedCount:0};}
 };
-    
-    
+
     

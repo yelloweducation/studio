@@ -2,13 +2,14 @@
 'use server';
 import { z } from 'zod';
 import {
-  findUserByEmailFromMock,
-  updateUserRoleInMock,
-  addUserToMock,
+  findUserByEmail, // Updated from findUserByEmailFromMock
+  updateUserRole,   // Updated from updateUserRoleInMock
+  addUser,          // Updated from addUserToMock
   comparePassword,
   SUPER_ADMIN_EMAIL,
-  getAllUsersFromMock as getAllUsersFromMockUtil
-} from '@/lib/authUtils';
+  getAllUsers,      // Updated from getAllUsersFromMock
+  seedInitialUsersToDatabase, // Updated from seedInitialUsersToLocalStorage
+} from '@/lib/authUtils'; // Using Prisma-backed authUtils
 import type { User as PrismaUserType, Role as PrismaRoleType } from '@prisma/client';
 
 const LoginInputSchema = z.object({
@@ -30,127 +31,101 @@ const UpdateRoleInputSchema = z.object({
 
 export const serverLoginUser = async (email_from_form_raw: string, password_from_form: string): Promise<PrismaUserType | null> => {
   const email_from_form = email_from_form_raw.toLowerCase();
-  console.log(`[AuthActions - serverLoginUser] Attempting login for email: ${email_from_form}, password_from_form (prefix): ${password_from_form.substring(0,3)}... (length: ${password_from_form.length})`);
+  console.log(`[AuthActions-Prisma - serverLoginUser] Attempting login for email: ${email_from_form}`);
   
   const validation = LoginInputSchema.safeParse({ email: email_from_form, password: password_from_form });
   if (!validation.success) {
-    console.error("[AuthActions - serverLoginUser] Server-side login input validation failed:", validation.error.flatten().fieldErrors);
+    console.error("[AuthActions-Prisma - serverLoginUser] Server-side login input validation failed:", validation.error.flatten().fieldErrors);
     return null;
   }
 
   const validatedEmail = validation.data.email;
   const validatedPassword = validation.data.password;
 
-  const user = await findUserByEmailFromMock(validatedEmail);
+  const user = await findUserByEmail(validatedEmail); // Uses Prisma
 
   if (user) {
-    console.log(`[AuthActions - serverLoginUser] User found for ${validatedEmail}. ID: ${user.id}. Stored hash (prefix): ${user.passwordHash?.substring(0,10)}...`);
+    console.log(`[AuthActions-Prisma - serverLoginUser] User found for ${validatedEmail}. ID: ${user.id}.`);
     
-    let isMatch = false;
-
-    // Temporary Debugging Bypass for admin@example.com
-    if (validatedEmail === SUPER_ADMIN_EMAIL.toLowerCase() && validatedPassword === 'superadminpass') {
-      console.warn("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-      console.warn("!!! [AuthActions - serverLoginUser] DEBUGGING BYPASS ACTIVATED for admin@example.com !!!");
-      console.warn("!!! Password check was SKIPPED. Login granted directly. REMOVE THIS BYPASS. !!!");
-      console.warn("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-      isMatch = true;
-    } else {
-      // Standard secure bcryptjs comparison for all other users or if admin uses a different password
-      console.log(`[AuthActions - serverLoginUser] Proceeding with bcrypt.compare for user ${validatedEmail}.`);
-      isMatch = await comparePassword(validatedPassword, user.passwordHash || '');
-    }
-        
-    console.log(`[AuthActions - serverLoginUser] Final isMatch result for ${validatedEmail}: ${isMatch}`);
+    const isMatch = await comparePassword(validatedPassword, user.passwordHash || '');
+            
+    console.log(`[AuthActions-Prisma - serverLoginUser] Final isMatch result for ${validatedEmail}: ${isMatch}`);
 
     if (isMatch) {
-      console.log(`[AuthActions - serverLoginUser] Password match for user ID: ${user.id}. Login successful.`);
+      console.log(`[AuthActions-Prisma - serverLoginUser] Password match for user ID: ${user.id}. Login successful.`);
       // @ts-ignore 
       const { passwordHash, ...userWithoutPasswordHash } = user; 
       return userWithoutPasswordHash as PrismaUserType;
     } else {
-      console.log(`[AuthActions - serverLoginUser] Password mismatch for user ID: ${user.id}.`);
+      console.log(`[AuthActions-Prisma - serverLoginUser] Password mismatch for user ID: ${user.id}.`);
     }
   } else {
-    console.log(`[AuthActions - serverLoginUser] User not found for email: ${validatedEmail}.`);
+    console.log(`[AuthActions-Prisma - serverLoginUser] User not found for email: ${validatedEmail}.`);
   }
   return null;
 };
 
 export const serverRegisterUser = async (name: string, email_raw: string, password_param: string): Promise<PrismaUserType | null> => {
-  const email = email_raw.toLowerCase(); // Normalize email
-  console.log(`[AuthActions - serverRegisterUser] Attempting registration for email: ${email}, name: ${name}, password_param (prefix): ${password_param.substring(0,3)}... (length: ${password_param.length})`);
+  const email = email_raw.toLowerCase(); 
+  console.log(`[AuthActions-Prisma - serverRegisterUser] Attempting registration for email: ${email}, name: ${name}`);
   const validation = RegisterInputSchema.safeParse({ name, email, password: password_param });
   if (!validation.success) {
-    console.error("[AuthActions - serverRegisterUser] Server-side registration input validation failed:", validation.error.flatten().fieldErrors);
+    console.error("[AuthActions-Prisma - serverRegisterUser] Server-side registration input validation failed:", validation.error.flatten().fieldErrors);
     const errorMessages = Object.values(validation.error.flatten().fieldErrors).flat().join(' ');
     throw new Error(errorMessages || "Invalid registration data. Please check your inputs.");
   }
 
-  const existingUser = await findUserByEmailFromMock(validation.data.email);
-  if (existingUser) {
-    console.error(`[AuthActions - serverRegisterUser] User already exists with email: ${validation.data.email}.`);
-    throw new Error("UserAlreadyExists");
-  }
-
   try {
-    const newUser = await addUserToMock({
+    // addUser now interacts with Prisma (via authUtils) and will throw if user exists
+    const newUser = await addUser({ // Uses Prisma
       name: validation.data.name,
       email: validation.data.email,
       role: validation.data.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase() ? 'ADMIN' : 'STUDENT',
     }, validation.data.password); 
 
-    console.log(`[AuthActions - serverRegisterUser] Registration successful for: ${newUser.email}, ID: ${newUser.id}. Hash stored (prefix): ${newUser.passwordHash.substring(0,10)}...`);
+    console.log(`[AuthActions-Prisma - serverRegisterUser] Registration successful for: ${newUser.email}, ID: ${newUser.id}.`);
     // @ts-ignore
     const { passwordHash, ...userWithoutPasswordHash } = newUser;
     return userWithoutPasswordHash as PrismaUserType;
   } catch (error) {
-    console.error("[AuthActions - serverRegisterUser] Error during user registration process:", error);
+    console.error("[AuthActions-Prisma - serverRegisterUser] Error during user registration process:", error);
     if (error instanceof Error && (error.message === "UserAlreadyExists")) {
-        throw error;
+        throw error; // Re-throw specific error for client to handle
     }
-    throw new Error("UserCreationFailure");
+    throw new Error("UserCreationFailure"); // General error
   }
 };
 
 
-export async function getAllUsersServerAction(): Promise<PrismaUserType[]> {
-  console.log("[AuthActions - getAllUsersServerAction] Fetching all users from in-memory store.");
-  const users = await getAllUsersFromMockUtil();
-  return users.map(user => {
-    // @ts-ignore
-    const { passwordHash, ...userWithoutPasswordHash } = user;
-    return userWithoutPasswordHash as PrismaUserType;
-  });
+export async function getAllUsersServerAction(): Promise<Omit<PrismaUserType, 'passwordHash'>[]> {
+  console.log("[AuthActions-Prisma - getAllUsersServerAction] Fetching all users from DB.");
+  return await getAllUsers(); // Uses Prisma
 }
 
-export async function updateUserRoleServerAction(userId: string, newRole: PrismaRoleType): Promise<PrismaUserType | null> {
-  console.log(`[AuthActions - updateUserRoleServerAction] Attempting to update role for user ID: ${userId} to ${newRole}`);
+export async function updateUserRoleServerAction(userId: string, newRole: PrismaRoleType): Promise<Omit<PrismaUserType, 'passwordHash'> | null> {
+  console.log(`[AuthActions-Prisma - updateUserRoleServerAction] Attempting to update role for user ID: ${userId} to ${newRole}`);
   const validation = UpdateRoleInputSchema.safeParse({ userId, newRole });
   if (!validation.success) {
-    console.error("[AuthActions - updateUserRoleServerAction] Server-side role update input validation failed:", validation.error.flatten().fieldErrors);
+    console.error("[AuthActions-Prisma - updateUserRoleServerAction] Server-side role update input validation failed:", validation.error.flatten().fieldErrors);
     const errorMessages = Object.values(validation.error.flatten().fieldErrors).flat().join(' ');
     throw new Error(errorMessages || "Invalid role update data.");
   }
 
   if (!['STUDENT', 'ADMIN'].includes(newRole)) { 
-      console.error("[AuthActions - updateUserRoleServerAction] Invalid role specified for update:", newRole);
+      console.error("[AuthActions-Prisma - updateUserRoleServerAction] Invalid role specified for update:", newRole);
       throw new Error("InvalidRole");
   }
   try {
-    const updatedUser = await updateUserRoleInMock(validation.data.userId, validation.data.newRole as 'STUDENT' | 'ADMIN');
-    if (updatedUser) {
-      console.log(`[AuthActions - updateUserRoleServerAction] Role updated successfully for user ID: ${userId} to ${newRole}`);
-      // @ts-ignore
-      const { passwordHash, ...userWithoutPasswordHash } = updatedUser;
-      return userWithoutPasswordHash as PrismaUserType;
-    } else {
-      console.warn(`[AuthActions - updateUserRoleServerAction] User not found or update failed for user ID: ${userId}`);
-      return null;
-    }
+    return await updateUserRole(validation.data.userId, validation.data.newRole as 'STUDENT' | 'ADMIN'); // Uses Prisma
   } catch (error: any) {
-    console.error(`[AuthActions - updateUserRoleServerAction] Error updating role for user ${userId}:`, error.message);
+    console.error(`[AuthActions-Prisma - updateUserRoleServerAction] Error updating role for user ${userId}:`, error.message);
     throw error;
   }
 }
+
+export async function serverSeedInitialUsers(): Promise<{ successCount: number; errorCount: number; skippedCount: number }> {
+  console.log("[AuthActions-Prisma - serverSeedInitialUsers] Seeding initial users to database via authUtils.");
+  return seedInitialUsersToDatabase(); // Uses Prisma via authUtils
+}
+
     

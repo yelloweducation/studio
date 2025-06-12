@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { courses as defaultMockCourses, type Course, type Quiz, type Question as QuizQuestionType, type Option as QuizOptionType } from '@/data/mockData';
+import { type Course, type Quiz, type Question as QuizQuestionType, type Option as QuizOptionType } from '@/lib/dbUtils'; // Use Prisma types from dbUtils
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -11,8 +11,10 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChevronLeft, ChevronRight, CheckCircle, XCircle, AlertTriangle, Home, HelpCircle, Award } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CheckCircle, XCircle, AlertTriangle, Home, HelpCircle, Award, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { serverGetCourseById } from '@/actions/adminDataActions'; // Import server action
+import { useToast } from '@/hooks/use-toast';
 
 const quizPageTranslations = {
   en: {
@@ -70,6 +72,7 @@ export default function QuizPage() {
   const router = useRouter();
   const { language } = useLanguage();
   const t = quizPageTranslations[language];
+  const { toast } = useToast();
 
   const courseId = params.id as string;
   const quizId = params.quizId as string;
@@ -83,38 +86,46 @@ export default function QuizPage() {
   const [score, setScore] = useState(0);
 
   useEffect(() => {
-    setIsLoading(true);
-    let coursesToUse: Course[] = [];
-    try {
-      const storedCoursesString = localStorage.getItem('adminCourses');
-      if (storedCoursesString) {
-        coursesToUse = JSON.parse(storedCoursesString) as Course[];
-      } else {
-        coursesToUse = defaultMockCourses;
+    const fetchQuizData = async () => {
+      setIsLoading(true);
+      if (!courseId || !quizId) {
+        toast({ variant: "destructive", title: t.quizNotFound, description: "Course ID or Quiz ID is missing." });
+        setIsLoading(false);
+        return;
       }
-    } catch (error) {
-      console.error("Error loading courses for quiz:", error);
-      coursesToUse = defaultMockCourses;
-    }
-
-    const course = coursesToUse.find(c => c.id === courseId);
-    if (course) {
-      setCurrentCourse(course);
-      const quiz = course.quizzes?.find(q => q.id === quizId);
-      setCurrentQuiz(quiz || null);
-    } else {
-      setCurrentCourse(null);
-      setCurrentQuiz(null);
-    }
-    setIsLoading(false);
-  }, [courseId, quizId]);
+      try {
+        const courseData = await serverGetCourseById(courseId);
+        if (courseData) {
+          setCurrentCourse(courseData);
+          const quizData = courseData.quizzes?.find(q => q.id === quizId);
+          if (quizData) {
+            setCurrentQuiz(quizData);
+          } else {
+            setCurrentQuiz(null);
+            toast({ variant: "destructive", title: t.quizNotFound, description: `Quiz with ID ${quizId} not found in course ${courseId}.` });
+          }
+        } else {
+          setCurrentCourse(null);
+          setCurrentQuiz(null);
+          toast({ variant: "destructive", title: t.quizNotFound, description: `Course with ID ${courseId} not found.` });
+        }
+      } catch (error) {
+        console.error("Error fetching quiz data:", error);
+        toast({ variant: "destructive", title: "Error", description: "Could not load quiz data." });
+        setCurrentCourse(null);
+        setCurrentQuiz(null);
+      }
+      setIsLoading(false);
+    };
+    fetchQuizData();
+  }, [courseId, quizId, toast, t.quizNotFound]);
 
   const handleOptionChange = (questionId: string, optionId: string) => {
     setUserAnswers(prev => ({ ...prev, [questionId]: optionId }));
   };
 
   const handleNextQuestion = () => {
-    if (currentQuiz && currentQuestionIndex < currentQuiz.questions.length - 1) {
+    if (currentQuiz && currentQuiz.questions && currentQuestionIndex < currentQuiz.questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
     }
   };
@@ -126,16 +137,16 @@ export default function QuizPage() {
   };
 
   const handleSubmitQuiz = () => {
-    if (!currentQuiz) return;
+    if (!currentQuiz || !currentQuiz.questions) return;
     if (Object.keys(userAnswers).length !== currentQuiz.questions.length) {
-        alert(t.selectOption); // Or use a toast
+        toast({title: t.selectOption, variant: "destructive"});
         return;
     }
 
     let calculatedScore = 0;
     currentQuiz.questions.forEach(q => {
       if (userAnswers[q.id] === q.correctOptionId) {
-        calculatedScore++;
+        calculatedScore += (q.points || 1); // Default to 1 point if not specified
       }
     });
     setScore(calculatedScore);
@@ -152,17 +163,10 @@ export default function QuizPage() {
   if (isLoading) {
     return (
       <div className="max-w-2xl mx-auto py-8 px-4">
-        <Skeleton className="h-8 w-1/3 mb-2" />
-        <Skeleton className="h-6 w-1/2 mb-6" />
-        <Card>
-          <CardHeader><Skeleton className="h-5 w-1/4 mb-4" /><Skeleton className="h-8 w-full" /></CardHeader>
-          <CardContent className="space-y-3">
-            {[1, 2, 3].map(i => <Skeleton key={i} className="h-10 w-full" />)}
-          </CardContent>
-          <CardFooter className="flex justify-between">
-            <Skeleton className="h-10 w-24" /> <Skeleton className="h-10 w-24" />
-          </CardFooter>
-        </Card>
+        <div className="flex justify-center items-center h-64">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="ml-3 text-muted-foreground">{t.loadingQuiz}</p>
+        </div>
       </div>
     );
   }
@@ -196,7 +200,7 @@ export default function QuizPage() {
     );
   }
 
-  if (currentQuiz.questions.length === 0) {
+  if (!currentQuiz.questions || currentQuiz.questions.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center py-10">
         <Card className="w-full max-w-lg shadow-xl">
@@ -228,10 +232,14 @@ export default function QuizPage() {
   const currentQuestionData = currentQuiz.questions[currentQuestionIndex];
   const totalQuestions = currentQuiz.questions.length;
   const progressPercentage = totalQuestions > 0 ? ((currentQuestionIndex + 1) / totalQuestions) * 100 : 0;
+  const maxPossibleScore = currentQuiz.questions.reduce((sum, q) => sum + (q.points || 1), 0);
+
 
   if (quizSubmitted) {
-    const percentageScore = totalQuestions > 0 ? (score / totalQuestions) * 100 : 0;
-    const passed = currentQuiz.quizType === 'graded' && currentQuiz.passingScore !== undefined ? percentageScore >= currentQuiz.passingScore : true; // Practice quizzes always "pass"
+    const percentageScore = maxPossibleScore > 0 ? (score / maxPossibleScore) * 100 : 0;
+    const passed = currentQuiz.quizType === 'GRADED' && currentQuiz.passingScore !== undefined && currentQuiz.passingScore !== null
+                     ? percentageScore >= currentQuiz.passingScore 
+                     : true; // Practice quizzes or graded without passing score always "pass"
 
     return (
       <div className="max-w-2xl mx-auto py-8 px-4">
@@ -245,9 +253,9 @@ export default function QuizPage() {
             <Award className="mx-auto h-12 w-12 text-primary mb-2" />
             <CardTitle className="text-2xl font-headline">{t.resultsTitle}</CardTitle>
             <CardDescription className="text-lg">
-              {t.score.replace('{score}', score.toString()).replace('{totalQuestions}', totalQuestions.toString()).replace('{percentage}', percentageScore.toFixed(0))}
+              {t.score.replace('{score}', score.toString()).replace('{totalQuestions}', maxPossibleScore.toString()).replace('{percentage}', percentageScore.toFixed(0))}
             </CardDescription>
-            {currentQuiz.quizType === 'graded' && (
+            {currentQuiz.quizType === 'GRADED' && currentQuiz.passingScore !== null && currentQuiz.passingScore !== undefined && (
               <p className={`font-semibold text-lg ${passed ? 'text-green-600' : 'text-red-600'}`}>
                 {passed ? t.passed : t.failed}
               </p>
@@ -262,12 +270,12 @@ export default function QuizPage() {
                 const userAnswerText = q.options.find(opt => opt.id === userAnswerId)?.text;
                 const correctAnswerText = q.options.find(opt => opt.id === q.correctOptionId)?.text;
                 return (
-                  <div key={q.id} className={`p-3 rounded-md border ${isCorrect ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50'}`}>
-                    <p className="font-medium text-sm mb-1">{index + 1}. {q.text}</p>
-                    <p className={`text-xs ${isCorrect ? 'text-green-700' : 'text-red-700'}`}>
+                  <div key={q.id} className={`p-3 rounded-md border ${isCorrect ? 'border-green-500 bg-green-50 dark:bg-green-900/30' : 'border-red-500 bg-red-50 dark:bg-red-900/30'}`}>
+                    <p className="font-medium text-sm mb-1">{q.order || index + 1}. {q.text}</p>
+                    <p className={`text-xs ${isCorrect ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
                       {t.yourAnswer} {userAnswerText || 'Not answered'} - {isCorrect ? t.correct : t.incorrect}
                     </p>
-                    {!isCorrect && <p className="text-xs text-blue-700">{t.correctAnswer} {correctAnswerText}</p>}
+                    {!isCorrect && <p className="text-xs text-blue-700 dark:text-blue-300">{t.correctAnswer} {correctAnswerText}</p>}
                   </div>
                 );
               })}
@@ -311,7 +319,7 @@ export default function QuizPage() {
                 key={option.id}
                 htmlFor={`option-${currentQuestionData.id}-${option.id}`}
                 className={`flex items-center space-x-3 p-3 border rounded-md cursor-pointer transition-all 
-                  ${userAnswers[currentQuestionData.id] === option.id ? 'bg-primary/10 border-primary ring-1 ring-primary' : 'hover:bg-muted/50'}`}
+                  ${userAnswers[currentQuestionData.id] === option.id ? 'bg-primary/10 border-primary ring-1 ring-primary dark:bg-primary/20' : 'hover:bg-muted/50 dark:hover:bg-muted/30'}`}
               >
                 <RadioGroupItem value={option.id} id={`option-${currentQuestionData.id}-${option.id}`} />
                 <span>{option.text}</span>
@@ -333,7 +341,7 @@ export default function QuizPage() {
               {t.nextQuestion} <ChevronRight className="ml-2 h-4 w-4" />
             </Button>
           ) : (
-            <Button onClick={handleSubmitQuiz} disabled={!userAnswers[currentQuestionData.id]} className="w-full sm:w-auto bg-green-600 hover:bg-green-700">
+            <Button onClick={handleSubmitQuiz} disabled={!userAnswers[currentQuestionData.id]} className="w-full sm:w-auto bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800">
               {t.submitQuiz} <CheckCircle className="ml-2 h-4 w-4" />
             </Button>
           )}
