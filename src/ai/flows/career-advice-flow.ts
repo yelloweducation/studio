@@ -29,16 +29,16 @@ export async function getCareerAdvice(input: CareerAdviceInput): Promise<CareerA
   console.log('[getCareerAdvice] Invoked with input query:', input.query);
 
   if (!ai || typeof ai.definePrompt !== 'function' || typeof ai.defineFlow !== 'function') {
-    const errorMessage = "[getCareerAdvice] CRITICAL: Genkit 'ai' object from '@/ai/genkit' is not properly initialized or is missing essential methods. This usually means Genkit initialization failed, often due to missing API keys (e.g., GOOGLE_API_KEY) in the environment. AI features will not work. Check server logs and environment variable settings for 'GOOGLE_API_KEY' or 'GEMINI_API_KEY'.";
+    const errorMessage = "[getCareerAdvice] Genkit 'ai' object is not properly initialized or no AI provider plugin is configured. AI features are currently unavailable.";
     console.error(errorMessage);
-    return { advice: "The AI service is currently unavailable due to an initialization error. Please check server logs or contact support." };
+    return { advice: "The AI service is currently unavailable. Please ensure an AI provider (like Google AI, OpenAI, etc.) is configured for Genkit." };
   }
 
   // Define prompt and flow at runtime
   if (!careerAdvicePromptDefinition) {
     try {
       careerAdvicePromptDefinition = ai.definePrompt({
-        name: 'careerAdvicePromptRuntime', // Ensure unique name if registered multiple times (though should not happen with this structure)
+        name: 'careerAdvicePromptRuntime',
         input: {schema: CareerAdviceInputSchema},
         output: {schema: CareerAdviceOutputSchema},
         prompt: `You are a friendly and knowledgeable career advisor specializing in technology fields.
@@ -53,7 +53,7 @@ export async function getCareerAdvice(input: CareerAdviceInput): Promise<CareerA
       });
     } catch (e: any) {
         console.error("[getCareerAdvice] Error defining careerAdvicePromptDefinition:", e);
-        return { advice: "A critical error occurred while setting up the AI prompt. Please contact support." };
+        return { advice: "A critical error occurred while setting up the AI prompt. This might be due to missing AI provider configuration." };
     }
   }
 
@@ -72,11 +72,14 @@ export async function getCareerAdvice(input: CareerAdviceInput): Promise<CareerA
         async (flowInput: CareerAdviceInput): Promise<CareerAdviceOutput> => {
           console.log('[careerAdviceFlowRuntime] Real flow invoked with input query:', flowInput.query);
           try {
+            // Since no AI model is configured, this call will likely fail or hang.
+            // We should ideally check if any model is available before calling prompt.
+            // For now, we rely on the initial `ai` object check.
             const genkitResponse = await careerAdvicePromptDefinition(flowInput);
             
             if (!genkitResponse || !genkitResponse.output) {
               console.warn('[careerAdviceFlowRuntime] Genkit careerAdvicePrompt returned no output for query:', flowInput.query, 'Genkit Response:', JSON.stringify(genkitResponse));
-              return { advice: "I'm sorry, the AI couldn't generate advice for that query. Could you try rephrasing it or check back later?" };
+              return { advice: "I'm sorry, the AI couldn't generate advice for that query. This could be due to a configuration issue or the AI service being unavailable." };
             }
             console.log('[careerAdviceFlowRuntime] Successfully generated output from AI.');
             return genkitResponse.output;
@@ -85,18 +88,18 @@ export async function getCareerAdvice(input: CareerAdviceInput): Promise<CareerA
             if (error instanceof Error && error.stack) {
               console.error("[careerAdviceFlowRuntime] Stack trace:", error.stack);
             }
-            return { advice: "An error occurred while the AI was processing your career advice request. Please try again later." };
+            return { advice: "An error occurred while the AI was processing your career advice request. Please check if an AI provider is configured." };
           }
         }
       );
     } catch (e: any) {
         console.error("[getCareerAdvice] Error defining careerAdviceFlowDefinition:", e);
-        return { advice: "A critical error occurred while setting up the AI advisory flow. Please contact support." };
+        return { advice: "A critical error occurred while setting up the AI advisory flow. This might be due to missing AI provider configuration." };
     }
   }
   
   if (typeof careerAdviceFlowDefinition !== 'function') {
-      const errorMsg = "[getCareerAdvice] 'careerAdviceFlowDefinition' is not defined as a function. This indicates a serious problem with the AI flow module initialization, possibly due to Genkit setup issues.";
+      const errorMsg = "[getCareerAdvice] 'careerAdviceFlowDefinition' is not defined as a function. This indicates a serious problem with the AI flow module initialization, possibly due to Genkit setup issues or missing AI provider.";
       console.error(errorMsg);
       return { advice: "A critical error occurred with the AI advisory flow. Please contact support if this persists." };
   }
@@ -107,7 +110,7 @@ export async function getCareerAdvice(input: CareerAdviceInput): Promise<CareerA
     return result;
   } catch (error: any) {
     console.error("[getCareerAdvice] Unexpected error during careerAdviceFlowDefinition execution:", error);
-    let userFriendlyMessage = "An unexpected error occurred while trying to get career advice. Please try again later or check server logs.";
+    let userFriendlyMessage = "An unexpected error occurred while trying to get career advice. The AI service might be unavailable or misconfigured.";
     if (error.stack) {
         console.error("[getCareerAdvice] Stack trace:", error.stack);
     }

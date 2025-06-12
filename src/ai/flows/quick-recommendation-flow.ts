@@ -10,13 +10,13 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import type { Course } from '@/data/mockData'; // Assuming Course type is exported from mockData
+import type { Course } from '@/data/mockData';
 
 const CourseSchemaForFlow = z.object({
   id: z.string(),
   title: z.string(),
   description: z.string().optional(),
-  categoryNameCache: z.string().optional(), // Updated from category to categoryNameCache
+  categoryNameCache: z.string().optional(),
 });
 
 const QuickRecommendationInputSchema = z.object({
@@ -44,9 +44,9 @@ export async function getQuickRecommendations(input: QuickRecommendationInput): 
   console.log('[getQuickRecommendations] Invoked with user interest:', input.userInterest, 'and', input.availableCourses?.length, 'courses.');
 
   if (!ai || typeof ai.definePrompt !== 'function' || typeof ai.defineFlow !== 'function') {
-    const errorMessage = "[getQuickRecommendations] CRITICAL: Genkit 'ai' object from '@/ai/genkit' is not properly initialized or is missing essential methods. This usually means Genkit initialization failed, often due to missing API keys (e.g., GOOGLE_API_KEY) in the environment. AI features will not work. Check server logs and environment variable settings for 'GOOGLE_API_KEY' or 'GEMINI_API_KEY'.";
+    const errorMessage = "[getQuickRecommendations] Genkit 'ai' object is not properly initialized or no AI provider plugin is configured. AI features are currently unavailable.";
     console.error(errorMessage);
-    return { recommendations: [], error: "The AI recommendation service is currently unavailable due to an initialization error." };
+    return { recommendations: [], error: "The AI recommendation service is currently unavailable. Please ensure an AI provider is configured for Genkit." };
   }
 
   if (!input.availableCourses || input.availableCourses.length === 0) {
@@ -54,7 +54,6 @@ export async function getQuickRecommendations(input: QuickRecommendationInput): 
       return { recommendations: [], error: "No courses available to recommend from." };
   }
 
-  // Define prompt and flow at runtime
   if (!quickRecommendationPromptDefinition) {
     try {
         quickRecommendationPromptDefinition = ai.definePrompt({
@@ -77,7 +76,7 @@ export async function getQuickRecommendations(input: QuickRecommendationInput): 
         });
     } catch (e: any) {
         console.error("[getQuickRecommendations] Error defining quickRecommendationPromptDefinition:", e);
-        return { recommendations: [], error: "A critical error occurred while setting up the AI recommendation prompt." };
+        return { recommendations: [], error: "A critical error occurred while setting up the AI recommendation prompt. This may be due to missing AI provider configuration." };
     }
   }
   
@@ -100,7 +99,7 @@ export async function getQuickRecommendations(input: QuickRecommendationInput): 
                 
                 if (!genkitResponse || !genkitResponse.output) {
                 console.warn('[quickRecommendationFlowRuntime] QuickRecommendationPrompt returned no output for interest:', flowInput.userInterest, 'Genkit Response:', JSON.stringify(genkitResponse));
-                return { recommendations: [], error: "The AI couldn't generate recommendations for that interest." };
+                return { recommendations: [], error: "The AI couldn't generate recommendations for that interest. This could be due to configuration or service unavailability." };
                 }
                 
                 const validRecommendations = genkitResponse.output.recommendations.filter(rec => 
@@ -119,20 +118,20 @@ export async function getQuickRecommendations(input: QuickRecommendationInput): 
                 if (error instanceof Error && error.stack) {
                 console.error("[quickRecommendationFlowRuntime] Stack trace:", error.stack);
                 }
-                return { recommendations: [], error: "An error occurred while the AI was processing your recommendation request." };
+                return { recommendations: [], error: "An error occurred while the AI was processing your recommendation request. Check AI provider configuration." };
             }
             }
         );
     } catch (e: any) {
         console.error("[getQuickRecommendations] Error defining quickRecommendationFlowDefinition:", e);
-        return { recommendations: [], error: "A critical error occurred while setting up the AI recommendation flow." };
+        return { recommendations: [], error: "A critical error occurred while setting up the AI recommendation flow. Missing AI provider?" };
     }
   }
 
   if (typeof quickRecommendationFlowDefinition !== 'function') {
     const errorMsg = "[getQuickRecommendations] 'quickRecommendationFlowDefinition' is not defined as a function. This indicates a serious problem with the AI flow module initialization.";
     console.error(errorMsg);
-    return { recommendations: [], error: "A critical error occurred with the AI recommendation flow." };
+    return { recommendations: [], error: "A critical error occurred with the AI recommendation flow (not a function)." };
   }
 
   try {
@@ -141,7 +140,7 @@ export async function getQuickRecommendations(input: QuickRecommendationInput): 
     return result;
   } catch (error: any) {
     console.error("[getQuickRecommendations] Unexpected error during quickRecommendationFlowDefinition execution:", error);
-    let userFriendlyMessage = "An unexpected error occurred while trying to get course recommendations. Please try again later.";
+    let userFriendlyMessage = "An unexpected error occurred while trying to get course recommendations. The AI service might be unavailable or misconfigured.";
      if (error.stack) {
         console.error("[getQuickRecommendations] Stack trace:", error.stack);
     }
