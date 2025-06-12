@@ -82,8 +82,6 @@ const Header = () => {
     if (typeof window === 'undefined') return;
 
     const controlHeaderBackground = () => {
-      // This effect primarily controls background for DESKTOP on non-video pages
-      // Mobile transparency is handled by the main header's className conditional logic
       if (pathname === '/videos') {
         setDynamicHeaderBackgroundClasses(''); 
       } else {
@@ -98,7 +96,7 @@ const Header = () => {
   }, [pathname]);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !useScrollHidingHeader || isMobile) { // Disable scroll hiding on mobile
+    if (typeof window === 'undefined' || !useScrollHidingHeader || isMobile) { 
       setHeaderVisible(true);
       return;
     }
@@ -117,7 +115,7 @@ const Header = () => {
     controlHeaderVisibility();
     window.addEventListener('scroll', controlHeaderVisibility, { passive: true });
     return () => window.removeEventListener('scroll', controlHeaderVisibility);
-  }, [pathname, useScrollHidingHeader, headerScrollThreshold, isMobile]); // Added isMobile
+  }, [pathname, useScrollHidingHeader, headerScrollThreshold, isMobile]);
 
 
   if (pathname === '/videos') {
@@ -148,7 +146,7 @@ const Header = () => {
   const commonNavItems = [
     { href: "/", label: t.home, Icon: Home },
     { href: "/courses/search", label: t.explore, Icon: Compass },
-    { href: "/videos", label: t.videos, Icon: BookOpen }, // Reels icon
+    { href: "/videos", label: t.videos, Icon: BookOpen },
     { href: "/flash-cards", label: t.flashCards, Icon: Layers },
     { href: "/personality-tests", label: t.personalityTest, Icon: Brain }
   ];
@@ -209,14 +207,12 @@ const Header = () => {
     </nav>
   );
   
-  // Mobile specific components
   const MobileHomepageAllLink = () => (
     <Link href="/" className={cn(
-        "group text-base font-bold font-headline px-2 py-1 rounded-md transition-all", // Font size reduced to text-base
+        "group text-base font-bold font-headline transition-all py-1", // Removed px, rounded-md, shadow-md. Adjusted for plain text.
         "text-black dark:text-white", 
         "underline decoration-primary underline-offset-4 decoration-2",
-        "shadow-md hover:shadow-lg active:shadow-sm", 
-        "hover:translate-x-px hover:-translate-y-px active:translate-x-0 active:translate-y-0"
+        "hover:translate-x-px hover:-translate-y-px active:translate-x-0 active:translate-y-0" // Kept hover effects
       )}>
         {t.all}
     </Link>
@@ -248,9 +244,7 @@ const Header = () => {
   return (
     <header className={cn(
         "sticky top-0 z-50 transition-all duration-300 ease-in-out",
-        // Apply dynamic background classes only if not mobile, otherwise, it's transparent
-        !isMobile ? dynamicHeaderBackgroundClasses : 'bg-transparent border-transparent',
-        // Scroll hiding only for desktop and when useScrollHidingHeader is true
+        isMobile ? 'bg-transparent border-transparent' : dynamicHeaderBackgroundClasses,
         {'!-translate-y-full': !headerVisible && useScrollHidingHeader && !isMobile }
       )}>
       <div className="container mx-auto px-4 py-2.5 flex justify-between items-center min-h-[60px]">
