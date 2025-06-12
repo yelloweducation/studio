@@ -4,9 +4,12 @@ import type { Prisma } from '@prisma/client'; // Import Prisma for Json types
 import { 
   mockCoursesForSeeding,
   mockCategoriesForSeeding,
-  mockVideosForSeeding as mockVideosForSeedingData, // Renamed to avoid conflict
+  mockVideosForSeeding as mockVideosForSeedingData,
   mockLearningPathsForSeeding,
-  initialPaymentSettings as mockDefaultPaymentSettingsData, // Renamed
+  initialPaymentSettings as mockDefaultPaymentSettingsData,
+  // We will now use Prisma for these, but mock data can still be a source for seeding
+  // paymentSubmissions_DEPRECATED_USE_FIRESTORE, 
+  // enrollments_DEPRECATED_USE_FIRESTORE,
 } from '@/data/mockData';
 import { QuizType as PrismaQuizTypeEnum, type SitePage, type Course, type Category, type LearningPath, type Module, type Lesson, type Quiz, type Question, type Option, type QuizType as PrismaQuizTypeTypeAlias, type Video, type PaymentSettings, type PaymentSubmission, type Enrollment, type User, type PaymentSubmissionStatus as PrismaPaymentStatus } from '@prisma/client';
 import { z } from 'zod';
@@ -92,7 +95,7 @@ const VideoInputSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().min(1, "Description is required"),
   thumbnailUrl: z.string().url("Invalid thumbnail URL").optional().nullable(),
-  embedUrl: z.string().min(1, "Embed URL is required").url("Invalid embed URL").refine(val => val.includes("youtube.com") || val.includes("tiktok.com") || val.includes("drive.google.com"), { // Added Google Drive
+  embedUrl: z.string().min(1, "Embed URL is required").url("Invalid embed URL").refine(val => val.includes("youtube.com") || val.includes("tiktok.com") || val.includes("drive.google.com"), {
     message: "Embed URL must be a valid YouTube, TikTok, or Google Drive URL."
   }),
   dataAiHint: z.string().max(100, "AI hint too long").optional().nullable(),
@@ -864,38 +867,58 @@ export const updatePaymentSubmissionInDb = async (
 // --- Enrollment (Using Prisma) ---
 export const getEnrollmentForUserAndCourseFromDb = async (userId: string, courseId: string): Promise<Enrollment | null> => {
   console.log(`[dbUtils-Prisma] getEnrollmentForUserAndCourseFromDb: Fetching for user ${userId}, course ${courseId}.`);
-  return prisma.enrollment.findUnique({
-    where: { userId_courseId: { userId, courseId } },
-    include: { course: true } 
-  });
+  try {
+    return await prisma.enrollment.findUnique({
+      where: { userId_courseId: { userId, courseId } },
+      include: { course: true } 
+    });
+  } catch (error) {
+     console.error(`[dbUtils-Prisma] getEnrollmentForUserAndCourseFromDb: Error for user ${userId}, course ${courseId}:`, error);
+     throw error;
+  }
 };
 export const createEnrollmentInDb = async (userId: string, courseId: string): Promise<Enrollment> => {
   console.log(`[dbUtils-Prisma] createEnrollmentInDb: Creating for user ${userId}, course ${courseId}.`);
-  return prisma.enrollment.create({
-    data: {
-      userId,
-      courseId,
-      progress: 0,
-      enrolledDate: new Date(),
-    },
-    include: { course: true }
-  });
+  try {
+    return await prisma.enrollment.create({
+      data: {
+        userId,
+        courseId,
+        progress: 0,
+        enrolledDate: new Date(),
+      },
+      include: { course: true }
+    });
+  } catch (error) {
+    console.error(`[dbUtils-Prisma] createEnrollmentInDb: Error for user ${userId}, course ${courseId}:`, error);
+    throw error;
+  }
 };
 export const updateEnrollmentProgressInDb = async (enrollmentId: string, progress: number): Promise<Enrollment> => {
   console.log(`[dbUtils-Prisma] updateEnrollmentProgressInDb: Updating enrollment ${enrollmentId} to progress ${progress}.`);
-  return prisma.enrollment.update({
-    where: { id: enrollmentId },
-    data: { progress },
-    include: { course: true }
-  });
+  try {
+    return await prisma.enrollment.update({
+      where: { id: enrollmentId },
+      data: { progress },
+      include: { course: true }
+    });
+  } catch (error) {
+     console.error(`[dbUtils-Prisma] updateEnrollmentProgressInDb: Error updating enrollment ${enrollmentId}:`, error);
+     throw error;
+  }
 };
 export const getEnrollmentsByUserIdFromDb = async (userId: string): Promise<Enrollment[]> => {
   console.log(`[dbUtils-Prisma] getEnrollmentsByUserIdFromDb: Fetching for user ${userId}.`);
-  return prisma.enrollment.findMany({
-    where: { userId },
-    include: { course: true },
-    orderBy: { enrolledDate: 'desc' }
-  });
+  try {
+    return await prisma.enrollment.findMany({
+      where: { userId },
+      include: { course: true }, // Ensure course data is included
+      orderBy: { enrolledDate: 'desc' }
+    });
+  } catch (error) {
+     console.error(`[dbUtils-Prisma] getEnrollmentsByUserIdFromDb: Error for user ${userId}:`, error);
+     throw error;
+  }
 };
 
 // --- Site Page Content Functions (Using Prisma) ---
@@ -966,10 +989,75 @@ export const seedCoursesToDb = async (): Promise<{ successCount: number; errorCo
     try{
       if(await prisma.course.findUnique({where:{id:cd.id}})){sk++;continue;}
       let cat=await prisma.category.findUnique({where:{name:cd.category}});
-      if(!cat)cat=await prisma.category.create({data:{name:cd.category,iconName:'Shapes'}});
-      const pcd:any={...cd,categoryId:cat.id,categoryNameCache:cat.name,quizzes:cd.quizzes?{create:cd.quizzes.map(q=>({...q,quizType: q.quizType.toUpperCase() as PrismaQuizTypeEnum, questions:q.questions?{create:q.questions.map(qs=>({...qs,options:{create:qs.options.map(o=>({id:o.id, text:o.text}))}}))}:undefined}))}:undefined,modules:cd.modules?{create:cd.modules.map(m=>({...m,lessons:m.lessons?{create:m.lessons}:undefined}))}:undefined};
-      delete pcd.category; 
-      await prisma.course.create({data:pcd});s++;
+      if(!cat)cat=await prisma.category.create({data:{name:cd.category, iconName:'Shapes'}});
+      
+      const quizzesToCreate = cd.quizzes?.map(q => {
+        const questionsToCreate = q.questions.map(qs => {
+            const optionsToCreate = qs.options.map(o => ({ id: o.id, text: o.text }));
+            return { 
+                id: qs.id, 
+                text: qs.text, 
+                points: qs.points, 
+                order: 0, // Set default order
+                options: { create: optionsToCreate },
+                // correctOptionId will be linked after creation if necessary
+            };
+        });
+        return { 
+            id: q.id, 
+            title: q.title, 
+            quizType: q.quizType.toUpperCase() as PrismaQuizTypeEnum, 
+            passingScore: q.passingScore,
+            questions: { create: questionsToCreate }
+        };
+      });
+
+      const courseCreateData: any = {
+        id: cd.id,
+        title: cd.title,
+        description: cd.description,
+        instructor: cd.instructor,
+        imageUrl: cd.imageUrl,
+        dataAiHint: cd.dataAiHint,
+        price: cd.price,
+        currency: cd.currency,
+        isFeatured: cd.isFeatured,
+        learningObjectives: cd.learningObjectives,
+        targetAudience: cd.targetAudience,
+        prerequisites: cd.prerequisites,
+        estimatedTimeToComplete: cd.estimatedTimeToComplete,
+        categoryId: cat.id,
+        categoryNameCache: cat.name,
+        modules: cd.modules ? { create: cd.modules.map(m => ({...m, lessons: m.lessons ? { create: m.lessons } : undefined })) } : undefined,
+        quizzes: quizzesToCreate ? { create: quizzesToCreate } : undefined
+      };
+      
+      const createdCourse = await prisma.course.create({data:courseCreateData, include: { quizzes: { include: {questions: { include: {options:true}}}}}});
+      
+      // Link correctOptionId for quizzes
+      if (createdCourse.quizzes && cd.quizzes) {
+          for (let i=0; i < createdCourse.quizzes.length; i++) {
+              const dbQuiz = createdCourse.quizzes[i];
+              const mockQuiz = cd.quizzes[i];
+              if (dbQuiz.questions && mockQuiz.questions) {
+                  for (let j=0; j < dbQuiz.questions.length; j++) {
+                      const dbQuestion = dbQuiz.questions[j];
+                      const mockQuestion = mockQuiz.questions[j];
+                      const correctMockOption = mockQuestion.options.find(o => o.id === mockQuestion.correctOptionId);
+                      if (correctMockOption) {
+                          const correctDbOption = dbQuestion.options.find(o => o.text === correctMockOption.text); // Match by text as IDs might change if not preset
+                          if (correctDbOption && dbQuestion.correctOptionId !== correctDbOption.id) {
+                              await prisma.question.update({
+                                  where: {id: dbQuestion.id},
+                                  data: {correctOptionId: correctDbOption.id}
+                              });
+                          }
+                      }
+                  }
+              }
+          }
+      }
+      s++;
     }catch(err){console.error(`Err seed course ${cd.title}:`,err);e++;}
   }
   console.log(`[dbUtils-Prisma] seedCoursesToDb: Done. Success: ${s}, Errors: ${e}, Skipped: ${sk}`);
@@ -993,12 +1081,13 @@ export const seedLearningPathsToDb = async (): Promise<{ successCount: number; e
 export const seedVideosToDb = async (): Promise<{ successCount: number; errorCount: number; skippedCount: number }> => {
   console.log("[dbUtils-Prisma] seedVideosToDb: Seeding videos to DB.");
   let s=0,e=0,sk=0;
-  for(const vd of mockVideosForSeedingData){ // Use renamed import
+  for(const vd of mockVideosForSeedingData){ 
     try{
       const existing = await prisma.video.findUnique({where:{id:vd.id}});
       if(existing){sk++;continue;}
-      const { createdAt,updatedAt,videoUrl, ...restOfVd } = vd; // videoUrl is not in Video model
-      await prisma.video.create({data:{...restOfVd,id:vd.id}});s++;
+      // Ensure only fields present in the Prisma Video model are passed
+      const { createdAt, updatedAt, videoUrl, ...prismaVideoData } = vd; 
+      await prisma.video.create({data:{...prismaVideoData, id:vd.id}});s++; // Use the mock ID for consistency
     }catch(err){console.error(`Err seed Video ${vd.title}:`,err);e++;}
   }
   console.log(`[dbUtils-Prisma] seedVideosToDb: Done. Success: ${s}, Errors: ${e}, Skipped: ${sk}`);
@@ -1008,11 +1097,18 @@ export const seedVideosToDb = async (): Promise<{ successCount: number; errorCou
 export const seedPaymentSettingsToDb = async (): Promise<{ successCount: number; errorCount: number; skippedCount: number }> => {
   console.log("[dbUtils-Prisma] seedPaymentSettingsToDb: Seeding payment settings to DB.");
   try{
-    const {updatedAt, ...restOfSettings} = mockDefaultPaymentSettingsData; // Use renamed import
-    await prisma.paymentSettings.upsert({where:{id:'global'},update:restOfSettings,create:{id:'global',...restOfSettings}});
+    const {updatedAt, ...restOfSettings} = mockDefaultPaymentSettingsData;
+    await prisma.paymentSettings.upsert({
+        where:{id:'global'},
+        update:restOfSettings,
+        create:{id:'global',...restOfSettings}
+    });
     console.log(`[dbUtils-Prisma] seedPaymentSettingsToDb: Done. Success: 1`);
     return{successCount:1,errorCount:0,skippedCount:0};
-  }catch(err){console.error('Err seed PaymentSettings:',err);return{successCount:0,errorCount:1,skippedCount:0};}
+  }catch(err){
+      console.error('Err seed PaymentSettings:',err);
+      return{successCount:0,errorCount:1,skippedCount:0};
+    }
 };
-
+ 
     
