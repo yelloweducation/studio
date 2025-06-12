@@ -68,16 +68,16 @@ const Header = () => {
   const isOnCourseSearchPage = pathname === '/courses/search';
 
   const useScrollHidingHeader = isOnHomepage || isOnCourseSearchPage;
-  // Show sheet menu only on mobile for all pages except homepage (where icons are direct)
-  // On desktop, no sheet menu. Header items are direct.
-  const showSheetMenu = isMobile && !isOnHomepage;
 
+  // State for dynamic classes to avoid hydration mismatch
+  const initialBackgroundClasses = useScrollHidingHeader ? '' : 'bg-background/80 backdrop-blur-md border-b';
+  const [dynamicHeaderBackgroundClasses, setDynamicHeaderBackgroundClasses] = useState(initialBackgroundClasses);
 
   useEffect(() => {
     const controlHeader = () => {
-      if (pathname === '/videos') return; 
+      if (pathname === '/videos') return;
 
-      if (useScrollHidingHeader) { 
+      if (useScrollHidingHeader) {
         const currentScrollY = window.scrollY;
         if (currentScrollY > headerScrollThreshold && currentScrollY > lastScrollY.current) {
           setHeaderVisible(false);
@@ -85,13 +85,21 @@ const Header = () => {
           setHeaderVisible(true);
         }
         lastScrollY.current = currentScrollY;
+
+        // Update background classes based on scroll position, only on client
+        if (typeof window !== 'undefined') {
+            const newBackgroundClasses = (currentScrollY < 50) ? '' : 'bg-background/80 backdrop-blur-md border-b';
+            setDynamicHeaderBackgroundClasses(newBackgroundClasses);
+        }
+
       } else {
-        setHeaderVisible(true); 
+        setHeaderVisible(true);
+        setDynamicHeaderBackgroundClasses('bg-background/80 backdrop-blur-md border-b'); // Default for non-hiding headers
       }
     };
-    
+
     window.addEventListener('scroll', controlHeader);
-    controlHeader(); 
+    controlHeader(); // Initial check
 
     return () => {
       window.removeEventListener('scroll', controlHeader);
@@ -112,16 +120,13 @@ const Header = () => {
   const getDashboardPath = () => {
     if (role === 'admin') return '/dashboard/admin';
     if (role === 'student') return '/dashboard/student';
-    return '/'; 
+    return '/';
   };
 
   const commonNavButtonClasses = "w-full justify-start py-3 px-2 text-base";
   const commonIconClasses = "mr-2 h-5 w-5";
-  
-  const headerBaseClasses = 'sticky top-0 z-50 transition-transform duration-300 ease-in-out';
-  // Apply background blur unless it's the homepage or course search page *and* header is at the very top (not scrolled)
-  const headerBackgroundClasses = (useScrollHidingHeader && headerVisible && (typeof window !== 'undefined' && window.scrollY < 50)) ? '' : 'bg-background/80 backdrop-blur-md border-b';
 
+  const headerBaseClasses = 'sticky top-0 z-50 transition-transform duration-300 ease-in-out';
 
   const desktopNavItems = (
     <>
@@ -173,13 +178,14 @@ const Header = () => {
   return (
     <header className={cn(
         headerBaseClasses,
-        headerBackgroundClasses,
+        // Use the state variable for background classes
+        useScrollHidingHeader ? dynamicHeaderBackgroundClasses : 'bg-background/80 backdrop-blur-md border-b',
         {'!-translate-y-full': !headerVisible && useScrollHidingHeader }
       )}>
       <nav className="container mx-auto px-4 py-3 flex justify-between items-center min-h-[57px]">
         <LuminaLogo />
 
-        {isMobile ? ( // Always show sheet trigger on mobile
+        {isMobile ? (
             <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon">
@@ -189,7 +195,7 @@ const Header = () => {
               </SheetTrigger>
               <SheetContent side="right" className="w-[280px] sm:w-[320px] p-0">
                 <SheetHeader className="p-4 border-b">
-                    <SheetTitle><LuminaLogo /></SheetTitle> 
+                    <SheetTitle><LuminaLogo /></SheetTitle>
                 </SheetHeader>
                 <div className="flex flex-col space-y-1 p-4">
                   <SheetClose asChild>
@@ -245,7 +251,7 @@ const Header = () => {
                 </div>
               </SheetContent>
             </Sheet>
-        ) : ( // Desktop navigation
+        ) : ( 
           <div className="flex items-center space-x-1">
             {desktopNavItems}
           </div>
@@ -256,4 +262,3 @@ const Header = () => {
 };
 
 export default Header;
-    
