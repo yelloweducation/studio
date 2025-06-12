@@ -8,21 +8,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { ImageIcon, Save, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Course, Category, LearningPath } from '@prisma/client'; 
-import type { Video as MockVideoType } from '@/data/mockData'; 
+import type { Video as PrismaVideo } from '@/lib/dbUtils'; // Videos now use Prisma type
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
 import { 
   serverGetCourses, serverUpdateCourse,
   serverGetCategories, serverUpdateCategory,
-  serverGetLearningPaths, serverUpdateLearningPath
-} from '@/actions/adminDataActions'; // Use Server Actions for Prisma entities
-import { 
-  getVideosFromDb, updateVideoInDb, // Videos still use client-side localStorage utils
-} from '@/lib/dbUtils'; 
+  serverGetLearningPaths, serverUpdateLearningPath,
+  serverGetVideos, serverUpdateVideo // Added server actions for videos
+} from '@/actions/adminDataActions'; 
 
 export default function ImageManagement() {
   const [courses, setCourses] = useState<Course[]>([]);
-  const [videos, setVideos] = useState<MockVideoType[]>([]); 
+  const [videos, setVideos] = useState<PrismaVideo[]>([]); 
   const [categories, setCategories] = useState<Category[]>([]);
   const [learningPaths, setLearningPaths] = useState<LearningPath[]>([]);
 
@@ -34,19 +32,20 @@ export default function ImageManagement() {
     const loadAllData = async () => {
       setIsLoading(true);
       try {
+        // Fetch all data concurrently
         const [dbCourses, dbVideos, dbCategories, dbLearningPaths] = await Promise.all([
-          serverGetCourses(), // Server Action
-          getVideosFromDb(),    // Client-side localStorage
-          serverGetCategories(), // Server Action
-          serverGetLearningPaths(), // Server Action
+          serverGetCourses().catch(e => { console.error("Failed to fetch courses for img mgmt:", e); throw e; }),
+          serverGetVideos().catch(e => { console.error("Failed to fetch videos for img mgmt:", e); throw e; }),    
+          serverGetCategories().catch(e => { console.error("Failed to fetch categories for img mgmt:", e); throw e; }), 
+          serverGetLearningPaths().catch(e => { console.error("Failed to fetch learning paths for img mgmt:", e); throw e; }), 
         ]);
         setCourses(dbCourses);
         setVideos(dbVideos);
         setCategories(dbCategories);
-        setLearningPaths(dbLearningPaths as any); // Cast if Prisma include differs
+        setLearningPaths(dbLearningPaths as any); 
       } catch (error) {
         console.error("Error loading data for Image Management:", error);
-        toast({ variant: "destructive", title: "Error Loading Data", description: "Could not fetch all items for image management." });
+        toast({ variant: "destructive", title: "Error Loading Data", description: "Could not fetch all items for image management. Check console for details." });
       }
       setIsLoading(false);
     };
@@ -71,7 +70,7 @@ export default function ImageManagement() {
     itemId: string
   ) => {
     setIsSaving(prev => ({ ...prev, [itemId]: true }));
-    let itemToSave: Course | MockVideoType | Category | LearningPath | undefined;
+    let itemToSave: Course | PrismaVideo | Category | LearningPath | undefined;
     let updateFunction: (id: string, data: Partial<any>) => Promise<any>; 
     let itemName = '';
 
@@ -79,22 +78,22 @@ export default function ImageManagement() {
       switch (itemType) {
         case 'course':
           itemToSave = courses.find(c => c.id === itemId);
-          updateFunction = serverUpdateCourse; // Server Action
+          updateFunction = serverUpdateCourse; 
           itemName = itemToSave?.title || 'Course';
           break;
         case 'video': 
           itemToSave = videos.find(v => v.id === itemId);
-          updateFunction = updateVideoInDb; // Client-side util for localStorage
+          updateFunction = serverUpdateVideo; 
           itemName = itemToSave?.title || 'Video';
           break;
         case 'category':
           itemToSave = categories.find(cat => cat.id === itemId);
-          updateFunction = serverUpdateCategory; // Server Action
+          updateFunction = serverUpdateCategory; 
           itemName = (itemToSave as Category)?.name || 'Category';
           break;
         case 'learningPath':
           itemToSave = learningPaths.find(lp => lp.id === itemId);
-          updateFunction = serverUpdateLearningPath; // Server Action
+          updateFunction = serverUpdateLearningPath; 
           itemName = itemToSave?.title || 'Learning Path';
           break;
         default:
@@ -106,7 +105,7 @@ export default function ImageManagement() {
           dataAiHint: itemToSave.dataAiHint || null,
         };
         if (itemType === 'video') {
-            dataToUpdate.thumbnailUrl = (itemToSave as MockVideoType).thumbnailUrl || null;
+            dataToUpdate.thumbnailUrl = (itemToSave as PrismaVideo).thumbnailUrl || null;
         } else {
             dataToUpdate.imageUrl = (itemToSave as Course | Category | LearningPath).imageUrl || null;
         }
@@ -206,13 +205,13 @@ export default function ImageManagement() {
         <CardTitle className="flex items-center text-xl md:text-2xl font-headline">
           <ImageIcon className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Image Management
         </CardTitle>
-        <CardDescription>Manage image URLs and AI hints. Courses, Categories, Learning Paths use Neon/Postgres via Prisma. Videos use localStorage.</CardDescription>
+        <CardDescription>Manage image URLs and AI hints. All data now uses Neon/Postgres via Prisma server actions.</CardDescription>
       </CardHeader>
       <CardContent>
         <ScrollArea className="h-[calc(100vh-20rem)] pr-3">
           <div className="space-y-8">
             <section>
-              <h3 className="text-xl font-semibold mb-4 font-headline">Course Images (Prisma)</h3>
+              <h3 className="text-xl font-semibold mb-4 font-headline">Course Images</h3>
               {courses.length > 0 ? (
                 <div className="space-y-6">
                   {courses.map(course => renderImageForm(course, 'course', setCourses))}
@@ -221,7 +220,7 @@ export default function ImageManagement() {
             </section>
 
             <section>
-              <h3 className="text-xl font-semibold mb-4 font-headline">Video Thumbnails (localStorage)</h3>
+              <h3 className="text-xl font-semibold mb-4 font-headline">Video Thumbnails</h3>
               {videos.length > 0 ? (
                 <div className="space-y-6">
                   {videos.map(video => renderImageForm(video, 'video', setVideos))}
@@ -230,7 +229,7 @@ export default function ImageManagement() {
             </section>
 
             <section>
-              <h3 className="text-xl font-semibold mb-4 font-headline">Category Images (Prisma)</h3>
+              <h3 className="text-xl font-semibold mb-4 font-headline">Category Images</h3>
               {categories.length > 0 ? (
                 <div className="space-y-6">
                   {categories.map(category => renderImageForm(category, 'category', setCategories))}
@@ -239,7 +238,7 @@ export default function ImageManagement() {
             </section>
 
             <section>
-              <h3 className="text-xl font-semibold mb-4 font-headline">Learning Path Images (Prisma)</h3>
+              <h3 className="text-xl font-semibold mb-4 font-headline">Learning Path Images</h3>
               {learningPaths.length > 0 ? (
                 <div className="space-y-6">
                   {learningPaths.map(lp => renderImageForm(lp, 'learningPath', setLearningPaths))}
@@ -252,3 +251,4 @@ export default function ImageManagement() {
     </Card>
   );
 }
+    

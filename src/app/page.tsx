@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useState, type FormEvent, useEffect, Suspense, lazy } from 'react';
 import { useRouter } from 'next/navigation';
@@ -6,10 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Video as VideoIcon, Search, Compass, Circle, Brain, Layers } from 'lucide-react'; 
 import { useTheme } from '@/contexts/ThemeContext';
-import { useLanguage } from '@/contexts/LanguageContext'; // Added
-import { cn } from "@/lib/utils"; // Added for conditional classnames
+import { useLanguage } from '@/contexts/LanguageContext';
+import { cn } from "@/lib/utils";
 
-// Placeholder translations - in a real app, these would come from i18n files/library
 const homePageTranslations = {
   en: {
     title: "Yellow Institute",
@@ -17,7 +17,7 @@ const homePageTranslations = {
     searchPlaceholder: "Search courses, e.g., Web Development",
     coursesButton: "Courses",
     reelsButton: "Reels",
-    flashCardsButton: "Flash Cards", // Added
+    flashCardsButton: "Flash Cards",
     personalityTestLink: "Discover Your Strengths",
     privacyPolicy: "Privacy Policy",
     termsOfService: "Terms of Service",
@@ -28,17 +28,17 @@ const homePageTranslations = {
     myanmar: "Myanmar"
   },
   my: {
-    title: "အဝါရောင်အင်စတီကျု", // Changed from "အဝါရောင်တက္ကသိုလ်"
+    title: "Yellow Institute", // Kept as "Yellow Institute"
     subtitle: "သင့်အတွက် အနာဂတ်နည်းပညာပညာရေး。",
     searchPlaceholder: "အတန်းများရှာပါ၊ ဥပမာ - Web Development",
-    coursesButton: "အတန်း", // Updated from သင်တန်းများ to သင်တန်း, then to အတန်း
-    reelsButton: "ဗီဒီယို", // Updated from ရီးလ်များ
-    flashCardsButton: "ကတ်ပြားများ", // Changed from ကတ်ပြား
+    coursesButton: "အတန်း",
+    reelsButton: "ဗီဒီယို",
+    flashCardsButton: "ကတ်ပြားများ",
     personalityTestLink: "သင်၏ အားသာချက်များကို ရှာဖွေပါ",
     privacyPolicy: "ကိုယ်ရေးအချက်အလက်မူဝါဒ",
     termsOfService: "ဝန်ဆောင်မှုစည်းမျဉ်းများ",
     aboutUs: "ကျွန်ုပ်တို့အကြောင်း",
-    darkTheme: "အမဲရောင်", // Changed from "အမှောင်ပုံစံ"
+    darkTheme: "အမဲရောင်",
     availableLanguages: "ရရှိနိုင်သောဘာသာစကားများ",
     english: "အင်္ဂလိပ်",
     myanmar: "မြန်မာ"
@@ -49,9 +49,9 @@ export default function Home() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const { theme } = useTheme();
-  const { language, setLanguage } = useLanguage(); // Added
+  const { language, setLanguage } = useLanguage(); 
 
-  const t = homePageTranslations[language]; // Get translations for current language
+  const t = homePageTranslations[language]; 
 
   const handleSearchSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -65,7 +65,8 @@ export default function Home() {
       <section className="w-full max-w-2xl md:max-w-3xl lg:max-w-4xl text-center pt-12 md:pt-16 lg:pt-24 mb-10">
         <div className={cn(
           "flex items-center justify-center space-x-2 lg:space-x-3 font-bold font-headline text-foreground mb-4",
-          language === 'my' ? 'text-2xl sm:text-3xl lg:text-4xl' : 'text-3xl sm:text-4xl lg:text-5xl'
+          // Adjusted font size slightly for Burmese to better fit "Yellow Institute"
+          language === 'my' ? 'text-2xl sm:text-3xl lg:text-4xl' : 'text-3xl sm:text-4xl lg:text-5xl' 
         )}>
           <Circle size={language === 'my' ? 28 : 32} className="text-primary block lg:hidden" /> 
           <Circle size={language === 'my' ? 36 : 40} className="text-primary hidden lg:block" /> 
@@ -120,8 +121,7 @@ export default function Home() {
             </Button>
         </div>
 
-        {/* Text Links Section */}
-        <div className="mt-6 text-center space-y-2">
+        <div className="mt-8 text-center space-y-3"> {/* Increased spacing with mt-8 and space-y-3 */}
           <Link href="/personality-tests" className={cn(
             "inline-flex items-center text-sm font-medium text-foreground hover:text-primary transition-colors py-1 group",
             language === 'my' ? 'text-xs sm:text-sm' : 'text-sm'
@@ -129,7 +129,7 @@ export default function Home() {
             <Brain className="mr-2 h-4 w-4 text-primary/80 group-hover:text-primary transition-colors" />
             {t.personalityTestLink}
           </Link>
-          <br /> {/* Ensure it's on a new line */}
+          <br /> 
           <Link href="/flash-cards" className={cn(
             "inline-flex items-center text-sm font-medium text-foreground hover:text-primary transition-colors py-1 group",
             language === 'my' ? 'text-xs sm:text-sm' : 'text-sm'
@@ -140,7 +140,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Language Switcher Section */}
       <section className="w-full max-w-4xl text-center mt-6 mb-4">
         <div className="flex flex-wrap justify-center items-center gap-x-3 gap-y-2 text-xs text-muted-foreground">
           <span>{t.availableLanguages}:</span>
@@ -162,7 +161,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Footer Links Section */}
       <section className="w-full max-w-4xl text-center mt-2 mb-4">
         <div className="flex flex-wrap justify-center items-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
           <Link href="/privacy-policy" className="hover:text-primary hover:underline">

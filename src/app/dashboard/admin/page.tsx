@@ -11,9 +11,10 @@ import CategoryManagement from "@/components/admin/CategoryManagement";
 import PaymentSubmissions from "@/components/admin/PaymentSubmissions";
 import PaymentSettingsManagement from "@/components/admin/PaymentSettingsManagement";
 import LearningPathManagement from "@/components/admin/LearningPathManagement";
-import DataSeeding from "@/components/admin/DataSeeding"; // Added
+import DataSeeding from "@/components/admin/DataSeeding";
+import SiteContentManagement from "@/components/admin/SiteContentManagement"; // Added
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, BarChart3, Settings as SettingsIcon, Video as VideoIcon, Image as ImageIcon, Shapes, GraduationCap, Menu as MenuIcon, CreditCard, BookOpenCheck, DatabaseZap } from "lucide-react"; // Added DatabaseZap
+import { Users, BarChart3, Settings as SettingsIcon, Video as VideoIcon, Image as ImageIcon, Shapes, GraduationCap, Menu as MenuIcon, CreditCard, BookOpenCheck, DatabaseZap, FileText } from "lucide-react"; // Added FileText
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import {
@@ -37,7 +38,8 @@ const adminDashboardTranslations = {
     images: "Images",
     users: "Users",
     stats: "Stats",
-    dataSeed: "Data Seed", // Added
+    dataSeed: "Data Seed",
+    siteContent: "Site Content", // Added
   },
   my: {
     title: "အက်ဒမင် ဒက်ရှ်ဘုတ်",
@@ -51,7 +53,8 @@ const adminDashboardTranslations = {
     images: "ပုံများ",
     users: "အသုံးပြုသူများ",
     stats: "စာရင်းအင်း",
-    dataSeed: "ဒေတာထည့်သွင်းရန်", // Added
+    dataSeed: "ဒေတာထည့်သွင်းရန်",
+    siteContent: "စာမျက်နှာ အကြောင်းအရာ", // Added
   }
 };
 
@@ -63,9 +66,10 @@ const adminTabsConfig = (t: typeof adminDashboardTranslations.en) => [
   { value: "paymentSettings", label: t.paymentConfig, Icon: SettingsIcon },
   { value: "videos", label: t.videos, Icon: VideoIcon },
   { value: "images", label: t.images, Icon: ImageIcon },
+  { value: "siteContent", label: t.siteContent, Icon: FileText }, // Added
   { value: "users", label: t.users, Icon: Users },
   { value: "stats", label: t.stats, Icon: BarChart3 },
-  { value: "dataSeed", label: t.dataSeed, Icon: DatabaseZap }, // Added
+  { value: "dataSeed", label: t.dataSeed, Icon: DatabaseZap },
 ];
 
 export default function AdminDashboardPage() {
@@ -114,7 +118,7 @@ export default function AdminDashboardPage() {
               </DropdownMenu>
             </div>
           ) : (
-            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-10 gap-2 mb-6">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-11 gap-2 mb-6"> {/* Adjusted grid-cols for xl */}
               {adminTabs.map((tab) => (
                 <TabsTrigger
                   key={tab.value}
@@ -127,38 +131,20 @@ export default function AdminDashboardPage() {
             </TabsList>
           )}
 
-          <TabsContent value="courses">
-            <CourseManagement />
-          </TabsContent>
-          <TabsContent value="categories">
-            <CategoryManagement />
-          </TabsContent>
-          <TabsContent value="learningPaths">
-            <LearningPathManagement />
-          </TabsContent>
-           <TabsContent value="payments">
-            <PaymentSubmissions />
-          </TabsContent>
-          <TabsContent value="paymentSettings">
-            <PaymentSettingsManagement />
-          </TabsContent>
-          <TabsContent value="videos">
-            <VideoManagement />
-          </TabsContent>
-          <TabsContent value="images">
-            <ImageManagement />
-          </TabsContent>
-          <TabsContent value="users">
-            <UserManagement />
-          </TabsContent>
-          <TabsContent value="stats">
-            <EnrollmentStats />
-          </TabsContent>
-          <TabsContent value="dataSeed"> {/* Added */}
-            <DataSeeding />
-          </TabsContent>
+          <TabsContent value="courses"><CourseManagement /></TabsContent>
+          <TabsContent value="categories"><CategoryManagement /></TabsContent>
+          <TabsContent value="learningPaths"><LearningPathManagement /></TabsContent>
+          <TabsContent value="payments"><PaymentSubmissions /></TabsContent>
+          <TabsContent value="paymentSettings"><PaymentSettingsManagement /></TabsContent>
+          <TabsContent value="videos"><VideoManagement /></TabsContent>
+          <TabsContent value="images"><ImageManagement /></TabsContent>
+          <TabsContent value="siteContent"><SiteContentManagement /></TabsContent> {/* Added */}
+          <TabsContent value="users"><UserManagement /></TabsContent>
+          <TabsContent value="stats"><EnrollmentStats /></TabsContent>
+          <TabsContent value="dataSeed"><DataSeeding /></TabsContent>
         </Tabs>
       </div>
     </ProtectedRoute>
   );
 }
+    

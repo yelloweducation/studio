@@ -67,21 +67,17 @@ const Header = () => {
   const isOnHomepage = pathname === '/';
   const isOnCourseSearchPage = pathname === '/courses/search';
 
-  // Determine if special styling (transparent, different nav) should be used
-  const useSpecialHeaderStyle = isOnHomepage || isOnCourseSearchPage;
-
-  // Determine if the sheet menu should be shown
-  // Show sheet if:
-  // 1. On mobile AND (on course search page OR on any other page that's NOT the homepage)
-  // 2. On desktop AND on course search page
-  const showSheet = (isMobile && (isOnCourseSearchPage || !isOnHomepage)) || (!isMobile && isOnCourseSearchPage);
+  const useScrollHidingHeader = isOnHomepage || isOnCourseSearchPage;
+  // Show sheet menu only on mobile for all pages except homepage (where icons are direct)
+  // On desktop, no sheet menu. Header items are direct.
+  const showSheetMenu = isMobile && !isOnHomepage;
 
 
   useEffect(() => {
     const controlHeader = () => {
-      if (pathname === '/videos') return; // No scroll effect on videos page
+      if (pathname === '/videos') return; 
 
-      if (isOnHomepage || isOnCourseSearchPage) { // Apply scroll effect to homepage and course search
+      if (useScrollHidingHeader) { 
         const currentScrollY = window.scrollY;
         if (currentScrollY > headerScrollThreshold && currentScrollY > lastScrollY.current) {
           setHeaderVisible(false);
@@ -90,17 +86,17 @@ const Header = () => {
         }
         lastScrollY.current = currentScrollY;
       } else {
-        setHeaderVisible(true); // Always visible on other pages
+        setHeaderVisible(true); 
       }
     };
     
     window.addEventListener('scroll', controlHeader);
-    controlHeader(); // Initial check
+    controlHeader(); 
 
     return () => {
       window.removeEventListener('scroll', controlHeader);
     };
-  }, [pathname, isOnHomepage, isOnCourseSearchPage]);
+  }, [pathname, useScrollHidingHeader]);
 
 
   if (pathname === '/videos') {
@@ -116,73 +112,74 @@ const Header = () => {
   const getDashboardPath = () => {
     if (role === 'admin') return '/dashboard/admin';
     if (role === 'student') return '/dashboard/student';
-    return '/'; // Fallback
+    return '/'; 
   };
 
   const commonNavButtonClasses = "w-full justify-start py-3 px-2 text-base";
   const commonIconClasses = "mr-2 h-5 w-5";
   
   const headerBaseClasses = 'sticky top-0 z-50 transition-transform duration-300 ease-in-out';
-  const headerBackgroundClasses = useSpecialHeaderStyle ? '' : 'bg-background/80 backdrop-blur-md border-b';
+  // Apply background blur unless it's the homepage or course search page *and* header is at the very top (not scrolled)
+  const headerBackgroundClasses = (useScrollHidingHeader && headerVisible && (typeof window !== 'undefined' && window.scrollY < 50)) ? '' : 'bg-background/80 backdrop-blur-md border-b';
+
+
+  const desktopNavItems = (
+    <>
+      <Button variant="ghost" size="sm" asChild className={cn("hover:bg-accent/20", pathname === '/' && "bg-accent/10 text-primary font-semibold")}>
+        <Link href="/"><Home className="mr-1 h-4 w-4" /> {t.home}</Link>
+      </Button>
+      <Button variant="ghost" size="sm" asChild className={cn("hover:bg-accent/20", pathname === '/courses/search' && "bg-accent/10 text-primary font-semibold")}>
+          <Link href="/courses/search"><Search className="mr-1 h-4 w-4" /> {t.explore}</Link>
+      </Button>
+      {authLoading ? (
+        <Button variant="ghost" size="sm" disabled><Loader2 className="h-4 w-4 animate-spin mr-1" /> {t.loading}</Button>
+      ) : isAuthenticated ? (
+        <>
+          <span className="text-sm text-muted-foreground hidden sm:inline">{t.welcome}, {user?.name}!</span>
+          <Button variant="ghost" size="sm" asChild className={cn("hover:bg-accent/20", (pathname === '/dashboard/admin' || pathname === '/dashboard/student') && "bg-accent/10 text-primary font-semibold")}>
+            <Link href={getDashboardPath()}><LayoutDashboard className="mr-1 h-4 w-4" /> {t.dashboard}</Link>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleLogout}
+            className="border-primary/50 text-primary hover:bg-primary/10 hover:text-primary"
+          >
+            <LogOut className="mr-1 h-4 w-4" /> {t.logout}
+          </Button>
+        </>
+      ) : (
+        <>
+          <Button variant="ghost" size="sm" asChild className={cn("hover:bg-accent/20", pathname === '/login' && "bg-accent/10 text-primary font-semibold")}>
+            <Link href="/login"><LogIn className="mr-1 h-4 w-4" /> {t.login}</Link>
+          </Button>
+          <Button variant="default" size="sm" asChild className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md hover:shadow-sm active:translate-y-px transition-all duration-150">
+            <Link href="/register"><UserPlus className="mr-1 h-4 w-4" /> {t.register}</Link>
+          </Button>
+        </>
+      )}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={toggleTheme}
+        aria-label={t.toggleTheme}
+        className="hover:bg-accent/20 w-9 h-9"
+      >
+        {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+      </Button>
+    </>
+  );
 
   return (
     <header className={cn(
         headerBaseClasses,
         headerBackgroundClasses,
-        {'!-translate-y-full': !headerVisible && useSpecialHeaderStyle }
+        {'!-translate-y-full': !headerVisible && useScrollHidingHeader }
       )}>
       <nav className="container mx-auto px-4 py-3 flex justify-between items-center min-h-[57px]">
-        {/* === LEFT SECTION === */}
-        <div className="flex items-center">
-          {isOnHomepage ? (
-            <div className="flex items-center space-x-1">
-              <Button variant="ghost" size="sm" asChild
-                className={cn(
-                  "text-foreground hover:bg-transparent hover:text-foreground/70 px-2 font-medium",
-                  pathname === '/' && "underline underline-offset-4 decoration-primary decoration-2"
-                )}
-              >
-                <Link href="/">{t.all}</Link>
-              </Button>
-              {!authLoading && isAuthenticated && (
-                <Button variant="ghost" size="sm" asChild className="text-foreground hover:bg-transparent hover:text-foreground/70 px-2 font-medium">
-                  <Link href={getDashboardPath()}>{t.dashboard}</Link>
-                </Button>
-              )}
-            </div>
-          ) : isOnCourseSearchPage ? (
-            <h1 className="text-xl font-bold font-headline text-foreground flex items-center">
-              <Search className="mr-2 h-5 w-5 text-primary"/> {t.explore}
-            </h1>
-          ) : (
-            <LuminaLogo />
-          )}
-        </div>
+        <LuminaLogo />
 
-        {/* === RIGHT SECTION === */}
-        <div className="flex items-center space-x-1">
-          {isOnHomepage && !showSheet ? ( // Direct icons for homepage (mobile & desktop if not using sheet)
-            <>
-              {authLoading && (
-                <Button variant="ghost" size="icon" disabled>
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                </Button>
-              )}
-              {!authLoading && isAuthenticated && (
-                <Button variant="ghost" size="icon" onClick={handleLogout} aria-label={t.logout}>
-                  <LogOut className="h-5 w-5" />
-                </Button>
-              )}
-              {!authLoading && !isAuthenticated && (
-                <Button variant="ghost" size="icon" asChild aria-label={t.login}>
-                  <Link href="/login"><LogIn className="h-5 w-5" /></Link>
-                </Button>
-              )}
-              <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label={t.toggleTheme}>
-                {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-              </Button>
-            </>
-          ) : showSheet ? ( // Sheet for course search (mobile & desktop) and other mobile pages
+        {isMobile ? ( // Always show sheet trigger on mobile
             <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon">
@@ -192,31 +189,25 @@ const Header = () => {
               </SheetTrigger>
               <SheetContent side="right" className="w-[280px] sm:w-[320px] p-0">
                 <SheetHeader className="p-4 border-b">
-                  {isOnCourseSearchPage ? (
-                    <SheetTitle className="flex items-center"><Search className="mr-2 h-5 w-5 text-primary"/>{t.explore}</SheetTitle>
-                  ) : (
                     <SheetTitle><LuminaLogo /></SheetTitle> 
-                  )}
                 </SheetHeader>
                 <div className="flex flex-col space-y-1 p-4">
                   <SheetClose asChild>
-                    <Button variant="ghost" asChild className={commonNavButtonClasses}>
+                    <Button variant="ghost" asChild className={cn(commonNavButtonClasses, pathname === '/' && "bg-accent text-accent-foreground")}>
                       <Link href="/"><Home className={commonIconClasses} /> {t.home}</Link>
                     </Button>
                   </SheetClose>
-                  {!isOnCourseSearchPage && ( // Don't show "Explore" link if already on explore page with sheet
-                    <SheetClose asChild>
-                      <Button variant="ghost" asChild className={commonNavButtonClasses}>
+                  <SheetClose asChild>
+                      <Button variant="ghost" asChild className={cn(commonNavButtonClasses, pathname === '/courses/search' && "bg-accent text-accent-foreground")}>
                         <Link href="/courses/search"><Search className={commonIconClasses} /> {t.explore}</Link>
                       </Button>
-                    </SheetClose>
-                  )}
+                  </SheetClose>
                   {authLoading ? (
-                    <Button variant="ghost" className={commonNavButtonClasses} disabled>{t.loading}</Button>
+                    <Button variant="ghost" className={commonNavButtonClasses} disabled><Loader2 className="mr-2 h-4 w-4 animate-spin"/>{t.loading}</Button>
                   ) : isAuthenticated ? (
                     <>
                       <SheetClose asChild>
-                        <Button variant="ghost" asChild className={commonNavButtonClasses}>
+                        <Button variant="ghost" asChild className={cn(commonNavButtonClasses, (pathname === '/dashboard/admin' || pathname === '/dashboard/student') && "bg-accent text-accent-foreground")}>
                           <Link href={getDashboardPath()}><LayoutDashboard className={commonIconClasses} /> {t.dashboard}</Link>
                         </Button>
                       </SheetClose>
@@ -231,12 +222,12 @@ const Header = () => {
                   ) : (
                     <>
                       <SheetClose asChild>
-                        <Button variant="ghost" asChild className={commonNavButtonClasses}>
+                        <Button variant="ghost" asChild className={cn(commonNavButtonClasses, pathname === '/login' && "bg-accent text-accent-foreground")}>
                           <Link href="/login"><LogIn className={commonIconClasses} /> {t.login}</Link>
                         </Button>
                       </SheetClose>
                       <SheetClose asChild>
-                        <Button variant="ghost" asChild className={commonNavButtonClasses}>
+                        <Button variant="ghost" asChild className={cn(commonNavButtonClasses, pathname === '/register' && "bg-accent text-accent-foreground")}>
                           <Link href="/register"><UserPlus className={commonIconClasses} /> {t.register}</Link>
                         </Button>
                       </SheetClose>
@@ -254,58 +245,15 @@ const Header = () => {
                 </div>
               </SheetContent>
             </Sheet>
-          ) : ( // Desktop navigation for other pages (not homepage, not course search)
-            <>
-              <Button variant="ghost" size="sm" asChild className={cn("hover:bg-accent/20", pathname === '/' && "bg-accent/10")}>
-                <Link href="/"><Home className="mr-1 h-4 w-4" /> {t.home}</Link>
-              </Button>
-              {!isOnCourseSearchPage && (
-                  <Button variant="ghost" size="sm" asChild className={cn("hover:bg-accent/20", pathname === '/courses/search' && "bg-accent/10")}>
-                      <Link href="/courses/search"><Search className="mr-1 h-4 w-4" /> {t.explore}</Link>
-                  </Button>
-              )}
-              {authLoading ? (
-                <Button variant="ghost" size="sm" disabled>{t.loading}</Button>
-              ) : isAuthenticated ? (
-                <>
-                  <span className="text-sm text-muted-foreground hidden sm:inline">{t.welcome}, {user?.name}!</span>
-                  <Button variant="ghost" size="sm" asChild className={cn("hover:bg-accent/20", (pathname === '/dashboard/admin' || pathname === '/dashboard/student') && "bg-accent/10")}>
-                    <Link href={getDashboardPath()}><LayoutDashboard className="mr-1 h-4 w-4" /> {t.dashboard}</Link>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleLogout}
-                    className="border-primary/50 text-primary hover:bg-primary/10 hover:text-primary"
-                  >
-                    <LogOut className="mr-1 h-4 w-4" /> {t.logout}
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button variant="ghost" size="sm" asChild className={cn("hover:bg-accent/20", pathname === '/login' && "bg-accent/10")}>
-                    <Link href="/login"><LogIn className="mr-1 h-4 w-4" /> {t.login}</Link>
-                  </Button>
-                  <Button variant="default" size="sm" asChild className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md hover:shadow-sm active:translate-y-px transition-all duration-150">
-                    <Link href="/register"><UserPlus className="mr-1 h-4 w-4" /> {t.register}</Link>
-                  </Button>
-                </>
-              )}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleTheme}
-                aria-label={t.toggleTheme}
-                className="hover:bg-accent/20 w-9 h-9"
-              >
-                {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-              </Button>
-            </>
-          )}
-        </div>
+        ) : ( // Desktop navigation
+          <div className="flex items-center space-x-1">
+            {desktopNavItems}
+          </div>
+        )}
       </nav>
     </header>
   );
 };
 
 export default Header;
+    

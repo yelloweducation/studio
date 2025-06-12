@@ -1,16 +1,18 @@
 
-"use client"; // Make client component for language hook
+"use client"; 
+import React, { useState, useEffect } from 'react'; // Added React, useState, useEffect
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft } from 'lucide-react';
-import { useLanguage, type Language } from '@/contexts/LanguageContext';
-// Metadata is no longer exported from here
+import { ChevronLeft, Info, Loader2 } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { serverGetSitePageBySlug } from '@/actions/adminDataActions'; // To fetch dynamic content
+import type { SitePage } from '@/lib/dbUtils';
 
-const aboutPageTranslations = {
+const aboutPageStaticTranslations = { // Keep for fallback if dynamic content fails
   en: {
     backToHome: "Back to Home",
-    title: "About Yellow Institute",
+    pageTitle: "About Yellow Institute", // Use this for card title if dynamic fails
     welcome: "Yellow Institute is dedicated to providing high-quality online education to learners around the globe.",
     mission: "Our mission is to make learning accessible, engaging, and effective. We believe that education is a powerful tool for personal and professional growth, and we strive to create a platform that empowers individuals to achieve their learning goals.",
     visionTitle: "Our Vision",
@@ -21,11 +23,11 @@ const aboutPageTranslations = {
     value3: "Continuous Innovation",
     value4: "Supportive Learning Community",
     value5: "Integrity and Transparency",
-    placeholder: "This is a placeholder About Us page. More detailed content about our story, team, and impact will be added here."
+    loadingError: "Could not load page content. Please try again later.",
   },
   my: {
     backToHome: "ပင်မသို့ ပြန်သွားရန်",
-    title: "Yellow Institute အကြောင်း",
+    pageTitle: "Yellow Institute အကြောင်း",
     welcome: "Yellow Institute သည် ကမ္ဘာတစ်ဝှမ်းရှိ သင်ယူသူများအတွက် အရည်အသွေးမြင့် အွန်လိုင်းပညာရေးကို ပံ့ပိုးပေးရန် ရည်စူးပါသည်။",
     mission: "ကျွန်ုပ်တို့၏ ရည်မှန်းချက်မှာ သင်ယူမှုကို အလွယ်တကူရရှိနိုင်စေရန်၊ ဆွဲဆောင်မှုရှိစေရန်နှင့် ထိရောက်စေရန် ဖြစ်သည်။ ပညာရေးသည် တစ်ကိုယ်ရေနှင့် အသက်မွေးဝမ်းကျောင်း ကြီးထွားတိုးတက်မှုအတွက် အစွမ်းထက်သောကိရိယာတစ်ခုဖြစ်သည်ဟု ကျွန်ုပ်တို့ယုံကြည်ပြီး တစ်ဦးချင်းစီ၏ သင်ယူမှုပန်းတိုင်များ အောင်မြင်စေရန် စွမ်းဆောင်နိုင်သော ပလက်ဖောင်းတစ်ခုကို ဖန်တီးရန် ကြိုးပမ်းပါသည်။",
     visionTitle: "ကျွန်ုပ်တို့၏ မျှော်မှန်းချက်",
@@ -36,50 +38,84 @@ const aboutPageTranslations = {
     value3: "စဉ်ဆက်မပြတ် ဆန်းသစ်တီထွင်မှု",
     value4: "ပံ့ပိုးပေးသော သင်ယူမှုအသိုင်းအဝိုင်း",
     value5: "သမာဓိနှင့် ပွင့်လင်းမြင်သာမှု",
-    placeholder: "ဤသည်မှာ ကျွန်ုပ်တို့အကြောင်း စာမျက်နှာအတွက် နေရာဖြည့်စာသား ဖြစ်သည်။ ကျွန်ုပ်တို့၏ ဇာတ်လမ်း၊ အဖွဲ့နှင့် အကျိုးသက်ရောက်မှုများအကြောင်း အသေးစိတ်အကြောင်းအရာများကို ဤနေရာတွင် ထပ်ထည့်ပါမည်။"
+    loadingError: "စာမျက်နှာ အကြောင်းအရာကို တင်၍မရပါ။ နောက်မှ ပြန်ကြိုးစားကြည့်ပါ။",
   }
 };
 
+const SLUG = 'about-us';
 
-export default function AboutClient() { // Renamed from AboutPage
+export default function AboutClient() {
   const { language } = useLanguage();
-  const t = aboutPageTranslations[language];
+  const t_static = aboutPageStaticTranslations[language];
+
+  const [pageData, setPageData] = useState<SitePage | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchContent = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const data = await serverGetSitePageBySlug(SLUG);
+        setPageData(data);
+      } catch (err) {
+        console.error("Error fetching about us content:", err);
+        setError(t_static.loadingError);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchContent();
+  }, [language, t_static.loadingError]);
+
+  const pageTitle = pageData?.title || t_static.pageTitle;
+  // Assuming content is stored as an HTML string
+  const pageContent = typeof pageData?.content === 'string' ? pageData.content : null;
 
   return (
     <div className="max-w-2xl mx-auto py-8">
       <Button variant="outline" asChild className="mb-6">
         <Link href="/">
-          <ChevronLeft className="mr-2 h-4 w-4" /> {t.backToHome}
+          <ChevronLeft className="mr-2 h-4 w-4" /> {t_static.backToHome}
         </Link>
       </Button>
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="text-2xl md:text-3xl font-headline">{t.title}</CardTitle>
+          <CardTitle className="text-2xl md:text-3xl font-headline">{pageTitle}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-muted-foreground">
-            {t.welcome}
-          </p>
-          <p>
-            {t.mission}
-          </p>
-          <h3 className="text-lg font-semibold font-headline pt-2">{t.visionTitle}</h3>
-          <p>
-            {t.visionText}
-          </p>
-          <h3 className="text-lg font-semibold font-headline pt-2">{t.valuesTitle}</h3>
-          <ul className="list-disc list-inside pl-4 space-y-1">
-            <li>{t.value1}</li>
-            <li>{t.value2}</li>
-            <li>{t.value3}</li>
-            <li>{t.value4}</li>
-            <li>{t.value5}</li>
-          </ul>
-          <p className="text-sm text-muted-foreground pt-4">
-            {t.placeholder}
-          </p>
+        <CardContent className="space-y-4 prose dark:prose-invert max-w-none">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="ml-3 text-muted-foreground">Loading content...</p>
+            </div>
+          ) : error ? (
+             <div className="text-destructive flex items-center gap-2">
+                <Info size={20}/> {error}
+             </div>
+          ) : pageContent ? (
+            <div dangerouslySetInnerHTML={{ __html: pageContent }} />
+          ) : (
+            // Fallback to static translations if dynamic content is empty or not string
+            <>
+              <p className="text-muted-foreground">{t_static.welcome}</p>
+              <p>{t_static.mission}</p>
+              <h3>{t_static.visionTitle}</h3>
+              <p>{t_static.visionText}</p>
+              <h3>{t_static.valuesTitle}</h3>
+              <ul>
+                <li>{t_static.value1}</li>
+                <li>{t_static.value2}</li>
+                <li>{t_static.value3}</li>
+                <li>{t_static.value4}</li>
+                <li>{t_static.value5}</li>
+              </ul>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>
   );
 }
+    

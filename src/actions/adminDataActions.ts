@@ -2,7 +2,7 @@
 'use server';
 
 import {
-  // Prisma types
+  type SitePage,
   type Category,
   type Course,
   type Module,
@@ -20,20 +20,10 @@ import {
 } from '@/lib/dbUtils'; 
 
 import {
-  getCategoriesFromDb,
-  addCategoryToDb,
-  updateCategoryInDb,
-  deleteCategoryFromDb,
-  getCoursesFromDb,
-  getCourseByIdFromDb,
-  addCourseToDb,
-  updateCourseInDb,
-  deleteCourseFromDb,
+  getCategoriesFromDb, addCategoryToDb, updateCategoryInDb, deleteCategoryFromDb,
+  getCoursesFromDb, getCourseByIdFromDb, addCourseToDb, updateCourseInDb, deleteCourseFromDb,
   saveQuizWithQuestionsToDb,
-  getLearningPathsFromDb,
-  addLearningPathToDb,
-  updateLearningPathInDb,
-  deleteLearningPathFromDb,
+  getLearningPathsFromDb, addLearningPathToDb, updateLearningPathInDb, deleteLearningPathFromDb,
   seedCategoriesToDb as seedCategoriesDbUtil,
   seedCoursesToDb as seedCoursesDbUtil,
   seedLearningPathsToDb as seedLearningPathsDbUtil,
@@ -43,45 +33,27 @@ import {
   addPaymentSubmissionToDb as addPaymentSubmissionDbUtil,
   updatePaymentSubmissionInDb as updatePaymentSubmissionDbUtil,
   getEnrollmentsByUserIdFromDb as getEnrollmentsByUserIdDbUtil,
-  updateEnrollmentProgressInDb, // Added
-  getVideosFromDb, 
-  addVideoToDb, 
-  updateVideoInDb, 
-  deleteVideoFromDb,
-  getPaymentSettingsFromDb, 
-  savePaymentSettingsToDb,
+  updateEnrollmentProgressInDb, 
+  getVideosFromDb, addVideoToDb, updateVideoInDb, deleteVideoFromDb,
+  getPaymentSettingsFromDb, savePaymentSettingsToDb,
   seedVideosToDb as seedVideosDbUtil,
   seedPaymentSettingsToDb as seedPaymentSettingsDbUtil,
+  getSitePageBySlug as getSitePageBySlugDbUtil,
+  upsertSitePage as upsertSitePageDbUtil,
 } from '@/lib/dbUtils';
-import type { QuizType as MockQuizEnumType } from '@/data/mockData'; // For form compatibility
+import type { QuizType as MockQuizEnumType } from '@/data/mockData'; 
+import type { Prisma } from '@prisma/client';
 
 
 // --- Category Actions ---
-export async function serverGetCategories(): Promise<Category[]> {
-  return getCategoriesFromDb();
-}
-
-export async function serverAddCategory(categoryData: Omit<Category, 'id' | 'createdAt' | 'updatedAt' | 'courses'>): Promise<Category> {
-  return addCategoryToDb(categoryData);
-}
-
-export async function serverUpdateCategory(categoryId: string, categoryData: Partial<Omit<Category, 'id' | 'createdAt' | 'updatedAt' | 'courses'>>): Promise<Category> {
-  return updateCategoryInDb(categoryId, categoryData);
-}
-
-export async function serverDeleteCategory(categoryId: string): Promise<void> {
-  return deleteCategoryFromDb(categoryId);
-}
+export async function serverGetCategories(): Promise<Category[]> { return getCategoriesFromDb(); }
+export async function serverAddCategory(categoryData: Omit<Category, 'id' | 'createdAt' | 'updatedAt' | 'courses'>): Promise<Category> { return addCategoryToDb(categoryData); }
+export async function serverUpdateCategory(categoryId: string, categoryData: Partial<Omit<Category, 'id' | 'createdAt' | 'updatedAt' | 'courses'>>): Promise<Category> { return updateCategoryInDb(categoryId, categoryData); }
+export async function serverDeleteCategory(categoryId: string): Promise<void> { return deleteCategoryFromDb(categoryId); }
 
 // --- Course Actions ---
-export async function serverGetCourses(): Promise<Course[]> {
-  return getCoursesFromDb();
-}
-
-export async function serverGetCourseById(courseId: string): Promise<Course | null> {
-  return getCourseByIdFromDb(courseId);
-}
-
+export async function serverGetCourses(): Promise<Course[]> { return getCoursesFromDb(); }
+export async function serverGetCourseById(courseId: string): Promise<Course | null> { return getCourseByIdFromDb(courseId); }
 export async function serverAddCourse(
   courseData: Omit<Course, 'id'|'createdAt'|'updatedAt'|'categoryId'|'categoryNameCache'|'modules'|'quizzes'|'learningPathCourses'|'category'|'enrollments'|'paymentSubmissions'> & { 
     categoryName: string, 
@@ -103,8 +75,6 @@ export async function serverAddCourse(
     throw error; 
   }
 }
-
-
 export async function serverUpdateCourse(
   courseId: string, 
   courseData: Partial<Omit<Course, 'id'|'createdAt'|'updatedAt'|'categoryId'|'categoryNameCache'|'modules'|'quizzes'|'learningPathCourses'|'category'|'enrollments'|'paymentSubmissions'>> & { 
@@ -127,18 +97,13 @@ export async function serverUpdateCourse(
     throw error;
   }
 }
-
-export async function serverDeleteCourse(courseId: string): Promise<void> {
-  return deleteCourseFromDb(courseId);
-}
-
+export async function serverDeleteCourse(courseId: string): Promise<void> { return deleteCourseFromDb(courseId); }
 export async function serverSaveQuizWithQuestions(
     courseIdForQuiz: string,
-    quizData: Omit<Quiz, 'courseId'|'createdAt'|'updatedAt'> & { quizType: MockQuizEnumType, questionsToUpsert?: any[], questionIdsToDelete?: string[] }
+    quizData: Pick<Quiz, 'id'|'title'|'quizType'|'passingScore'> & { questionsToUpsert?: any[], questionIdsToDelete?: string[] }
 ): Promise<Quiz> { 
     console.log(`[ServerAction serverSaveQuizWithQuestions] Action called for course ID ${courseIdForQuiz}, quiz title: ${quizData.title}`);
     try {
-        // @ts-ignore // MockQuizEnumType is compatible with PrismaQuizType for this call path
         const savedQuiz = await saveQuizWithQuestionsToDb(courseIdForQuiz, quizData);
         console.log(`[ServerAction serverSaveQuizWithQuestions] saveQuizWithQuestionsToDb successful, returning quiz ID:`, savedQuiz.id);
         return savedQuiz;
@@ -152,87 +117,46 @@ export async function serverSaveQuizWithQuestions(
     }
 }
 
-
 // --- Learning Path Actions ---
-export async function serverGetLearningPaths(): Promise<LearningPath[]> {
-  return getLearningPathsFromDb();
-}
-
-export async function serverAddLearningPath(
-  pathData: Omit<LearningPath, 'id'|'createdAt'|'updatedAt'|'learningPathCourses'> & { courseIdsToConnect?: string[] }
-): Promise<LearningPath> {
-  return addLearningPathToDb(pathData);
-}
-
-export async function serverUpdateLearningPath(
-  pathId: string, 
-  pathData: Partial<Omit<LearningPath, 'id'|'createdAt'|'updatedAt'|'learningPathCourses'>> & { courseIdsToConnect?: string[] }
-): Promise<LearningPath> {
-  return updateLearningPathInDb(pathId, pathData);
-}
-
-export async function serverDeleteLearningPath(pathId: string): Promise<void> {
-  return deleteLearningPathFromDb(pathId);
-}
+export async function serverGetLearningPaths(): Promise<LearningPath[]> { return getLearningPathsFromDb(); }
+export async function serverAddLearningPath(pathData: Omit<LearningPath, 'id'|'createdAt'|'updatedAt'|'learningPathCourses'> & { courseIdsToConnect?: string[] }): Promise<LearningPath> { return addLearningPathToDb(pathData); }
+export async function serverUpdateLearningPath(pathId: string, pathData: Partial<Omit<LearningPath, 'id'|'createdAt'|'updatedAt'|'learningPathCourses'>> & { courseIdsToConnect?: string[] }): Promise<LearningPath> { return updateLearningPathInDb(pathId, pathData); }
+export async function serverDeleteLearningPath(pathId: string): Promise<void> { return deleteLearningPathFromDb(pathId); }
 
 // --- Seeding Actions ---
-export async function serverSeedCategories(): Promise<{ successCount: number; errorCount: number; skippedCount: number }> {
-    return seedCategoriesDbUtil();
-}
-export async function serverSeedCourses(): Promise<{ successCount: number; errorCount: number; skippedCount: number }> {
-    return seedCoursesDbUtil();
-}
-export async function serverSeedLearningPaths(): Promise<{ successCount: number; errorCount: number; skippedCount: number }> {
-    return seedLearningPathsDbUtil();
-}
-export async function serverSeedVideos(): Promise<{ successCount: number; errorCount: number; skippedCount: number }> {
-    return seedVideosDbUtil();
-}
-export async function serverSeedPaymentSettings(): Promise<{ successCount: number; errorCount: number; skippedCount: number }> {
-    return seedPaymentSettingsDbUtil();
-}
-
+export async function serverSeedCategories(): Promise<{ successCount: number; errorCount: number; skippedCount: number }> { return seedCategoriesDbUtil(); }
+export async function serverSeedCourses(): Promise<{ successCount: number; errorCount: number; skippedCount: number }> { return seedCoursesDbUtil(); }
+export async function serverSeedLearningPaths(): Promise<{ successCount: number; errorCount: number; skippedCount: number }> { return seedLearningPathsDbUtil(); }
+export async function serverSeedVideos(): Promise<{ successCount: number; errorCount: number; skippedCount: number }> { return seedVideosDbUtil(); }
+export async function serverSeedPaymentSettings(): Promise<{ successCount: number; errorCount: number; skippedCount: number }> { return seedPaymentSettingsDbUtil(); }
 
 // --- User-Specific Data Fetching for Course Display ---
-export async function serverGetEnrollmentForCourse(userId: string, courseId: string): Promise<Enrollment | null> {
-  return getEnrollmentForUserAndCourseFromDb(userId, courseId);
-}
-
-export async function serverGetPaymentSubmissionForCourse(userId: string, courseId: string): Promise<PaymentSubmission | null> {
+export async function serverGetEnrollmentForCourse(userId: string, courseId: string): Promise<Enrollment | null> { return getEnrollmentForUserAndCourseFromDb(userId, courseId); }
+export async function serverGetPaymentSubmissionForCourse(userId: string, courseId: string): Promise<PaymentSubmission | null> { 
   const allUserSubmissions = await getPaymentSubmissionsFromDb({ userId: userId }); 
   return allUserSubmissions.find(s => s.courseId === courseId) || null;
 }
-
 export async function serverCreateEnrollment(userId: string, courseId: string): Promise<Enrollment | null> {
-  try {
-    return await createEnrollmentDbUtil(userId, courseId);
-  } catch (error) {
-    console.error("[ServerAction serverCreateEnrollment] Error creating enrollment:", error);
-    throw error; 
-  }
+  try { return await createEnrollmentDbUtil(userId, courseId); } 
+  catch (error) { console.error("[ServerAction serverCreateEnrollment] Error creating enrollment:", error); throw error; }
 }
 export async function serverUpdateEnrollmentProgress(enrollmentId: string, progress: number): Promise<Enrollment | null> {
-    try {
-        return await updateEnrollmentProgressInDb(enrollmentId, progress);
-    } catch (error) {
-        console.error("[ServerAction serverUpdateEnrollmentProgress] Error updating enrollment progress:", error);
-        throw error;
-    }
+    try { return await updateEnrollmentProgressInDb(enrollmentId, progress); } 
+    catch (error) { console.error("[ServerAction serverUpdateEnrollmentProgress] Error updating enrollment progress:", error); throw error; }
 }
 
 // --- Student Dashboard Actions ---
-export async function serverGetEnrollmentsByUserId(userId: string): Promise<Enrollment[]> {
-    return getEnrollmentsByUserIdDbUtil(userId);
-}
+export async function serverGetEnrollmentsByUserId(userId: string): Promise<Enrollment[]> { return getEnrollmentsByUserIdDbUtil(userId); }
 
 // --- Checkout Page Actions ---
 export async function serverAddPaymentSubmission(
     submissionData: Omit<PaymentSubmission, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'submittedAt' | 'reviewedAt' | 'adminNotes' | 'user' | 'course'> & { userId: string, courseId: string }
-): Promise<PaymentSubmission> { // Changed to return PaymentSubmission or throw
+): Promise<PaymentSubmission> {
     console.log("[ServerAction serverAddPaymentSubmission] Action called. Received data:", JSON.stringify(submissionData));
     try {
         const result = await addPaymentSubmissionDbUtil(submissionData);
         console.log("[ServerAction serverAddPaymentSubmission] addPaymentSubmissionDbUtil successful. Result:", JSON.stringify(result));
+        if (!result) { throw new Error("addPaymentSubmissionDbUtil returned null or undefined"); }
         return result;
     } catch (error) {
         console.error("[ServerAction serverAddPaymentSubmission] Error calling addPaymentSubmissionDbUtil:", error);
@@ -240,25 +164,22 @@ export async function serverAddPaymentSubmission(
           console.error("[ServerAction serverAddPaymentSubmission] Error name:", error.name);
           console.error("[ServerAction serverAddPaymentSubmission] Error message:", error.message);
         }
-        throw error; // Re-throw the error to be caught by the client
+        throw error; 
     }
 }
 
 // --- Admin Panel Payment Submission Review Actions ---
-export async function serverGetAllPaymentSubmissions(filter?: { userId?: string }): Promise<PaymentSubmission[]> {
-    return getPaymentSubmissionsFromDb(filter); 
-}
-
+export async function serverGetAllPaymentSubmissions(filter?: { userId?: string }): Promise<PaymentSubmission[]> { return getPaymentSubmissionsFromDb(filter); }
 export async function serverUpdatePaymentSubmissionStatus(
     submissionId: string, 
     newStatus: PaymentSubmissionStatus, 
     adminNotes?: string | null
-): Promise<PaymentSubmission> { // Changed to return PaymentSubmission or throw
+): Promise<PaymentSubmission> { 
     console.log(`[ServerAction serverUpdatePaymentSubmissionStatus] Updating submission ${submissionId} to ${newStatus}`);
     try {
         const result = await updatePaymentSubmissionDbUtil(submissionId, { 
             status: newStatus, 
-            adminNotes: adminNotes === null ? undefined : adminNotes, // Prisma expects undefined for optional nulls
+            adminNotes: adminNotes === null ? undefined : adminNotes, 
             reviewedAt: new Date() 
         });
         console.log(`[ServerAction serverUpdatePaymentSubmissionStatus] Update successful for ${submissionId}. Result:`, JSON.stringify(result));
@@ -274,24 +195,24 @@ export async function serverUpdatePaymentSubmissionStatus(
 }
 
 // --- Video Actions (Admin Panel & Public Feed) ---
-export async function serverGetVideos(): Promise<Video[]> {
-    return getVideosFromDb();
-}
-export async function serverAddVideo(videoData: Omit<Video, 'id' | 'createdAt' | 'updatedAt'>): Promise<Video> {
-    return addVideoToDb(videoData);
-}
-export async function serverUpdateVideo(videoId: string, videoData: Partial<Omit<Video, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Video> {
-    return updateVideoInDb(videoId, videoData);
-}
-export async function serverDeleteVideo(videoId: string): Promise<void> {
-    return deleteVideoFromDb(videoId);
-}
+export async function serverGetVideos(): Promise<Video[]> { return getVideosFromDb(); }
+export async function serverAddVideo(videoData: Omit<Video, 'id' | 'createdAt' | 'updatedAt'>): Promise<Video> { return addVideoToDb(videoData); }
+export async function serverUpdateVideo(videoId: string, videoData: Partial<Omit<Video, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Video> { return updateVideoInDb(videoId, videoData); }
+export async function serverDeleteVideo(videoId: string): Promise<void> { return deleteVideoFromDb(videoId); }
 
 // --- Payment Settings Actions (Admin Panel & Checkout) ---
-export async function serverGetPaymentSettings(): Promise<PaymentSettings | null> {
-    return getPaymentSettingsFromDb();
-}
-export async function serverSavePaymentSettings(settingsData: Omit<PaymentSettings, 'id'| 'updatedAt'>): Promise<PaymentSettings> {
-    return savePaymentSettingsToDb(settingsData);
-}
+export async function serverGetPaymentSettings(): Promise<PaymentSettings | null> { return getPaymentSettingsFromDb(); }
+export async function serverSavePaymentSettings(settingsData: Omit<PaymentSettings, 'id'| 'updatedAt'>): Promise<PaymentSettings> { return savePaymentSettingsToDb(settingsData); }
 
+// --- Site Page Content Actions ---
+export async function serverGetSitePageBySlug(slug: string): Promise<SitePage | null> {
+  return getSitePageBySlugDbUtil(slug);
+}
+export async function serverUpsertSitePage(
+  slug: string,
+  title: string,
+  content: Prisma.JsonValue | string // Allow string for simple HTML
+): Promise<SitePage> {
+  return upsertSitePageDbUtil(slug, title, content);
+}
+    
