@@ -3,25 +3,25 @@
 import Link from 'next/link';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
-import { Circle, Home } from 'lucide-react'; 
-import { Button } from '@/components/ui/button'; 
+import { Circle, Home } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const videoPageHeaderTranslations = {
   en: {
     forYou: "For You",
-    home: "Go to Home", 
+    home: "Go to Home",
   },
   my: {
     forYou: "သင့်အတွက်",
-    home: "ပင်မသို့သွားပါ", 
+    home: "ပင်မသို့သွားပါ",
   }
 };
 
 interface VideoPageHeaderProps {
-  isScrolled: boolean;
+  // isScrolled prop is no longer needed as background is consistent
 }
 
-const VideoPageHeader = ({ isScrolled }: VideoPageHeaderProps) => {
+const VideoPageHeader = (/*{ isScrolled }: VideoPageHeaderProps*/) => {
   const { language } = useLanguage();
   const t = videoPageHeaderTranslations[language];
 
@@ -29,12 +29,12 @@ const VideoPageHeader = ({ isScrolled }: VideoPageHeaderProps) => {
     <header
       className={cn(
         "fixed top-0 left-0 right-0 z-40 flex h-14 items-center justify-between px-4 text-white shadow-md transition-colors duration-300",
-        isScrolled ? "bg-black/70 backdrop-blur-sm" : "bg-transparent"
+        "bg-black/70 backdrop-blur-sm" // Always apply the background
       )}
     >
       <div className="flex items-center gap-2">
-        <Circle size={18} className="text-primary fill-primary" /> 
-        <h1 className="text-lg font-semibold">{t.forYou}</h1>
+        <Circle size={18} className="text-primary fill-primary" />
+        <h1 className="text-lg font-semibold text-black">{t.forYou}</h1> {/* Text color remains black */}
       </div>
 
       <Button variant="ghost" size="icon" asChild aria-label={t.home} className="hover:bg-white/20">
