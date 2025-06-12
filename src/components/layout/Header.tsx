@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import LuminaLogo from '@/components/LuminaLogo';
 import { Button } from '@/components/ui/button';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Menu, Compass, User as UserIcon, BookOpen, Layers, Brain, Loader2 } from 'lucide-react';
+import { Home, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Compass, User as UserIcon, BookOpen, Layers, Brain, Loader2, Menu, Circle } from 'lucide-react'; // Added Circle
 import { useTheme } from '@/contexts/ThemeContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import React, { useEffect, useState } from 'react';
@@ -25,6 +25,7 @@ import { Separator } from '@/components/ui/separator';
 const headerTranslations = {
   en: {
     home: "Home",
+    all: "ALL", // Added for the new link
     explore: "Explore Courses",
     videos: "Reels",
     flashCards: "Flash Cards",
@@ -41,6 +42,7 @@ const headerTranslations = {
   },
   my: {
     home: "ပင်မ",
+    all: "အားလုံး", // Added for the new link
     explore: "သင်တန်းများ",
     videos: "ဗီဒီယို",
     flashCards: "ကတ်ပြားများ",
@@ -124,13 +126,13 @@ const Header = () => {
   const handleLogout = () => {
     logout();
     router.push('/');
-    setIsSheetOpen(false);
+    setIsSheetOpen(false); // Close sheet if open on mobile
   };
 
   const getDashboardPath = () => {
     if (role === 'admin') return '/dashboard/admin';
     if (role === 'student') return '/dashboard/student';
-    return '/login';
+    return '/login'; // Fallback, though should ideally not be needed if role is set
   };
 
   const navLinkClasses = (targetPath: string) => cn(
@@ -138,21 +140,29 @@ const Header = () => {
     pathname === targetPath && "bg-accent text-accent-foreground font-semibold"
   );
 
-  const sheetLinkClasses = (targetPath: string) => cn(
-    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-accent/50 w-full text-left text-base",
-    pathname === targetPath && "bg-accent text-primary font-semibold"
-  );
-
   const commonNavItems = [
     { href: "/", label: t.home, Icon: Home },
     { href: "/courses/search", label: t.explore, Icon: Compass },
-    { href: "/videos", label: t.videos, Icon: BookOpen },
+    { href: "/videos", label: t.videos, Icon: BookOpen }, // Reels icon
     { href: "/flash-cards", label: t.flashCards, Icon: Layers },
     { href: "/personality-tests", label: t.personalityTest, Icon: Brain }
   ];
 
+  const ThemeToggleButton = React.memo(() => (
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={toggleTheme}
+      aria-label={t.toggleTheme}
+      className="hover:bg-accent/20 w-9 h-9 text-foreground"
+    >
+      {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+    </Button>
+  ));
+  ThemeToggleButton.displayName = 'ThemeToggleButton';
+
   const DesktopNav = () => (
-    <nav className="hidden md:flex items-center space-x-1 lg:space-x-2">
+    <nav className="flex items-center space-x-1 lg:space-x-2">
       {commonNavItems.map(item => (
         <Button key={item.label} variant="ghost" size="sm" asChild className={navLinkClasses(item.href)}>
           <Link href={item.href}><item.Icon className="mr-1.5 h-4 w-4" />{item.label}</Link>
@@ -189,122 +199,41 @@ const Header = () => {
       <ThemeToggleButton />
     </nav>
   );
+  
+  // Mobile specific components
+  const MobileHomepageAllLink = () => (
+    <Link href="/" className={cn(
+        "group text-lg font-bold font-headline px-2 py-1 rounded-md transition-all",
+        "text-black dark:text-white", // Explicit black text, white in dark mode
+        "underline decoration-primary underline-offset-4 decoration-2",
+        "shadow-md hover:shadow-lg active:shadow-sm", // Subtle 3D effect
+        "hover:translate-x-px hover:-translate-y-px active:translate-x-0 active:translate-y-0" // Pseudo 3D on hover/active
+      )}>
+        {t.all}
+    </Link>
+  );
 
-  const MobileNavSheet = ({ currentPathname }: { currentPathname: string }) => {
-    const isMobileHomepage = currentPathname === '/';
-
-    return (
-      <div className="flex items-center md:hidden">
-        {isMobileHomepage ? (
-          <>
-            <Button variant="ghost" size="icon" asChild className="text-foreground hover:text-primary" aria-label={t.explore}>
-              <Link href="/courses/search"><Compass className="h-5 w-5" /></Link>
-            </Button>
-          </>
-        ) : (
-          <>
-            {authLoading ? (
-              <Button variant="ghost" size="icon" disabled className="mr-1"><Loader2 className="h-5 w-5 animate-spin" /></Button>
-            ) : isAuthenticated ? (
-              <>
-                <Button variant="ghost" size="icon" asChild className="text-foreground hover:text-primary" aria-label={t.dashboard}>
-                  <Link href={getDashboardPath()}><LayoutDashboard className="h-5 w-5" /></Link>
-                </Button>
-                <Button variant="ghost" size="icon" onClick={handleLogout} className="text-foreground hover:text-primary" aria-label={t.logout}>
-                  <LogOut className="h-5 w-5" />
-                </Button>
-              </>
-            ) : (
-              <Button variant="ghost" size="icon" asChild className="text-foreground hover:text-primary" aria-label={t.login}>
-                <Link href="/login"><LogIn className="h-5 w-5" /></Link>
-              </Button>
-            )}
-          </>
-        )}
-        <ThemeToggleButton />
-        <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" aria-label={t.openMenu}>
-              <Menu className="h-6 w-6" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="w-full max-w-xs sm:max-w-sm p-0 flex flex-col">
-            <SheetHeader className="p-4 border-b">
-              <SheetTitle className="flex items-center">
-                <LuminaLogo />
-              </SheetTitle>
-            </SheetHeader>
-            <div className="flex-grow p-4 space-y-2 overflow-y-auto">
-              {commonNavItems.map(item => (
-                <SheetClose asChild key={item.label}>
-                  <Link href={item.href} className={sheetLinkClasses(item.href)} onClick={() => setIsSheetOpen(false)}>
-                    <item.Icon className="h-5 w-5" /> {item.label}
-                  </Link>
-                </SheetClose>
-              ))}
-              <Separator className="my-3"/>
-              {isAuthenticated && !authLoading && (
-                <>
-                  <SheetClose asChild>
-                    <Link href={getDashboardPath()} className={sheetLinkClasses(getDashboardPath())} onClick={() => setIsSheetOpen(false)}>
-                      <LayoutDashboard className="h-5 w-5" /> {t.dashboard}
-                    </Link>
-                  </SheetClose>
-                  <button onClick={handleLogout} className={sheetLinkClasses("")}>
-                    <LogOut className="h-5 w-5" /> {t.logout}
-                  </button>
-                </>
-              )}
-              {!isAuthenticated && !authLoading && (
-                <>
-                  <SheetClose asChild>
-                    <Link href="/login" className={sheetLinkClasses('/login')} onClick={() => setIsSheetOpen(false)}>
-                      <LogIn className="h-5 w-5" /> {t.login}
-                    </Link>
-                  </SheetClose>
-                  <SheetClose asChild>
-                    <Link href="/register" className={sheetLinkClasses('/register')} onClick={() => setIsSheetOpen(false)}>
-                      <UserPlus className="h-5 w-5" /> {t.register}
-                    </Link>
-                  </SheetClose>
-                </>
-              )}
-              {authLoading && (
-                   <div className={cn(sheetLinkClasses(""), "text-muted-foreground")}>
-                      <Loader2 className="h-5 w-5 animate-spin" /> {t.loading}
-                  </div>
-              )}
-            </div>
-             <div className="p-4 border-t mt-auto">
-              <span className="text-sm text-muted-foreground block mb-1.5">{t.toggleTheme}</span>
-              <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => { toggleTheme(); }}
-                  className="w-full justify-start text-muted-foreground hover:text-primary hover:bg-accent/50"
-                >
-                  {theme === 'light' ? <Moon className="h-5 w-5 mr-3" /> : <Sun className="h-5 w-5 mr-3" />}
-                  {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
-                </Button>
-            </div>
-          </SheetContent>
-        </Sheet>
-      </div>
-    );
-  }
-
-  const ThemeToggleButton = React.memo(() => (
-    <Button
-      variant="ghost"
-      size="icon"
-      onClick={toggleTheme}
-      aria-label={t.toggleTheme}
-      className="hover:bg-accent/20 w-9 h-9 text-foreground"
-    >
-      {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-    </Button>
-  ));
-  ThemeToggleButton.displayName = 'ThemeToggleButton';
+  const MobileRightNav = () => (
+    <div className="flex items-center space-x-1">
+      {authLoading ? (
+        <Button variant="ghost" size="icon" disabled className="w-8 h-8"><Loader2 className="h-5 w-5 animate-spin" /></Button>
+      ) : isAuthenticated ? (
+        <>
+          <Button variant="ghost" size="icon" asChild className="text-foreground hover:text-primary w-8 h-8" aria-label={t.dashboard}>
+            <Link href={getDashboardPath()}><LayoutDashboard className="h-5 w-5" /></Link>
+          </Button>
+          <Button variant="ghost" size="icon" onClick={handleLogout} className="text-foreground hover:text-primary w-8 h-8" aria-label={t.logout}>
+            <LogOut className="h-5 w-5" />
+          </Button>
+        </>
+      ) : (
+        <Button variant="ghost" size="icon" asChild className="text-foreground hover:text-primary w-8 h-8" aria-label={t.login}>
+          <Link href="/login"><LogIn className="h-5 w-5" /></Link>
+        </Button>
+      )}
+      <ThemeToggleButton />
+    </div>
+  );
 
 
   return (
@@ -314,8 +243,19 @@ const Header = () => {
         {'!-translate-y-full': !headerVisible && useScrollHidingHeader }
       )}>
       <div className="container mx-auto px-4 py-2.5 flex justify-between items-center min-h-[60px]">
-        <LuminaLogo />
-        {isMobile ? <MobileNavSheet currentPathname={pathname} /> : <DesktopNav />}
+        {isMobile ? (
+          <>
+            <div className="flex-1"> {/* Left side container for mobile */}
+              {isOnHomepage && <MobileHomepageAllLink />}
+            </div>
+            <MobileRightNav />
+          </>
+        ) : (
+          <>
+            <LuminaLogo />
+            <DesktopNav />
+          </>
+        )}
       </div>
     </header>
   );
