@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import LuminaLogo from '@/components/LuminaLogo';
 import { Button } from '@/components/ui/button';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Menu, Search, User as UserIcon, CircleUser, Loader2 } from 'lucide-react';
+import { Home, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Menu, Compass, User as UserIcon, BookOpen, Layers, Brain, Loader2 } from 'lucide-react'; // Ensured Loader2 is here
 import { useTheme } from '@/contexts/ThemeContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import React, { useEffect, useState } from 'react';
@@ -14,18 +14,21 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
+  SheetClose, 
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-  SheetClose,
 } from '@/components/ui/sheet';
+import { Separator } from '@/components/ui/separator';
 
 
 const headerTranslations = {
   en: {
     home: "Home",
-    explore: "Explore",
+    explore: "Explore Courses",
+    videos: "Reels",
+    flashCards: "Flash Cards",
+    personalityTest: "Assessments",
     welcome: "Welcome",
     dashboard: "Dashboard",
     logout: "Logout",
@@ -34,14 +37,14 @@ const headerTranslations = {
     toggleTheme: "Toggle Theme",
     openMenu: "Open menu",
     loading: "Loading...",
-    all: "ALL",
-    searchLabel: "Search Courses",
-    profileLabel: "Profile / Login",
     menuTitle: "Navigation"
   },
   my: {
     home: "ပင်မ",
-    explore: "ရှာဖွေရန်",
+    explore: "သင်တန်းများ",
+    videos: "ဗီဒီယို",
+    flashCards: "ကတ်ပြားများ",
+    personalityTest: "စစ်ဆေးမှုများ",
     welcome: "ကြိုဆိုပါတယ်",
     dashboard: "ဒက်ရှ်ဘုတ်",
     logout: "ထွက်ရန်",
@@ -50,9 +53,6 @@ const headerTranslations = {
     toggleTheme: "အသွင်ပြောင်းရန်",
     openMenu: "မီနူးဖွင့်ပါ",
     loading: "လုပ်ဆောင်နေသည်...",
-    all: "အားလုံး",
-    searchLabel: "သင်တန်းရှာရန်",
-    profileLabel: "ပရိုဖိုင် / ဝင်ရန်",
     menuTitle: "လမ်းညွှန်"
   }
 };
@@ -62,7 +62,7 @@ const Header = () => {
   const router = useRouter();
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
-  const isMobile = useIsMobile();
+  const isMobile = useIsMobile(); 
   const { language } = useLanguage();
   const t = headerTranslations[language];
 
@@ -82,18 +82,17 @@ const Header = () => {
 
     const controlHeaderBackground = () => {
       if (pathname === '/videos') {
-        setDynamicHeaderBackgroundClasses(''); // Videos page header is handled separately or not at all by this component
+        setDynamicHeaderBackgroundClasses('');
       } else {
         setDynamicHeaderBackgroundClasses(window.scrollY < 50 ? '' : 'bg-background/80 backdrop-blur-md border-b');
       }
     };
     
-    // Set initial state based on current scroll and path
     controlHeaderBackground();
 
     window.addEventListener('scroll', controlHeaderBackground, { passive: true });
     return () => window.removeEventListener('scroll', controlHeaderBackground);
-  }, [pathname]); // Re-run when pathname changes to correctly set initial state
+  }, [pathname]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !useScrollHidingHeader) {
@@ -125,65 +124,46 @@ const Header = () => {
   const handleLogout = () => {
     logout();
     router.push('/');
-    setIsSheetOpen(false); // Close sheet on logout if open
+    setIsSheetOpen(false);
   };
 
   const getDashboardPath = () => {
     if (role === 'admin') return '/dashboard/admin';
     if (role === 'student') return '/dashboard/student';
-    return '/'; 
+    return '/login'; // Fallback to login if role is somehow null but authenticated
   };
-
-  const headerBaseClasses = 'sticky top-0 z-50 transition-all duration-300 ease-in-out';
-
-  const ThemeToggleButton = React.memo(() => (
-    <Button
-      variant="ghost"
-      size="icon"
-      onClick={toggleTheme}
-      aria-label={t.toggleTheme}
-      className="hover:bg-accent/20 w-9 h-9"
-    >
-      {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-    </Button>
-  ));
-  ThemeToggleButton.displayName = 'ThemeToggleButton';
-
-  const navLinkClasses = (targetPath: string) => cn(
-    "hover:bg-accent/20",
-    pathname === targetPath && "bg-accent/10 text-primary font-semibold"
-  );
   
-  const allLinkClasses = cn(
-    "text-sm font-medium", // Default text color (black in light mode) and size
-    isOnHomepage 
-      ? "text-foreground font-semibold underline decoration-primary decoration-2 underline-offset-4" // Active on homepage: black text, yellow thicker underline
-      : "text-foreground hover:text-primary" // Hover on other pages: black text, hover yellow
+  const navLinkClasses = (targetPath: string) => cn(
+    "text-sm font-medium text-foreground hover:text-primary transition-colors px-3 py-2 rounded-md",
+    pathname === targetPath && "bg-accent text-accent-foreground font-semibold"
   );
 
+  const sheetLinkClasses = (targetPath: string) => cn(
+    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-accent/50 w-full text-left text-base",
+    pathname === targetPath && "bg-accent text-primary font-semibold"
+  );
 
-  // Desktop Navigation Items
-  const desktopNavItems = (
-    <>
-      <Button
-        variant="ghost"
-        size="sm"
-        asChild
-        className={cn(
-          navLinkClasses("/"),
-          isOnHomepage && "underline decoration-primary decoration-2 underline-offset-4 font-semibold"
-        )}
-      >
-        <Link href="/">{t.all}</Link>
-      </Button>
-      <Button variant="ghost" size="sm" asChild className={navLinkClasses('/courses/search')}>
-          <Link href="/courses/search"><Search className="mr-1 h-4 w-4" /> {t.explore}</Link>
-      </Button>
+  const commonNavItems = [
+    { href: "/", label: t.home, Icon: Home },
+    { href: "/courses/search", label: t.explore, Icon: Compass },
+    { href: "/videos", label: t.videos, Icon: BookOpen },
+    { href: "/flash-cards", label: t.flashCards, Icon: Layers },
+    { href: "/personality-tests", label: t.personalityTest, Icon: Brain }
+  ];
+
+  const DesktopNav = () => (
+    <nav className="hidden md:flex items-center space-x-1 lg:space-x-2">
+      {commonNavItems.map(item => (
+        <Button key={item.label} variant="ghost" size="sm" asChild className={navLinkClasses(item.href)}>
+          <Link href={item.href}><item.Icon className="mr-1.5 h-4 w-4" />{item.label}</Link>
+        </Button>
+      ))}
+      <Separator orientation="vertical" className="h-6 mx-1 lg:mx-2"/>
       {authLoading ? (
         <Button variant="ghost" size="sm" disabled><Loader2 className="h-4 w-4 animate-spin mr-1" /> {t.loading}</Button>
       ) : isAuthenticated ? (
         <>
-          <span className="text-sm text-muted-foreground hidden sm:inline">{t.welcome}, {user?.name}!</span>
+          <span className="text-sm text-muted-foreground hidden lg:inline">{t.welcome}, {user?.name}!</span>
           <Button variant="ghost" size="sm" asChild className={navLinkClasses(getDashboardPath())}>
             <Link href={getDashboardPath()}><LayoutDashboard className="mr-1 h-4 w-4" /> {t.dashboard}</Link>
           </Button>
@@ -207,63 +187,125 @@ const Header = () => {
         </>
       )}
       <ThemeToggleButton />
-    </>
+    </nav>
   );
 
-  // Mobile Right Side Icons
-  const mobileRightIcons = (
-    <div className="flex items-center space-x-0.5 sm:space-x-1">
+  const MobileNavSheet = () => (
+    <div className="flex items-center md:hidden">
       {authLoading ? (
-        <Button variant="ghost" size="icon" disabled className="w-9 h-9">
-          <Loader2 className="h-5 w-5 animate-spin" />
-        </Button>
+         <Button variant="ghost" size="icon" disabled className="mr-1"><Loader2 className="h-5 w-5 animate-spin" /></Button>
       ) : isAuthenticated ? (
         <>
-          <Button variant="ghost" size="icon" asChild aria-label={t.dashboard} className="w-9 h-9">
-            <Link href={getDashboardPath()}>
-              <LayoutDashboard className="h-5 w-5" />
-            </Link>
+          <Button variant="ghost" size="icon" asChild className="text-foreground hover:text-primary" aria-label={t.dashboard}>
+            <Link href={getDashboardPath()}><LayoutDashboard className="h-5 w-5" /></Link>
           </Button>
-          <Button variant="ghost" size="icon" onClick={handleLogout} aria-label={t.logout} className="w-9 h-9">
+          <Button variant="ghost" size="icon" onClick={handleLogout} className="text-foreground hover:text-primary" aria-label={t.logout}>
             <LogOut className="h-5 w-5" />
           </Button>
         </>
       ) : (
-        <Button variant="ghost" size="icon" asChild aria-label={t.login} className="w-9 h-9">
-          <Link href="/login">
-            <LogIn className="h-5 w-5" />
-          </Link>
+        <Button variant="ghost" size="icon" asChild className="text-foreground hover:text-primary" aria-label={t.login}>
+          <Link href="/login"><LogIn className="h-5 w-5" /></Link>
         </Button>
       )}
       <ThemeToggleButton />
+      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+        <SheetTrigger asChild>
+          <Button variant="ghost" size="icon" aria-label={t.openMenu}>
+            <Menu className="h-6 w-6" />
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="left" className="w-full max-w-xs sm:max-w-sm p-0 flex flex-col">
+          <SheetHeader className="p-4 border-b">
+            <SheetTitle className="flex items-center">
+              <LuminaLogo />
+            </SheetTitle>
+          </SheetHeader>
+          <div className="flex-grow p-4 space-y-2 overflow-y-auto">
+            {commonNavItems.map(item => (
+              <SheetClose asChild key={item.label}>
+                <Link href={item.href} className={sheetLinkClasses(item.href)} onClick={() => setIsSheetOpen(false)}>
+                  <item.Icon className="h-5 w-5" /> {item.label}
+                </Link>
+              </SheetClose>
+            ))}
+            <Separator className="my-3"/>
+            {isAuthenticated && !authLoading && ( // Show dashboard/logout only if authenticated and not loading
+              <>
+                <SheetClose asChild>
+                  <Link href={getDashboardPath()} className={sheetLinkClasses(getDashboardPath())} onClick={() => setIsSheetOpen(false)}>
+                    <LayoutDashboard className="h-5 w-5" /> {t.dashboard}
+                  </Link>
+                </SheetClose>
+                <button onClick={handleLogout} className={sheetLinkClasses("")}>
+                  <LogOut className="h-5 w-5" /> {t.logout}
+                </button>
+              </>
+            )}
+            {!isAuthenticated && !authLoading && ( // Show login/register only if not authenticated and not loading
+              <>
+                <SheetClose asChild>
+                  <Link href="/login" className={sheetLinkClasses('/login')} onClick={() => setIsSheetOpen(false)}>
+                    <LogIn className="h-5 w-5" /> {t.login}
+                  </Link>
+                </SheetClose>
+                <SheetClose asChild>
+                  <Link href="/register" className={sheetLinkClasses('/register')} onClick={() => setIsSheetOpen(false)}>
+                    <UserPlus className="h-5 w-5" /> {t.register}
+                  </Link>
+                </SheetClose>
+              </>
+            )}
+            {authLoading && ( // Show loading in sheet if auth is loading
+                 <div className={cn(sheetLinkClasses(""), "text-muted-foreground")}>
+                    <Loader2 className="h-5 w-5 animate-spin" /> {t.loading}
+                </div>
+            )}
+          </div>
+           <div className="p-4 border-t mt-auto">
+            <span className="text-sm text-muted-foreground block mb-1.5">{t.toggleTheme}</span>
+            <Button
+                variant="outline" 
+                size="sm"
+                onClick={() => { toggleTheme(); }} 
+                className="w-full justify-start text-muted-foreground hover:text-primary hover:bg-accent/50"
+              >
+                {theme === 'light' ? <Moon className="h-5 w-5 mr-3" /> : <Sun className="h-5 w-5 mr-3" />}
+                {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
+              </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
+  
+  const ThemeToggleButton = React.memo(() => (
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={toggleTheme}
+      aria-label={t.toggleTheme}
+      className="hover:bg-accent/20 w-9 h-9 text-foreground"
+    >
+      {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+    </Button>
+  ));
+  ThemeToggleButton.displayName = 'ThemeToggleButton';
 
 
   return (
     <header className={cn(
-        headerBaseClasses,
+        "sticky top-0 z-50 transition-all duration-300 ease-in-out",
         dynamicHeaderBackgroundClasses, 
         {'!-translate-y-full': !headerVisible && useScrollHidingHeader } 
       )}>
-      <nav className="container mx-auto px-4 py-3 flex justify-between items-center min-h-[57px]">
-        {/* Left Side */}
-        <Link href="/" className={allLinkClasses}>
-          {t.all}
-        </Link>
-        
-        {/* Right Side */}
-        {isMobile ? (
-          mobileRightIcons
-        ) : (
-          <div className={cn("flex items-center space-x-1")}>
-            {desktopNavItems}
-          </div>
-        )}
-      </nav>
+      <div className="container mx-auto px-4 py-2.5 flex justify-between items-center min-h-[60px]">
+        <LuminaLogo />
+        {isMobile ? <MobileNavSheet /> : <DesktopNav />}
+      </div>
     </header>
   );
 };
 
 export default Header;
-
+    
