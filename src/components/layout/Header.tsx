@@ -69,40 +69,46 @@ const Header = () => {
 
   const useScrollHidingHeader = isOnHomepage || isOnCourseSearchPage;
 
-  // State for dynamic classes to avoid hydration mismatch
-  const initialBackgroundClasses = useScrollHidingHeader ? '' : 'bg-background/80 backdrop-blur-md border-b';
-  const [dynamicHeaderBackgroundClasses, setDynamicHeaderBackgroundClasses] = useState(initialBackgroundClasses);
+  const [dynamicHeaderBackgroundClasses, setDynamicHeaderBackgroundClasses] = useState(
+    useScrollHidingHeader && typeof window !== 'undefined' && window.scrollY < 50
+      ? ''
+      : 'bg-background/80 backdrop-blur-md border-b'
+  );
 
   useEffect(() => {
     const controlHeader = () => {
-      if (pathname === '/videos') return;
+      if (pathname === '/videos') { // Videos page has its own header/no header
+        setHeaderVisible(false); // Ensure main header is not visible
+        setDynamicHeaderBackgroundClasses(''); // No background needed if not visible
+        return;
+      }
+
+      const currentScrollY = window.scrollY;
 
       if (useScrollHidingHeader) {
-        const currentScrollY = window.scrollY;
         if (currentScrollY > headerScrollThreshold && currentScrollY > lastScrollY.current) {
           setHeaderVisible(false);
         } else {
           setHeaderVisible(true);
         }
         lastScrollY.current = currentScrollY;
-
-        // Update background classes based on scroll position, only on client
-        if (typeof window !== 'undefined') {
-            const newBackgroundClasses = (currentScrollY < 50) ? '' : 'bg-background/80 backdrop-blur-md border-b';
-            setDynamicHeaderBackgroundClasses(newBackgroundClasses);
-        }
-
+        const newBackgroundClasses = (currentScrollY < 50) ? '' : 'bg-background/80 backdrop-blur-md border-b';
+        setDynamicHeaderBackgroundClasses(newBackgroundClasses);
       } else {
         setHeaderVisible(true);
-        setDynamicHeaderBackgroundClasses('bg-background/80 backdrop-blur-md border-b'); // Default for non-hiding headers
+        setDynamicHeaderBackgroundClasses('bg-background/80 backdrop-blur-md border-b');
       }
     };
 
-    window.addEventListener('scroll', controlHeader);
-    controlHeader(); // Initial check
+    if (typeof window !== 'undefined') {
+      window.addEventListener('scroll', controlHeader);
+      controlHeader(); // Initial check on mount
+    }
 
     return () => {
-      window.removeEventListener('scroll', controlHeader);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('scroll', controlHeader);
+      }
     };
   }, [pathname, useScrollHidingHeader]);
 
@@ -178,17 +184,17 @@ const Header = () => {
   return (
     <header className={cn(
         headerBaseClasses,
-        // Use the state variable for background classes
-        useScrollHidingHeader ? dynamicHeaderBackgroundClasses : 'bg-background/80 backdrop-blur-md border-b',
+        dynamicHeaderBackgroundClasses, // Use state variable for dynamic classes
         {'!-translate-y-full': !headerVisible && useScrollHidingHeader }
       )}>
       <nav className="container mx-auto px-4 py-3 flex justify-between items-center min-h-[57px]">
-        <LuminaLogo />
+        {pathname !== '/' && <LuminaLogo />}
 
         {isMobile ? (
             <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon">
+                 {/* Ensure SheetTrigger is always on the right, even if logo is hidden */}
+                <Button variant="ghost" size="icon" className={cn(pathname === '/' && "ml-auto")}>
                   <Menu className="h-6 w-6" />
                   <span className="sr-only">{t.openMenu}</span>
                 </Button>
@@ -252,7 +258,7 @@ const Header = () => {
               </SheetContent>
             </Sheet>
         ) : ( 
-          <div className="flex items-center space-x-1">
+          <div className={cn("flex items-center space-x-1", pathname === '/' && "ml-auto")}> {/* Push to right if logo is hidden on homepage desktop */}
             {desktopNavItems}
           </div>
         )}
