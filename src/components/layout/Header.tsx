@@ -17,13 +17,13 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Separator } from '@/components/ui/separator';
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { cn } from "@/lib/utils";
 import { useLanguage } from '@/contexts/LanguageContext';
 
 const headerTranslations = {
   en: {
-    home: "ALL",
+    home: "ALL", // Will be used for the link text
     explore: "Explore",
     welcome: "Welcome",
     dashboard: "Dashboard",
@@ -33,7 +33,7 @@ const headerTranslations = {
     toggleTheme: "Toggle Theme",
     openMenu: "Open menu",
     loading: "Loading...",
-    all: "ALL",
+    all: "ALL", // Kept for consistency, though "home" key will be used for the link text
   },
   my: {
     home: "အားလုံး",
@@ -61,17 +61,25 @@ const Header = () => {
   const t = headerTranslations[language];
 
   const isOnHomepage = pathname === '/';
-  const useScrollHidingHeader = isOnHomepage;
-  const headerScrollThreshold = 100;
+  const useScrollHidingHeader = isOnHomepage; 
+  const headerScrollThreshold = 100; 
 
-  const [dynamicHeaderBackgroundClasses, setDynamicHeaderBackgroundClasses] = useState('bg-background/80 backdrop-blur-md border-b');
+  const [dynamicHeaderBackgroundClasses, setDynamicHeaderBackgroundClasses] = useState(
+    'bg-background/80 backdrop-blur-md border-b' // Default to non-transparent
+  );
   const [headerVisible, setHeaderVisible] = useState(true);
-
+  
   useEffect(() => {
     if (typeof window === 'undefined') {
-      setHeaderVisible(true);
+      setHeaderVisible(true); 
+      // Set initial background based on pathname for SSR consistency
+      if (pathname === '/videos') setDynamicHeaderBackgroundClasses('');
+      else if (useScrollHidingHeader) setDynamicHeaderBackgroundClasses(''); // Homepage starts transparent
+      else setDynamicHeaderBackgroundClasses('bg-background/80 backdrop-blur-md border-b');
       return;
     }
+
+    // Client-side effect for scroll-based visibility
     if (!useScrollHidingHeader) {
       setHeaderVisible(true);
       return;
@@ -87,52 +95,65 @@ const Header = () => {
       lastScrollYLocal = currentScrollY;
     };
     window.addEventListener('scroll', controlHeaderVisibility, { passive: true });
-    controlHeaderVisibility();
+    controlHeaderVisibility(); 
     return () => window.removeEventListener('scroll', controlHeaderVisibility);
   }, [pathname, useScrollHidingHeader, headerScrollThreshold]);
+
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
+    // Client-side effect for scroll-based background
     const controlHeaderBackground = () => {
-      if (pathname === '/videos') {
+      if (pathname === '/videos') { 
         setDynamicHeaderBackgroundClasses('');
         return;
       }
-      if (useScrollHidingHeader) {
+      if (useScrollHidingHeader) { 
         const currentScrollY = window.scrollY;
         const newBackgroundClasses = (currentScrollY < 50) ? '' : 'bg-background/80 backdrop-blur-md border-b';
         setDynamicHeaderBackgroundClasses(newBackgroundClasses);
-      } else {
+      } else { 
         setDynamicHeaderBackgroundClasses('bg-background/80 backdrop-blur-md border-b');
       }
     };
-    
     window.addEventListener('scroll', controlHeaderBackground, { passive: true });
     controlHeaderBackground(); 
     return () => window.removeEventListener('scroll', controlHeaderBackground);
-  }, [pathname, useScrollHidingHeader]);
+  }, [pathname, useScrollHidingHeader]); 
 
 
   if (pathname === '/videos') {
-    return null;
+    return null; 
   }
 
   const handleLogout = () => {
     logout();
     router.push('/');
-    setIsSheetOpen(false);
+    setIsSheetOpen(false); 
   };
 
   const getDashboardPath = () => {
     if (role === 'admin') return '/dashboard/admin';
     if (role === 'student') return '/dashboard/student';
-    return '/';
+    return '/'; 
   };
 
   const commonNavButtonClasses = "w-full justify-start py-3 px-2 text-base";
   const commonIconClasses = "mr-2 h-5 w-5";
   const headerBaseClasses = 'sticky top-0 z-50 transition-transform duration-300 ease-in-out';
+
+  const ThemeToggleButton = () => (
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={toggleTheme}
+      aria-label={t.toggleTheme}
+      className="hover:bg-accent/20 w-9 h-9"
+    >
+      {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+    </Button>
+  );
 
   const desktopNavItems = (
     <>
@@ -169,17 +190,15 @@ const Header = () => {
           </Button>
         </>
       )}
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={toggleTheme}
-        aria-label={t.toggleTheme}
-        className="hover:bg-accent/20 w-9 h-9"
-      >
-        {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-      </Button>
+      <ThemeToggleButton />
     </>
   );
+  
+  // Determine if anything should be shown on the left for mobile
+  // Show dashboard link if authenticated.
+  // Show logo if not authenticated AND not on homepage (as logo is hidden on homepage).
+  const showMobileLeftContent = isAuthenticated || (!isOnHomepage && !isAuthenticated);
+
 
   return (
     <header className={cn(
@@ -188,101 +207,114 @@ const Header = () => {
         {'!-translate-y-full': !headerVisible && useScrollHidingHeader }
       )}>
       <nav className="container mx-auto px-4 py-3 flex justify-between items-center min-h-[57px]">
-        {/* Mobile Left Side: Dashboard or Logo (conditionally) */}
-        {isMobile && isAuthenticated && (
-          <Button variant="ghost" size="sm" asChild className="text-xs p-1 mr-auto">
-            <Link href={getDashboardPath()}>
-              <LayoutDashboard className="mr-1 h-4 w-4" /> {t.dashboard}
-            </Link>
-          </Button>
-        )}
-        {isMobile && !isAuthenticated && !isOnHomepage && <LuminaLogo />}
-        
-        {/* Desktop: Logo (conditionally) */}
-        {!isMobile && !isOnHomepage && <LuminaLogo />}
-
-        {/* Mobile Right Side: Menu Trigger (always, but position adjusts) */}
+        {/* Left side */}
         {isMobile ? (
-            <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-              <SheetTrigger asChild className={cn(
-                  (!isAuthenticated && isOnHomepage) && "ml-auto" // If no dashboard link on left & on homepage, push menu to right
-              )}>
-                <Button variant="ghost" size="icon">
-                  <Menu className="h-6 w-6" />
-                  <span className="sr-only">{t.openMenu}</span>
+            // Mobile Left Side: Dashboard or Logo (conditionally)
+            showMobileLeftContent && (
+              isAuthenticated ? (
+                <Button variant="ghost" size="sm" asChild className="text-xs p-1">
+                  <Link href={getDashboardPath()}>
+                    <LayoutDashboard className="mr-1 h-4 w-4" /> {t.dashboard}
+                  </Link>
                 </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-[280px] sm:w-[320px] p-0">
-                <SheetHeader className="p-4 border-b">
-                    <SheetTitle><LuminaLogo /></SheetTitle> {/* Logo always in sheet title */}
-                </SheetHeader>
-                <div className="flex flex-col space-y-1 p-4">
-                  <SheetClose asChild>
-                    <Button 
-                      variant="ghost" 
-                      asChild 
-                      className={cn(
-                        commonNavButtonClasses, 
-                        pathname === '/' && "bg-accent text-accent-foreground underline underline-offset-4"
-                      )}
-                    >
-                      <Link href="/"><Home className={commonIconClasses} /> {t.all}</Link>
-                    </Button>
-                  </SheetClose>
-                  <SheetClose asChild>
-                      <Button variant="ghost" asChild className={cn(commonNavButtonClasses, pathname === '/courses/search' && "bg-accent text-accent-foreground")}>
-                        <Link href="/courses/search"><Search className={commonIconClasses} /> {t.explore}</Link>
-                      </Button>
-                  </SheetClose>
-                  {authLoading ? (
-                    <Button variant="ghost" className={commonNavButtonClasses} disabled><Loader2 className="mr-2 h-4 w-4 animate-spin"/>{t.loading}</Button>
-                  ) : isAuthenticated ? (
-                    <>
-                      {/* Dashboard link is now directly on header for mobile, so it's optional here or can be repeated */}
-                      {/* <SheetClose asChild>
-                        <Button variant="ghost" asChild className={cn(commonNavButtonClasses, (pathname.startsWith('/dashboard')) && "bg-accent text-accent-foreground")}>
-                          <Link href={getDashboardPath()}><LayoutDashboard className={commonIconClasses} /> {t.dashboard}</Link>
-                        </Button>
-                      </SheetClose> */}
-                      <Button
-                        variant="ghost"
-                        onClick={handleLogout}
-                        className={`${commonNavButtonClasses} text-destructive hover:text-destructive hover:bg-destructive/10`}
-                      >
-                        <LogOut className={commonIconClasses} /> {t.logout}
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <SheetClose asChild>
-                        <Button variant="ghost" asChild className={cn(commonNavButtonClasses, pathname === '/login' && "bg-accent text-accent-foreground")}>
-                          <Link href="/login"><LogIn className={commonIconClasses} /> {t.login}</Link>
-                        </Button>
-                      </SheetClose>
-                      <SheetClose asChild>
-                        <Button variant="ghost" asChild className={cn(commonNavButtonClasses, pathname === '/register' && "bg-accent text-accent-foreground")}>
-                          <Link href="/register"><UserPlus className={commonIconClasses} /> {t.register}</Link>
-                        </Button>
-                      </SheetClose>
-                    </>
-                  )}
-                  <Separator className="my-2" />
-                  <Button
-                    variant="ghost"
-                    onClick={() => { toggleTheme(); setIsSheetOpen(false); }}
-                    className={commonNavButtonClasses}
-                  >
-                    {theme === 'light' ? <Moon className={commonIconClasses} /> : <Sun className={commonIconClasses} />}
-                    {t.toggleTheme}
+              ) : ( // Not authenticated AND not on homepage (implicit from showMobileLeftContent)
+                <LuminaLogo />
+              )
+            )
+          ) : (
+            // Desktop Left Side: Logo only if not on homepage
+            !isOnHomepage && <LuminaLogo />
+          )
+        }
+
+
+        {/* Right side: Mobile Specific or Desktop Nav Items */}
+        {isMobile ? (
+          <div className={cn(
+            "flex items-center",
+            // If no content on the left (e.g. unauth homepage), push right content to far right
+            !showMobileLeftContent && "ml-auto" 
+          )}>
+            {isOnHomepage ? (
+              // On mobile homepage, only show theme toggle, no hamburger
+              <ThemeToggleButton />
+            ) : (
+              // On other mobile pages, show hamburger menu
+              <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <Menu className="h-6 w-6" />
+                    <span className="sr-only">{t.openMenu}</span>
                   </Button>
-                </div>
-              </SheetContent>
-            </Sheet>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-[280px] sm:w-[320px] p-0">
+                  <SheetHeader className="p-4 border-b">
+                      <SheetTitle><LuminaLogo /></SheetTitle>
+                  </SheetHeader>
+                  <div className="flex flex-col space-y-1 p-4">
+                    <SheetClose asChild>
+                      <Button 
+                        variant="ghost" 
+                        asChild 
+                        className={cn(
+                          commonNavButtonClasses, 
+                          pathname === '/' && "bg-accent text-accent-foreground underline underline-offset-4"
+                        )}
+                      >
+                        <Link href="/"><Home className={commonIconClasses} /> {t.all}</Link>
+                      </Button>
+                    </SheetClose>
+                    <SheetClose asChild>
+                        <Button variant="ghost" asChild className={cn(commonNavButtonClasses, pathname === '/courses/search' && "bg-accent text-accent-foreground")}>
+                          <Link href="/courses/search"><Search className={commonIconClasses} /> {t.explore}</Link>
+                        </Button>
+                    </SheetClose>
+                    {authLoading ? (
+                      <Button variant="ghost" className={commonNavButtonClasses} disabled><Loader2 className="mr-2 h-4 w-4 animate-spin"/>{t.loading}</Button>
+                    ) : isAuthenticated ? (
+                      <>
+                        {/* Dashboard link already on header bar for mobile */}
+                        <Button
+                          variant="ghost"
+                          onClick={handleLogout}
+                          className={`${commonNavButtonClasses} text-destructive hover:text-destructive hover:bg-destructive/10`}
+                        >
+                          <LogOut className={commonIconClasses} /> {t.logout}
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <SheetClose asChild>
+                          <Button variant="ghost" asChild className={cn(commonNavButtonClasses, pathname === '/login' && "bg-accent text-accent-foreground")}>
+                            <Link href="/login"><LogIn className={commonIconClasses} /> {t.login}</Link>
+                          </Button>
+                        </SheetClose>
+                        <SheetClose asChild>
+                          <Button variant="ghost" asChild className={cn(commonNavButtonClasses, pathname === '/register' && "bg-accent text-accent-foreground")}>
+                            <Link href="/register"><UserPlus className={commonIconClasses} /> {t.register}</Link>
+                          </Button>
+                        </SheetClose>
+                      </>
+                    )}
+                    <Separator className="my-2" />
+                    <Button
+                      variant="ghost"
+                      onClick={() => { toggleTheme(); setIsSheetOpen(false); }}
+                      className={commonNavButtonClasses}
+                    >
+                      {theme === 'light' ? <Moon className={commonIconClasses} /> : <Sun className={commonIconClasses} />}
+                      {t.toggleTheme}
+                    </Button>
+                  </div>
+                </SheetContent>
+              </Sheet>
+            )}
+          </div>
         ) : ( 
-          // Desktop Right Side: Nav Items
+          // Desktop Navigation
           <div className={cn(
               "flex items-center space-x-1", 
-              (isOnHomepage || isMobile) && "ml-auto" // If on homepage (desktop) or mobile, push nav items to right (if no logo/dashboard link on left)
+              (isOnHomepage && !isMobile) && "ml-auto" 
             )}>
             {desktopNavItems}
           </div>
