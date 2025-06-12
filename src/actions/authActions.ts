@@ -9,11 +9,11 @@ import {
   SUPER_ADMIN_EMAIL,
   getAllUsersFromMock as getAllUsersFromMockUtil
 } from '@/lib/authUtils';
-import type { User as MockUserType, Role as PrismaRoleType } from '@/lib/authUtils'; // Use internal MockUserType
+import type { User as PrismaUserType, Role as PrismaRoleType } from '@prisma/client';
 
 const LoginInputSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
-  password: z.string().min(1, { message: "Password cannot be empty." }), // Keep min 1 for initial validation
+  password: z.string().min(1, { message: "Password cannot be empty." }),
 });
 
 const RegisterInputSchema = z.object({
@@ -28,7 +28,7 @@ const UpdateRoleInputSchema = z.object({
 });
 
 
-export const serverLoginUser = async (email_from_form_raw: string, password_from_form: string): Promise<MockUserType | null> => {
+export const serverLoginUser = async (email_from_form_raw: string, password_from_form: string): Promise<PrismaUserType | null> => {
   const email_from_form = email_from_form_raw.toLowerCase();
   console.log(`[AuthActions - serverLoginUser] Attempting login for email: ${email_from_form}, password_from_form (prefix): ${password_from_form.substring(0,3)}... (length: ${password_from_form.length})`);
   
@@ -47,10 +47,19 @@ export const serverLoginUser = async (email_from_form_raw: string, password_from
     console.log(`[AuthActions - serverLoginUser] User found for ${validatedEmail}. ID: ${user.id}. Stored hash (prefix): ${user.passwordHash?.substring(0,10)}...`);
     
     let isMatch = false;
-    
-    // Secure bcryptjs comparison for all users
-    console.log(`[AuthActions - serverLoginUser] Proceeding with bcrypt.compare for user ${validatedEmail}.`);
-    isMatch = await comparePassword(validatedPassword, user.passwordHash || '');
+
+    // Temporary Debugging Bypass for admin@example.com
+    if (validatedEmail === SUPER_ADMIN_EMAIL.toLowerCase() && validatedPassword === 'superadminpass') {
+      console.warn("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+      console.warn("!!! [AuthActions - serverLoginUser] DEBUGGING BYPASS ACTIVATED for admin@example.com !!!");
+      console.warn("!!! Password check was SKIPPED. Login granted directly. REMOVE THIS BYPASS. !!!");
+      console.warn("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+      isMatch = true;
+    } else {
+      // Standard secure bcryptjs comparison for all other users or if admin uses a different password
+      console.log(`[AuthActions - serverLoginUser] Proceeding with bcrypt.compare for user ${validatedEmail}.`);
+      isMatch = await comparePassword(validatedPassword, user.passwordHash || '');
+    }
         
     console.log(`[AuthActions - serverLoginUser] Final isMatch result for ${validatedEmail}: ${isMatch}`);
 
@@ -58,7 +67,7 @@ export const serverLoginUser = async (email_from_form_raw: string, password_from
       console.log(`[AuthActions - serverLoginUser] Password match for user ID: ${user.id}. Login successful.`);
       // @ts-ignore 
       const { passwordHash, ...userWithoutPasswordHash } = user; 
-      return userWithoutPasswordHash as MockUserType;
+      return userWithoutPasswordHash as PrismaUserType;
     } else {
       console.log(`[AuthActions - serverLoginUser] Password mismatch for user ID: ${user.id}.`);
     }
@@ -68,7 +77,7 @@ export const serverLoginUser = async (email_from_form_raw: string, password_from
   return null;
 };
 
-export const serverRegisterUser = async (name: string, email_raw: string, password_param: string): Promise<MockUserType | null> => {
+export const serverRegisterUser = async (name: string, email_raw: string, password_param: string): Promise<PrismaUserType | null> => {
   const email = email_raw.toLowerCase(); // Normalize email
   console.log(`[AuthActions - serverRegisterUser] Attempting registration for email: ${email}, name: ${name}, password_param (prefix): ${password_param.substring(0,3)}... (length: ${password_param.length})`);
   const validation = RegisterInputSchema.safeParse({ name, email, password: password_param });
@@ -94,7 +103,7 @@ export const serverRegisterUser = async (name: string, email_raw: string, passwo
     console.log(`[AuthActions - serverRegisterUser] Registration successful for: ${newUser.email}, ID: ${newUser.id}. Hash stored (prefix): ${newUser.passwordHash.substring(0,10)}...`);
     // @ts-ignore
     const { passwordHash, ...userWithoutPasswordHash } = newUser;
-    return userWithoutPasswordHash as MockUserType;
+    return userWithoutPasswordHash as PrismaUserType;
   } catch (error) {
     console.error("[AuthActions - serverRegisterUser] Error during user registration process:", error);
     if (error instanceof Error && (error.message === "UserAlreadyExists")) {
@@ -105,17 +114,17 @@ export const serverRegisterUser = async (name: string, email_raw: string, passwo
 };
 
 
-export async function getAllUsersServerAction(): Promise<MockUserType[]> {
+export async function getAllUsersServerAction(): Promise<PrismaUserType[]> {
   console.log("[AuthActions - getAllUsersServerAction] Fetching all users from in-memory store.");
   const users = await getAllUsersFromMockUtil();
   return users.map(user => {
     // @ts-ignore
     const { passwordHash, ...userWithoutPasswordHash } = user;
-    return userWithoutPasswordHash as MockUserType;
+    return userWithoutPasswordHash as PrismaUserType;
   });
 }
 
-export async function updateUserRoleServerAction(userId: string, newRole: PrismaRoleType): Promise<MockUserType | null> {
+export async function updateUserRoleServerAction(userId: string, newRole: PrismaRoleType): Promise<PrismaUserType | null> {
   console.log(`[AuthActions - updateUserRoleServerAction] Attempting to update role for user ID: ${userId} to ${newRole}`);
   const validation = UpdateRoleInputSchema.safeParse({ userId, newRole });
   if (!validation.success) {
@@ -129,12 +138,12 @@ export async function updateUserRoleServerAction(userId: string, newRole: Prisma
       throw new Error("InvalidRole");
   }
   try {
-    const updatedUser = await updateUserRoleInMock(validation.data.userId, validation.data.newRole as 'student' | 'admin');
+    const updatedUser = await updateUserRoleInMock(validation.data.userId, validation.data.newRole as 'STUDENT' | 'ADMIN');
     if (updatedUser) {
       console.log(`[AuthActions - updateUserRoleServerAction] Role updated successfully for user ID: ${userId} to ${newRole}`);
       // @ts-ignore
       const { passwordHash, ...userWithoutPasswordHash } = updatedUser;
-      return userWithoutPasswordHash as MockUserType;
+      return userWithoutPasswordHash as PrismaUserType;
     } else {
       console.warn(`[AuthActions - updateUserRoleServerAction] User not found or update failed for user ID: ${userId}`);
       return null;
