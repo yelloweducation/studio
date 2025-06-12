@@ -5,26 +5,16 @@ import { useAuth } from '@/hooks/useAuth';
 import LuminaLogo from '@/components/LuminaLogo';
 import { Button } from '@/components/ui/button';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Menu, Search, User as UserIcon, CircleUser } from 'lucide-react'; // Added UserIcon, CircleUser
+import { Home, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Menu, Search, User as UserIcon, CircleUser, Loader2 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useIsMobile } from '@/hooks/use-mobile';
-import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-  SheetClose,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { Separator } from '@/components/ui/separator';
 import React, { useEffect, useState } from 'react';
 import { cn } from "@/lib/utils";
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Loader2 } from 'lucide-react'; // Ensured Loader2 is imported
 
 const headerTranslations = {
   en: {
-    home: "Home", // This key is not directly used for "ALL" link text, but good for context
+    home: "Home",
     explore: "Explore",
     welcome: "Welcome",
     dashboard: "Dashboard",
@@ -34,7 +24,7 @@ const headerTranslations = {
     toggleTheme: "Toggle Theme",
     openMenu: "Open menu",
     loading: "Loading...",
-    all: "ALL", // Text for the "ALL" link
+    all: "ALL",
     searchLabel: "Search Courses",
     profileLabel: "Profile / Login",
   },
@@ -65,44 +55,45 @@ const Header = () => {
   const t = headerTranslations[language];
 
   const isOnHomepage = pathname === '/';
+  // Controls the "hide header on scroll down" effect, currently only for homepage.
   const useScrollHidingHeader = isOnHomepage;
-  const headerScrollThreshold = 100;
+  const headerScrollThreshold = 100; // Pixels to scroll before header starts hiding
 
+  // State for dynamic background classes. Initialized to have background for SSR.
   const [dynamicHeaderBackgroundClasses, setDynamicHeaderBackgroundClasses] = useState(
-    isOnHomepage ? '' : 'bg-background/80 backdrop-blur-md border-b' // Start transparent on homepage, bg on others
+    pathname === '/videos' ? '' : 'bg-background/80 backdrop-blur-md border-b'
   );
   const [headerVisible, setHeaderVisible] = useState(true);
 
   useEffect(() => {
-    // Initialize with server-render friendly default
-    const initialBg = (pathname === '/' && typeof window !== 'undefined' && window.scrollY < 50) ? '' : 'bg-background/80 backdrop-blur-md border-b';
-    if (pathname === '/videos') {
-        setDynamicHeaderBackgroundClasses('');
-    } else {
-        setDynamicHeaderBackgroundClasses(initialBg);
-    }
-
+    // This effect handles the transparency of the header based on scroll position.
+    // It applies to all pages except '/videos'.
     if (typeof window === 'undefined') return;
 
     const controlHeaderBackground = () => {
       if (pathname === '/videos') {
-        setDynamicHeaderBackgroundClasses('');
-        return;
-      }
-      if (useScrollHidingHeader) {
-        const currentScrollY = window.scrollY;
-        setDynamicHeaderBackgroundClasses((currentScrollY < 50) ? '' : 'bg-background/80 backdrop-blur-md border-b');
+        setDynamicHeaderBackgroundClasses(''); // Always fully transparent for /videos
       } else {
-        setDynamicHeaderBackgroundClasses('bg-background/80 backdrop-blur-md border-b');
+        // Transparent at top, background otherwise for other pages
+        setDynamicHeaderBackgroundClasses(window.scrollY < 50 ? '' : 'bg-background/80 backdrop-blur-md border-b');
       }
     };
 
+    controlHeaderBackground(); // Set initial state based on current scroll
+    window.addEventListener('scroll', controlHeaderBackground, { passive: true });
+    return () => window.removeEventListener('scroll', controlHeaderBackground);
+  }, [pathname]); // Rerun if pathname changes
+
+  useEffect(() => {
+    // This effect handles the visibility (show/hide on scroll) of the header.
+    // It only applies if useScrollHidingHeader is true (currently only homepage).
+    if (typeof window === 'undefined' || !useScrollHidingHeader) {
+      setHeaderVisible(true); // Ensure header is visible if not using scroll hiding
+      return;
+    }
+
     let lastScrollYLocal = window.scrollY;
     const controlHeaderVisibility = () => {
-      if (!useScrollHidingHeader) {
-        setHeaderVisible(true);
-        return;
-      }
       const currentScrollY = window.scrollY;
       if (currentScrollY > headerScrollThreshold && currentScrollY > lastScrollYLocal) {
         setHeaderVisible(false);
@@ -112,19 +103,15 @@ const Header = () => {
       lastScrollYLocal = currentScrollY;
     };
 
-    window.addEventListener('scroll', controlHeaderBackground, { passive: true });
+    controlHeaderVisibility(); // Set initial state
     window.addEventListener('scroll', controlHeaderVisibility, { passive: true });
-    controlHeaderBackground();
-    controlHeaderVisibility();
-
-    return () => {
-      window.removeEventListener('scroll', controlHeaderBackground);
-      window.removeEventListener('scroll', controlHeaderVisibility);
-    };
+    return () => window.removeEventListener('scroll', controlHeaderVisibility);
   }, [pathname, useScrollHidingHeader, headerScrollThreshold]);
 
 
   if (pathname === '/videos') {
+    // On the /videos page, a different, simpler header is used (VideoPageHeader.tsx)
+    // or no header at all based on its own logic. So, this main header is null.
     return null;
   }
 
@@ -136,12 +123,10 @@ const Header = () => {
   const getDashboardPath = () => {
     if (role === 'admin') return '/dashboard/admin';
     if (role === 'student') return '/dashboard/student';
-    return '/';
+    return '/'; // Fallback
   };
 
-  const commonNavButtonClasses = "w-full justify-start py-3 px-2 text-base";
-  const commonIconClasses = "mr-2 h-5 w-5";
-  const headerBaseClasses = 'sticky top-0 z-50 transition-all duration-300 ease-in-out'; // Removed transform from base
+  const headerBaseClasses = 'sticky top-0 z-50 transition-all duration-300 ease-in-out';
 
   const ThemeToggleButton = React.memo(() => (
     <Button
@@ -156,11 +141,10 @@ const Header = () => {
   ));
   ThemeToggleButton.displayName = 'ThemeToggleButton';
 
-
   // Desktop Navigation Items
   const desktopNavItems = (
     <>
-      <Button variant="ghost" size="sm" asChild className={cn("hover:bg-accent/20", pathname === '/' && "text-primary font-semibold underline underline-offset-4")}>
+      <Button variant="ghost" size="sm" asChild className={cn("hover:bg-accent/20", isOnHomepage && "text-primary underline underline-offset-4 font-semibold")}>
         <Link href="/">{t.all}</Link>
       </Button>
       <Button variant="ghost" size="sm" asChild className={cn("hover:bg-accent/20", pathname === '/courses/search' && "bg-accent/10 text-primary font-semibold")}>
@@ -200,21 +184,21 @@ const Header = () => {
   return (
     <header className={cn(
         headerBaseClasses,
-        dynamicHeaderBackgroundClasses,
-        {'!-translate-y-full': !headerVisible && useScrollHidingHeader && (typeof window !== 'undefined' && window.scrollY > headerScrollThreshold) } // Added scrollY check for hiding
+        dynamicHeaderBackgroundClasses, // Handles transparency based on scroll and page
+        {'!-translate-y-full': !headerVisible && useScrollHidingHeader } // Hides header on scroll down (homepage only for now)
       )}>
       <nav className="container mx-auto px-4 py-3 flex justify-between items-center min-h-[57px]">
         {/* Left Side */}
         {isMobile ? (
           <Link href="/" className={cn(
-            "text-base font-medium", // Adjusted for "ALL"
-            pathname === '/' ? "text-primary underline underline-offset-4 font-semibold" : "text-foreground hover:text-primary"
+            "text-sm font-medium", // Slightly smaller text for "ALL" on mobile
+            isOnHomepage ? "text-primary underline underline-offset-4 font-semibold" : "text-foreground hover:text-primary"
           )}>
             {t.all}
           </Link>
         ) : (
           // Desktop: Logo only if not on homepage
-          !isOnHomepage ? <LuminaLogo /> : <div /> // Empty div to help with justify-between
+          !isOnHomepage ? <LuminaLogo /> : <div className="w-[160px]"/> // Placeholder to balance flex justify-between
         )}
 
         {/* Right Side */}
@@ -231,13 +215,13 @@ const Header = () => {
                     <Loader2 className="h-5 w-5 animate-spin" />
                 </Button>
             ) : isAuthenticated ? (
-                <Button variant="ghost" size="icon" asChild aria-label={t.dashboard}  className="w-9 h-9">
+                <Button variant="ghost" size="icon" asChild aria-label={t.profileLabel}  className="w-9 h-9">
                     <Link href={getDashboardPath()}>
                         <UserIcon className="h-5 w-5" />
                     </Link>
                 </Button>
             ) : (
-                <Button variant="ghost" size="icon" asChild aria-label={t.login}  className="w-9 h-9">
+                <Button variant="ghost" size="icon" asChild aria-label={t.profileLabel}  className="w-9 h-9">
                     <Link href="/login">
                         <LogIn className="h-5 w-5" />
                     </Link>
@@ -247,10 +231,7 @@ const Header = () => {
           </div>
         ) : (
           // Desktop Navigation
-          <div className={cn(
-              "flex items-center space-x-1",
-              (isOnHomepage) && "ml-auto" // Push to right if no logo on homepage
-            )}>
+          <div className={cn("flex items-center space-x-1")}>
             {desktopNavItems}
           </div>
         )}
@@ -260,4 +241,3 @@ const Header = () => {
 };
 
 export default Header;
-
