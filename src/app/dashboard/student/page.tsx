@@ -8,7 +8,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import CourseCard from "@/components/courses/CourseCard";
 import { type Course, type Enrollment } from "@/lib/dbUtils"; // Use Prisma types from dbUtils
-import { getEnrollmentsByUserIdFromDb } from "@/lib/dbUtils"; // Use Prisma-based functions
+import { serverGetEnrollmentsByUserId } from '@/actions/adminDataActions'; // UPDATED IMPORT
 import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -49,17 +49,18 @@ export default function StudentDashboardPage() {
         setIsLoading(true);
         console.log("[StudentDashboard] Fetching enrollments for user:", user.id);
         try {
-          const userEnrollments = await getEnrollmentsByUserIdFromDb(user.id);
-          console.log("[StudentDashboard] Fetched userEnrollments:", userEnrollments);
+          // Use server action instead of direct dbUtils import
+          const userEnrollments = await serverGetEnrollmentsByUserId(user.id); // UPDATED FUNCTION CALL
+          console.log("[StudentDashboard] Fetched userEnrollments via server action:", userEnrollments);
           
           const coursesData = userEnrollments
-            .map(enrollment => enrollment.course) // enrollment.course can be Course | undefined
-            .filter(Boolean) as Course[]; // filter(Boolean) removes null/undefined, then cast
+            .map(enrollment => enrollment.course) 
+            .filter(Boolean) as Course[]; 
           
           console.log("[StudentDashboard] Processed coursesData to display:", coursesData);
           setEnrolledCoursesDetails(coursesData);
         } catch (error) {
-          console.error("[StudentDashboard] Error fetching enrolled courses from database:", error);
+          console.error("[StudentDashboard] Error fetching enrolled courses from server action:", error);
           setEnrolledCoursesDetails([]);
         }
         setIsLoading(false);
