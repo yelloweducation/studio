@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import LuminaLogo from '@/components/LuminaLogo';
 import { Button } from '@/components/ui/button';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Menu, Search, Loader2 } from 'lucide-react';
+import { Home, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Menu, Search, User as UserIcon, CircleUser } from 'lucide-react'; // Added UserIcon, CircleUser
 import { useTheme } from '@/contexts/ThemeContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
@@ -20,10 +20,11 @@ import { Separator } from '@/components/ui/separator';
 import React, { useEffect, useState } from 'react';
 import { cn } from "@/lib/utils";
 import { useLanguage } from '@/contexts/LanguageContext';
+import { Loader2 } from 'lucide-react'; // Ensured Loader2 is imported
 
 const headerTranslations = {
   en: {
-    home: "ALL", // Will be used for the link text
+    home: "Home", // This key is not directly used for "ALL" link text, but good for context
     explore: "Explore",
     welcome: "Welcome",
     dashboard: "Dashboard",
@@ -33,10 +34,12 @@ const headerTranslations = {
     toggleTheme: "Toggle Theme",
     openMenu: "Open menu",
     loading: "Loading...",
-    all: "ALL", // Kept for consistency, though "home" key will be used for the link text
+    all: "ALL", // Text for the "ALL" link
+    searchLabel: "Search Courses",
+    profileLabel: "Profile / Login",
   },
   my: {
-    home: "အားလုံး",
+    home: "ပင်မ",
     explore: "ရှာဖွေရန်",
     welcome: "ကြိုဆိုပါတယ်",
     dashboard: "ဒက်ရှ်ဘုတ်",
@@ -47,6 +50,8 @@ const headerTranslations = {
     openMenu: "မီနူးဖွင့်ပါ",
     loading: "လုပ်ဆောင်နေသည်...",
     all: "အားလုံး",
+    searchLabel: "သင်တန်းရှာရန်",
+    profileLabel: "ပရိုဖိုင် / ဝင်ရန်",
   }
 };
 
@@ -56,36 +61,48 @@ const Header = () => {
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
   const isMobile = useIsMobile();
-  const [isSheetOpen, setIsSheetOpen] = React.useState(false);
   const { language } = useLanguage();
   const t = headerTranslations[language];
 
   const isOnHomepage = pathname === '/';
-  const useScrollHidingHeader = isOnHomepage; 
-  const headerScrollThreshold = 100; 
+  const useScrollHidingHeader = isOnHomepage;
+  const headerScrollThreshold = 100;
 
   const [dynamicHeaderBackgroundClasses, setDynamicHeaderBackgroundClasses] = useState(
-    'bg-background/80 backdrop-blur-md border-b' // Default to non-transparent
+    isOnHomepage ? '' : 'bg-background/80 backdrop-blur-md border-b' // Start transparent on homepage, bg on others
   );
   const [headerVisible, setHeaderVisible] = useState(true);
-  
+
   useEffect(() => {
-    if (typeof window === 'undefined') {
-      setHeaderVisible(true); 
-      // Set initial background based on pathname for SSR consistency
-      if (pathname === '/videos') setDynamicHeaderBackgroundClasses('');
-      else if (useScrollHidingHeader) setDynamicHeaderBackgroundClasses(''); // Homepage starts transparent
-      else setDynamicHeaderBackgroundClasses('bg-background/80 backdrop-blur-md border-b');
-      return;
+    // Initialize with server-render friendly default
+    const initialBg = (pathname === '/' && typeof window !== 'undefined' && window.scrollY < 50) ? '' : 'bg-background/80 backdrop-blur-md border-b';
+    if (pathname === '/videos') {
+        setDynamicHeaderBackgroundClasses('');
+    } else {
+        setDynamicHeaderBackgroundClasses(initialBg);
     }
 
-    // Client-side effect for scroll-based visibility
-    if (!useScrollHidingHeader) {
-      setHeaderVisible(true);
-      return;
-    }
+    if (typeof window === 'undefined') return;
+
+    const controlHeaderBackground = () => {
+      if (pathname === '/videos') {
+        setDynamicHeaderBackgroundClasses('');
+        return;
+      }
+      if (useScrollHidingHeader) {
+        const currentScrollY = window.scrollY;
+        setDynamicHeaderBackgroundClasses((currentScrollY < 50) ? '' : 'bg-background/80 backdrop-blur-md border-b');
+      } else {
+        setDynamicHeaderBackgroundClasses('bg-background/80 backdrop-blur-md border-b');
+      }
+    };
+
     let lastScrollYLocal = window.scrollY;
     const controlHeaderVisibility = () => {
+      if (!useScrollHidingHeader) {
+        setHeaderVisible(true);
+        return;
+      }
       const currentScrollY = window.scrollY;
       if (currentScrollY > headerScrollThreshold && currentScrollY > lastScrollYLocal) {
         setHeaderVisible(false);
@@ -94,56 +111,39 @@ const Header = () => {
       }
       lastScrollYLocal = currentScrollY;
     };
+
+    window.addEventListener('scroll', controlHeaderBackground, { passive: true });
     window.addEventListener('scroll', controlHeaderVisibility, { passive: true });
-    controlHeaderVisibility(); 
-    return () => window.removeEventListener('scroll', controlHeaderVisibility);
+    controlHeaderBackground();
+    controlHeaderVisibility();
+
+    return () => {
+      window.removeEventListener('scroll', controlHeaderBackground);
+      window.removeEventListener('scroll', controlHeaderVisibility);
+    };
   }, [pathname, useScrollHidingHeader, headerScrollThreshold]);
 
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    // Client-side effect for scroll-based background
-    const controlHeaderBackground = () => {
-      if (pathname === '/videos') { 
-        setDynamicHeaderBackgroundClasses('');
-        return;
-      }
-      if (useScrollHidingHeader) { 
-        const currentScrollY = window.scrollY;
-        const newBackgroundClasses = (currentScrollY < 50) ? '' : 'bg-background/80 backdrop-blur-md border-b';
-        setDynamicHeaderBackgroundClasses(newBackgroundClasses);
-      } else { 
-        setDynamicHeaderBackgroundClasses('bg-background/80 backdrop-blur-md border-b');
-      }
-    };
-    window.addEventListener('scroll', controlHeaderBackground, { passive: true });
-    controlHeaderBackground(); 
-    return () => window.removeEventListener('scroll', controlHeaderBackground);
-  }, [pathname, useScrollHidingHeader]); 
-
-
   if (pathname === '/videos') {
-    return null; 
+    return null;
   }
 
   const handleLogout = () => {
     logout();
     router.push('/');
-    setIsSheetOpen(false); 
   };
 
   const getDashboardPath = () => {
     if (role === 'admin') return '/dashboard/admin';
     if (role === 'student') return '/dashboard/student';
-    return '/'; 
+    return '/';
   };
 
   const commonNavButtonClasses = "w-full justify-start py-3 px-2 text-base";
   const commonIconClasses = "mr-2 h-5 w-5";
-  const headerBaseClasses = 'sticky top-0 z-50 transition-transform duration-300 ease-in-out';
+  const headerBaseClasses = 'sticky top-0 z-50 transition-all duration-300 ease-in-out'; // Removed transform from base
 
-  const ThemeToggleButton = () => (
+  const ThemeToggleButton = React.memo(() => (
     <Button
       variant="ghost"
       size="icon"
@@ -153,12 +153,15 @@ const Header = () => {
     >
       {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
     </Button>
-  );
+  ));
+  ThemeToggleButton.displayName = 'ThemeToggleButton';
 
+
+  // Desktop Navigation Items
   const desktopNavItems = (
     <>
-      <Button variant="ghost" size="sm" asChild className={cn("hover:bg-accent/20", pathname === '/' && "bg-accent/10 text-primary font-semibold")}>
-        <Link href="/"><Home className="mr-1 h-4 w-4" /> {t.all}</Link>
+      <Button variant="ghost" size="sm" asChild className={cn("hover:bg-accent/20", pathname === '/' && "text-primary font-semibold underline underline-offset-4")}>
+        <Link href="/">{t.all}</Link>
       </Button>
       <Button variant="ghost" size="sm" asChild className={cn("hover:bg-accent/20", pathname === '/courses/search' && "bg-accent/10 text-primary font-semibold")}>
           <Link href="/courses/search"><Search className="mr-1 h-4 w-4" /> {t.explore}</Link>
@@ -193,128 +196,60 @@ const Header = () => {
       <ThemeToggleButton />
     </>
   );
-  
-  // Determine if anything should be shown on the left for mobile
-  // Show dashboard link if authenticated.
-  // Show logo if not authenticated AND not on homepage (as logo is hidden on homepage).
-  const showMobileLeftContent = isAuthenticated || (!isOnHomepage && !isAuthenticated);
-
 
   return (
     <header className={cn(
         headerBaseClasses,
         dynamicHeaderBackgroundClasses,
-        {'!-translate-y-full': !headerVisible && useScrollHidingHeader }
+        {'!-translate-y-full': !headerVisible && useScrollHidingHeader && (typeof window !== 'undefined' && window.scrollY > headerScrollThreshold) } // Added scrollY check for hiding
       )}>
       <nav className="container mx-auto px-4 py-3 flex justify-between items-center min-h-[57px]">
-        {/* Left side */}
+        {/* Left Side */}
         {isMobile ? (
-            // Mobile Left Side: Dashboard or Logo (conditionally)
-            showMobileLeftContent && (
-              isAuthenticated ? (
-                <Button variant="ghost" size="sm" asChild className="text-xs p-1">
-                  <Link href={getDashboardPath()}>
-                    <LayoutDashboard className="mr-1 h-4 w-4" /> {t.dashboard}
-                  </Link>
-                </Button>
-              ) : ( // Not authenticated AND not on homepage (implicit from showMobileLeftContent)
-                <LuminaLogo />
-              )
-            )
-          ) : (
-            // Desktop Left Side: Logo only if not on homepage
-            !isOnHomepage && <LuminaLogo />
-          )
-        }
-
-
-        {/* Right side: Mobile Specific or Desktop Nav Items */}
-        {isMobile ? (
-          <div className={cn(
-            "flex items-center",
-            // If no content on the left (e.g. unauth homepage), push right content to far right
-            !showMobileLeftContent && "ml-auto" 
+          <Link href="/" className={cn(
+            "text-base font-medium", // Adjusted for "ALL"
+            pathname === '/' ? "text-primary underline underline-offset-4 font-semibold" : "text-foreground hover:text-primary"
           )}>
-            {isOnHomepage ? (
-              // On mobile homepage, only show theme toggle, no hamburger
-              <ThemeToggleButton />
+            {t.all}
+          </Link>
+        ) : (
+          // Desktop: Logo only if not on homepage
+          !isOnHomepage ? <LuminaLogo /> : <div /> // Empty div to help with justify-between
+        )}
+
+        {/* Right Side */}
+        {isMobile ? (
+          // Mobile: Direct Icons
+          <div className="flex items-center space-x-0.5 sm:space-x-1">
+            <Button variant="ghost" size="icon" asChild aria-label={t.searchLabel} className="w-9 h-9">
+                <Link href="/courses/search">
+                    <Search className="h-5 w-5" />
+                </Link>
+            </Button>
+            {authLoading ? (
+                <Button variant="ghost" size="icon" disabled  className="w-9 h-9">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                </Button>
+            ) : isAuthenticated ? (
+                <Button variant="ghost" size="icon" asChild aria-label={t.dashboard}  className="w-9 h-9">
+                    <Link href={getDashboardPath()}>
+                        <UserIcon className="h-5 w-5" />
+                    </Link>
+                </Button>
             ) : (
-              // On other mobile pages, show hamburger menu
-              <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <Menu className="h-6 w-6" />
-                    <span className="sr-only">{t.openMenu}</span>
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="right" className="w-[280px] sm:w-[320px] p-0">
-                  <SheetHeader className="p-4 border-b">
-                      <SheetTitle><LuminaLogo /></SheetTitle>
-                  </SheetHeader>
-                  <div className="flex flex-col space-y-1 p-4">
-                    <SheetClose asChild>
-                      <Button 
-                        variant="ghost" 
-                        asChild 
-                        className={cn(
-                          commonNavButtonClasses, 
-                          pathname === '/' && "bg-accent text-accent-foreground underline underline-offset-4"
-                        )}
-                      >
-                        <Link href="/"><Home className={commonIconClasses} /> {t.all}</Link>
-                      </Button>
-                    </SheetClose>
-                    <SheetClose asChild>
-                        <Button variant="ghost" asChild className={cn(commonNavButtonClasses, pathname === '/courses/search' && "bg-accent text-accent-foreground")}>
-                          <Link href="/courses/search"><Search className={commonIconClasses} /> {t.explore}</Link>
-                        </Button>
-                    </SheetClose>
-                    {authLoading ? (
-                      <Button variant="ghost" className={commonNavButtonClasses} disabled><Loader2 className="mr-2 h-4 w-4 animate-spin"/>{t.loading}</Button>
-                    ) : isAuthenticated ? (
-                      <>
-                        {/* Dashboard link already on header bar for mobile */}
-                        <Button
-                          variant="ghost"
-                          onClick={handleLogout}
-                          className={`${commonNavButtonClasses} text-destructive hover:text-destructive hover:bg-destructive/10`}
-                        >
-                          <LogOut className={commonIconClasses} /> {t.logout}
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <SheetClose asChild>
-                          <Button variant="ghost" asChild className={cn(commonNavButtonClasses, pathname === '/login' && "bg-accent text-accent-foreground")}>
-                            <Link href="/login"><LogIn className={commonIconClasses} /> {t.login}</Link>
-                          </Button>
-                        </SheetClose>
-                        <SheetClose asChild>
-                          <Button variant="ghost" asChild className={cn(commonNavButtonClasses, pathname === '/register' && "bg-accent text-accent-foreground")}>
-                            <Link href="/register"><UserPlus className={commonIconClasses} /> {t.register}</Link>
-                          </Button>
-                        </SheetClose>
-                      </>
-                    )}
-                    <Separator className="my-2" />
-                    <Button
-                      variant="ghost"
-                      onClick={() => { toggleTheme(); setIsSheetOpen(false); }}
-                      className={commonNavButtonClasses}
-                    >
-                      {theme === 'light' ? <Moon className={commonIconClasses} /> : <Sun className={commonIconClasses} />}
-                      {t.toggleTheme}
-                    </Button>
-                  </div>
-                </SheetContent>
-              </Sheet>
+                <Button variant="ghost" size="icon" asChild aria-label={t.login}  className="w-9 h-9">
+                    <Link href="/login">
+                        <LogIn className="h-5 w-5" />
+                    </Link>
+                </Button>
             )}
+            <ThemeToggleButton />
           </div>
-        ) : ( 
+        ) : (
           // Desktop Navigation
           <div className={cn(
-              "flex items-center space-x-1", 
-              (isOnHomepage && !isMobile) && "ml-auto" 
+              "flex items-center space-x-1",
+              (isOnHomepage) && "ml-auto" // Push to right if no logo on homepage
             )}>
             {desktopNavItems}
           </div>
@@ -325,3 +260,4 @@ const Header = () => {
 };
 
 export default Header;
+
