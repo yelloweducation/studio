@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChevronLeft, BookOpenText, PlayCircle, Lock, CheckCircle, AlertTriangle, Clock, ExternalLink, ArrowRight, Home, ShoppingCart, BadgeDollarSign, Hourglass, ListChecks, Users as TargetAudienceIcon, ShieldCheck, Timer, FileQuestion, Edit3 as PracticeQuizIcon, CheckSquare as GradedQuizIcon, Loader2 } from 'lucide-react';
+import { ChevronLeft, BookOpenText, PlayCircle, Lock, CheckCircle, AlertTriangle, Clock, ExternalLink, ArrowRight, Home as HomeIcon, ShoppingCart, BadgeDollarSign, Hourglass, ListChecks, Users as TargetAudienceIcon, ShieldCheck, Timer, FileQuestion, Edit3 as PracticeQuizIcon, CheckSquare as GradedQuizIcon, Loader2, LayoutDashboard } from 'lucide-react'; // Added HomeIcon, LayoutDashboard
 import { getEmbedUrl } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -29,6 +29,8 @@ interface PaymentInfo {
 const courseDetailTranslations = {
   en: {
     backToCourses: "Back to Courses",
+    navToHome: "Go to Homepage", // New
+    navToDashboard: "Go to Dashboard", // New
     taughtBy: "Taught by {instructor}",
     categoryLabel: "Category: {category}",
     priceLabel: "Price: {price} {currency}",
@@ -53,7 +55,7 @@ const courseDetailTranslations = {
     courseNotFound: "Course Not Found",
     courseNotFoundDesc: "Sorry, we couldn't find the course you were looking for (ID: {courseId}). It might have been moved or removed.",
     exploreOtherCourses: "Explore Other Courses",
-    backToHome: "Back to Home",
+    backToHome: "Back to Home", // Note: This key is used by the larger button on error page, distinct from navToHome
     whatYouWillLearn: "What You'll Learn",
     targetAudience: "Who This Course Is For",
     prerequisites: "Prerequisites",
@@ -70,6 +72,8 @@ const courseDetailTranslations = {
   },
   my: {
     backToCourses: "အတန်းများသို့ ပြန်သွားရန်",
+    navToHome: "ပင်မစာမျက်နှာသို့ သွားရန်", // New
+    navToDashboard: "ဒက်ရှ်ဘုတ်သို့ သွားရန်", // New
     taughtBy: "သင်ကြားသူ: {instructor}",
     categoryLabel: "အမျိုးအစား: {category}",
     priceLabel: "စျေးနှုန်း: {price} {currency}",
@@ -118,7 +122,7 @@ interface CourseDetailClientProps {
 
 export default function CourseDetailClient({ initialCourse, courseId }: CourseDetailClientProps) {
   const router = useRouter();
-  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const { user, isAuthenticated, role, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const { language } = useLanguage();
   const t = courseDetailTranslations[language];
@@ -130,7 +134,7 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
   const [isLoadingUserSpecificData, setIsLoadingUserSpecificData] = useState(true);
 
   useEffect(() => {
-    setCurrentCourse(initialCourse); // Update local state when prop changes
+    setCurrentCourse(initialCourse); 
     if (initialCourse?.modules?.[0]?.lessons?.[0]) {
       setFirstLessonPath(`/courses/${initialCourse.id}/learn/${initialCourse.modules[0].id}/${initialCourse.modules[0].lessons[0].id}`);
     } else {
@@ -141,15 +145,14 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
   useEffect(() => {
     const fetchUserSpecificData = async () => {
       if (authLoading) {
-        // Still waiting for auth. isLoadingUserSpecificData will be true.
         return;
       }
       if (!currentCourse) {
-        setIsLoadingUserSpecificData(false); // No course, so no user-specific data to load.
+        setIsLoadingUserSpecificData(false); 
         return;
       }
 
-      setIsLoadingUserSpecificData(true); // Set loading before async operations
+      setIsLoadingUserSpecificData(true); 
       try {
         if (isAuthenticated && user) {
           const enrollment = await serverGetEnrollmentForCourse(user.id, currentCourse.id);
@@ -157,7 +160,6 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
             setCompletionInfo({ isCompleted: enrollment.progress === 100, progress: enrollment.progress });
           } else {
             setCompletionInfo({ isCompleted: false, progress: 0 });
-            // TODO: Consider auto-enroll for free courses logic here or in serverCreateEnrollment
           }
 
           if (currentCourse.price && currentCourse.price > 0) {
@@ -166,7 +168,7 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
           } else {
             setPaymentInfo({ status: null }); 
           }
-        } else { // Not authenticated or no user
+        } else { 
           setCompletionInfo({ isCompleted: false, progress: 0 });
           setPaymentInfo({ status: null });
         }
@@ -183,6 +185,12 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
     fetchUserSpecificData();
   }, [user, isAuthenticated, authLoading, currentCourse, toast, language]);
 
+  const getDashboardPath = () => {
+    if (!isAuthenticated) return '/login'; 
+    if (role === 'admin') return '/dashboard/admin';
+    if (role === 'student') return '/dashboard/student';
+    return '/login'; // Default fallback
+  };
 
   const renderCTAButton = () => {
     if (!currentCourse) return null;
@@ -294,8 +302,6 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
     );
   };
 
-  // Loading state: Show skeleton if auth is loading OR if user-specific data is loading (for an existing course)
-  // The initialCourse being null is handled by the "Not Found" message.
   if (authLoading || (currentCourse && isLoadingUserSpecificData)) { 
     return (
       <div className="max-w-4xl mx-auto py-4 md:py-8 space-y-6">
@@ -338,12 +344,25 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
     );
   }
 
-  if (!currentCourse) { // This means initialCourse was null and all loading is done
+  if (!currentCourse) { 
     return (
       <div className="max-w-lg mx-auto py-6 sm:py-12 text-center">
-        <Button variant="outline" onClick={() => router.push('/')} className="mb-6">
-          <ChevronLeft className="mr-2 h-4 w-4" /> {t.backToHome}
-        </Button>
+        <div className="flex items-center gap-2 mb-4 md:mb-6"> {/* Moved here to be visible on not found page too */}
+            <Button variant="outline" size="icon" asChild title={t.navToHome}>
+                <Link href="/">
+                <HomeIcon className="h-4 w-4" />
+                <span className="sr-only">{t.navToHome}</span>
+                </Link>
+            </Button>
+            {(!authLoading && isAuthenticated) && (
+                <Button variant="outline" size="icon" asChild title={t.navToDashboard}>
+                <Link href={getDashboardPath()}>
+                    <LayoutDashboard className="h-4 w-4" />
+                    <span className="sr-only">{t.navToDashboard}</span>
+                </Link>
+                </Button>
+            )}
+        </div>
         <Card className="shadow-xl">
           <CardHeader>
             <CardTitle className="text-2xl flex items-center justify-center font-headline">
@@ -368,9 +387,26 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
 
   return (
     <div className="max-w-4xl mx-auto py-4 md:py-8">
-      <Button variant="outline" onClick={() => router.back()} className="mb-4 md:mb-6 text-sm">
-        <ChevronLeft className="mr-2 h-4 w-4" /> {t.backToCourses}
-      </Button>
+      <div className="flex items-center gap-2 mb-4 md:mb-6">
+        <Button variant="outline" size="icon" asChild title={t.navToHome}>
+            <Link href="/">
+            <HomeIcon className="h-4 w-4" />
+            <span className="sr-only">{t.navToHome}</span>
+            </Link>
+        </Button>
+        {(!authLoading && isAuthenticated) && (
+            <Button variant="outline" size="icon" asChild title={t.navToDashboard}>
+            <Link href={getDashboardPath()}>
+                <LayoutDashboard className="h-4 w-4" />
+                <span className="sr-only">{t.navToDashboard}</span>
+            </Link>
+            </Button>
+        )}
+        <Button variant="outline" onClick={() => router.back()} className="text-sm">
+            <ChevronLeft className="mr-2 h-4 w-4" /> {t.backToCourses}
+        </Button>
+      </div>
+
 
       <div className="grid md:grid-cols-3 gap-6 lg:gap-8 items-start">
         <div className="md:col-span-2 space-y-6">
@@ -581,3 +617,4 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
     </div>
   );
 }
+
