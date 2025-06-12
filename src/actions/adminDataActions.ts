@@ -43,6 +43,7 @@ import {
   addPaymentSubmissionToDb as addPaymentSubmissionDbUtil,
   updatePaymentSubmissionInDb as updatePaymentSubmissionDbUtil,
   getEnrollmentsByUserIdFromDb as getEnrollmentsByUserIdDbUtil,
+  updateEnrollmentProgressInDb, // Added
   getVideosFromDb, 
   addVideoToDb, 
   updateVideoInDb, 
@@ -99,7 +100,7 @@ export async function serverAddCourse(
         console.error("[ServerAction serverAddCourse] Error name:", error.name);
         console.error("[ServerAction serverAddCourse] Error message:", error.message);
     }
-    throw new Error(`Failed to add course. Server log may have details. Message: ${error instanceof Error ? error.message : 'Unknown server error'}`);
+    throw error; 
   }
 }
 
@@ -112,7 +113,19 @@ export async function serverUpdateCourse(
     quizzes?: Array<Partial<Omit<Quiz, 'id'|'courseId'|'createdAt'|'updatedAt'|'questions'>> & { id?: string, quizType: PrismaQuizType, questions?: Array<Partial<Omit<Question, 'id'|'quizId'|'createdAt'|'updatedAt'|'options'|'correctOptionId'>> & { id?: string, options: Array<Partial<Omit<Option, 'id'|'questionId'|'createdAt'|'updatedAt'>> & {id?:string}>, correctOptionText?: string }> }>
   }
 ): Promise<Course> {
-  return updateCourseInDb(courseId, courseData);
+  console.log(`[ServerAction serverUpdateCourse] Action called for course ID ${courseId}. Received data (first 200 chars):`, JSON.stringify(courseData).substring(0,200) + "...");
+  try {
+    const updatedCourse = await updateCourseInDb(courseId, courseData);
+    console.log(`[ServerAction serverUpdateCourse] updateCourseInDb successful for course ID ${courseId}, returning course ID:`, updatedCourse.id);
+    return updatedCourse;
+  } catch (error) {
+    console.error(`[ServerAction serverUpdateCourse] Error calling updateCourseInDb for course ID ${courseId}. Full error:`, error);
+    if (error instanceof Error) {
+        console.error(`[ServerAction serverUpdateCourse] Error name:`, error.name);
+        console.error(`[ServerAction serverUpdateCourse] Error message:`, error.message);
+    }
+    throw error;
+  }
 }
 
 export async function serverDeleteCourse(courseId: string): Promise<void> {
@@ -123,7 +136,20 @@ export async function serverSaveQuizWithQuestions(
     courseIdForQuiz: string,
     quizData: Omit<Quiz, 'courseId'|'createdAt'|'updatedAt'> & { quizType: MockQuizEnumType, questionsToUpsert?: any[], questionIdsToDelete?: string[] }
 ): Promise<Quiz> { 
-    return saveQuizWithQuestionsToDb(courseIdForQuiz, quizData);
+    console.log(`[ServerAction serverSaveQuizWithQuestions] Action called for course ID ${courseIdForQuiz}, quiz title: ${quizData.title}`);
+    try {
+        // @ts-ignore // MockQuizEnumType is compatible with PrismaQuizType for this call path
+        const savedQuiz = await saveQuizWithQuestionsToDb(courseIdForQuiz, quizData);
+        console.log(`[ServerAction serverSaveQuizWithQuestions] saveQuizWithQuestionsToDb successful, returning quiz ID:`, savedQuiz.id);
+        return savedQuiz;
+    } catch (error) {
+        console.error(`[ServerAction serverSaveQuizWithQuestions] Error calling saveQuizWithQuestionsToDb. Full error:`, error);
+        if (error instanceof Error) {
+            console.error(`[ServerAction serverSaveQuizWithQuestions] Error name:`, error.name);
+            console.error(`[ServerAction serverSaveQuizWithQuestions] Error message:`, error.message);
+        }
+        throw error;
+    }
 }
 
 
@@ -181,16 +207,16 @@ export async function serverCreateEnrollment(userId: string, courseId: string): 
   try {
     return await createEnrollmentDbUtil(userId, courseId);
   } catch (error) {
-    console.error("[ServerAction] Error creating enrollment:", error);
-    return null;
+    console.error("[ServerAction serverCreateEnrollment] Error creating enrollment:", error);
+    throw error; 
   }
 }
 export async function serverUpdateEnrollmentProgress(enrollmentId: string, progress: number): Promise<Enrollment | null> {
     try {
         return await updateEnrollmentProgressInDb(enrollmentId, progress);
     } catch (error) {
-        console.error("[ServerAction] Error updating enrollment progress:", error);
-        return null;
+        console.error("[ServerAction serverUpdateEnrollmentProgress] Error updating enrollment progress:", error);
+        throw error;
     }
 }
 
@@ -202,12 +228,19 @@ export async function serverGetEnrollmentsByUserId(userId: string): Promise<Enro
 // --- Checkout Page Actions ---
 export async function serverAddPaymentSubmission(
     submissionData: Omit<PaymentSubmission, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'submittedAt' | 'reviewedAt' | 'adminNotes' | 'user' | 'course'> & { userId: string, courseId: string }
-): Promise<PaymentSubmission | null> {
+): Promise<PaymentSubmission> { // Changed to return PaymentSubmission or throw
+    console.log("[ServerAction serverAddPaymentSubmission] Action called. Received data:", JSON.stringify(submissionData));
     try {
-        return await addPaymentSubmissionDbUtil(submissionData);
+        const result = await addPaymentSubmissionDbUtil(submissionData);
+        console.log("[ServerAction serverAddPaymentSubmission] addPaymentSubmissionDbUtil successful. Result:", JSON.stringify(result));
+        return result;
     } catch (error) {
-        console.error("[ServerAction] Error adding payment submission:", error);
-        return null;
+        console.error("[ServerAction serverAddPaymentSubmission] Error calling addPaymentSubmissionDbUtil:", error);
+        if (error instanceof Error) {
+          console.error("[ServerAction serverAddPaymentSubmission] Error name:", error.name);
+          console.error("[ServerAction serverAddPaymentSubmission] Error message:", error.message);
+        }
+        throw error; // Re-throw the error to be caught by the client
     }
 }
 
@@ -220,12 +253,23 @@ export async function serverUpdatePaymentSubmissionStatus(
     submissionId: string, 
     newStatus: PaymentSubmissionStatus, 
     adminNotes?: string | null
-): Promise<PaymentSubmission | null> {
+): Promise<PaymentSubmission> { // Changed to return PaymentSubmission or throw
+    console.log(`[ServerAction serverUpdatePaymentSubmissionStatus] Updating submission ${submissionId} to ${newStatus}`);
     try {
-        return await updatePaymentSubmissionDbUtil(submissionId, { status: newStatus, adminNotes: adminNotes === null ? undefined : adminNotes, reviewedAt: new Date() });
+        const result = await updatePaymentSubmissionDbUtil(submissionId, { 
+            status: newStatus, 
+            adminNotes: adminNotes === null ? undefined : adminNotes, // Prisma expects undefined for optional nulls
+            reviewedAt: new Date() 
+        });
+        console.log(`[ServerAction serverUpdatePaymentSubmissionStatus] Update successful for ${submissionId}. Result:`, JSON.stringify(result));
+        return result;
     } catch (error) {
-        console.error("[ServerAction] Error updating payment submission status:", error);
-        return null;
+        console.error(`[ServerAction serverUpdatePaymentSubmissionStatus] Error updating payment submission status for ${submissionId}:`, error);
+        if (error instanceof Error) {
+          console.error(`[ServerAction serverUpdatePaymentSubmissionStatus] Error name:`, error.name);
+          console.error(`[ServerAction serverUpdatePaymentSubmissionStatus] Error message:`, error.message);
+        }
+        throw error; 
     }
 }
 
@@ -250,3 +294,4 @@ export async function serverGetPaymentSettings(): Promise<PaymentSettings | null
 export async function serverSavePaymentSettings(settingsData: Omit<PaymentSettings, 'id'| 'updatedAt'>): Promise<PaymentSettings> {
     return savePaymentSettingsToDb(settingsData);
 }
+

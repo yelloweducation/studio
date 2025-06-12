@@ -67,7 +67,7 @@ const QuestionInputSchema = z.object({
 const QuizInputSchema = z.object({
   id: z.string().optional(),
   title: z.string().min(1, "Quiz title is required"),
-  quizType: z.nativeEnum(PrismaQuizTypeEnum), // Use imported Prisma enum object
+  quizType: z.nativeEnum(PrismaQuizTypeEnum), 
   passingScore: z.number().int().min(0).max(100).optional().nullable(),
   questions: z.array(QuestionInputSchema).optional(), 
 });
@@ -131,7 +131,7 @@ const PaymentSubmissionInputSchema = z.object({
   courseId: z.string().min(1, "Course ID is required"),
   amount: z.number().positive("Amount must be positive"),
   currency: z.string().min(1, "Currency is required"),
-  screenshotUrl: z.string().url("Screenshot URL must be a valid URL.").refine(val => val.startsWith('data:image/') || val.startsWith('http'), {
+  screenshotUrl: z.string().url("Screenshot URL must be a valid URL.").refine(val => val.startsWith('data:image/') || val.startsWith('http') || val.startsWith('https'), { // Added https
     message: "Screenshot must be a valid data URI image or an HTTP(S) URL.",
   }),
 });
@@ -284,7 +284,7 @@ export const addCourseToDb = async (
       quizzes: quizzes ? {
         create: quizzes.map((quizData) => ({
           title: quizData.title!,
-          quizType: quizData.quizType!, // Already validated by Zod to be Prisma enum
+          quizType: quizData.quizType!, 
           passingScore: quizData.passingScore,
           questions: quizData.questions ? {
             create: quizData.questions.map(q => ({
@@ -306,11 +306,11 @@ export const addCourseToDb = async (
     });
     console.log("[dbUtils] addCourseToDb: Course created with ID:", createdCourse.id);
 
-    if (createdCourse.quizzes && quizzes) { // `quizzes` here is from validation.data
+    if (createdCourse.quizzes && quizzes) { 
       console.log("[dbUtils] addCourseToDb: Starting correctOptionId update loop for new quizzes.");
       for (let i = 0; i < createdCourse.quizzes.length; i++) {
           const dbQuiz = createdCourse.quizzes[i];
-          const formQuiz = quizzes[i]; // Original input quiz data (after Zod validation)
+          const formQuiz = quizzes[i]; 
           console.log(`[dbUtils] addCourseToDb: Processing quiz index ${i}, DB Quiz ID: ${dbQuiz.id}, Form Quiz Title: ${formQuiz?.title}`);
           if (dbQuiz.questions && formQuiz?.questions) {
               for (let j = 0; j < dbQuiz.questions.length; j++) {
@@ -454,7 +454,7 @@ export const updateCourseInDb = async (
     });
     console.log(`[dbUtils] updateCourseInDb: Course ${courseId} updated. Starting correctOptionId update loop for its quizzes.`);
     
-    if (updatedCourse.quizzes && quizzes) { // `quizzes` is from validation.data
+    if (updatedCourse.quizzes && quizzes) { 
         for (let i = 0; i < updatedCourse.quizzes.length; i++) {
             const dbQuiz = updatedCourse.quizzes[i];
             const formQuiz = quizzes[i]; 
@@ -755,43 +755,66 @@ export const getPaymentSubmissionsFromDb = async (filter?: { userId?: string }):
   console.log("[dbUtils] getPaymentSubmissionsFromDb: Fetching payment submissions. DATABASE_URL:", process.env.DATABASE_URL ? "Exists" : "MISSING", "Filter:", filter);
   return prisma.paymentSubmission.findMany({
     where: filter,
-    include: { user: {select: {name:true, email:true}}, course: {select: {title: true}} }, 
+    include: { user: {select: {id:true, name:true, email:true}}, course: {select: {id:true, title: true}} }, 
     orderBy: { submittedAt: 'desc' }
   });
 };
 export const addPaymentSubmissionToDb = async (
   submissionData: Omit<PaymentSubmission, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'submittedAt' | 'reviewedAt' | 'adminNotes' | 'user' | 'course'> & { userId: string, courseId: string }
 ): Promise<PaymentSubmission> => {
-  console.log("[dbUtils] addPaymentSubmissionToDb: Adding payment submission. DATABASE_URL:", process.env.DATABASE_URL ? "Exists" : "MISSING", "Data:", JSON.stringify(submissionData, null, 1));
+  console.log("[dbUtils] addPaymentSubmissionToDb: Received data:", JSON.stringify(submissionData, null, 2));
   const validation = PaymentSubmissionInputSchema.safeParse(submissionData);
   if (!validation.success) {
-     console.error("[dbUtils] addPaymentSubmissionToDb: Validation failed:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
-    throw new Error(validation.error.flatten().fieldErrors._errors?.join(', ') || "Invalid payment submission data.");
+    console.error("[dbUtils] addPaymentSubmissionToDb: Zod validation failed:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
+    throw new Error(validation.error.flatten().fieldErrors._errors?.join(', ') || "Invalid payment submission data. Zod validation failed.");
   }
-  return prisma.paymentSubmission.create({
-    data: {
-      ...validation.data,
-      status: 'PENDING', 
-      submittedAt: new Date(),
-    },
-    include: { user: {select: {name:true, email:true}}, course: {select: {title: true}} }
-  });
+  console.log("[dbUtils] addPaymentSubmissionToDb: Zod validation successful. Data for Prisma:", JSON.stringify(validation.data, null, 2));
+  try {
+    const newSubmission = await prisma.paymentSubmission.create({
+      data: {
+        ...validation.data,
+        status: 'PENDING', 
+        submittedAt: new Date(),
+      },
+      include: { user: {select: {id:true, name:true, email:true}}, course: {select: {id:true, title: true}} }
+    });
+    console.log("[dbUtils] addPaymentSubmissionToDb: Successfully created submission in DB:", JSON.stringify(newSubmission, null, 2));
+    return newSubmission;
+  } catch (error) {
+    console.error("[dbUtils] addPaymentSubmissionToDb: Prisma error creating submission:", error);
+    // @ts-ignore
+    if (error.code) {  console.error("[dbUtils] addPaymentSubmissionToDb: Prisma Error Code:", error.code); }
+    // @ts-ignore
+    if (error.meta) { console.error("[dbUtils] addPaymentSubmissionToDb: Prisma Error Meta:", JSON.stringify(error.meta, null, 2)); }
+    if (error instanceof Error) {
+      throw new Error(`Prisma error: ${error.message}`);
+    }
+    throw new Error("Failed to create payment submission in database.");
+  }
 };
 export const updatePaymentSubmissionInDb = async (
   submissionId: string, 
   dataToUpdate: { status: PrismaPaymentStatus, adminNotes?: string | null, reviewedAt?: Date }
 ): Promise<PaymentSubmission> => {
   console.log(`[dbUtils] updatePaymentSubmissionInDb: Updating submission ID ${submissionId}. DATABASE_URL:`, process.env.DATABASE_URL ? "Exists" : "MISSING", "Data:", JSON.stringify(dataToUpdate, null, 1));
-  return prisma.paymentSubmission.update({
-    where: { id: submissionId },
-    data: {
-      status: dataToUpdate.status,
-      adminNotes: dataToUpdate.adminNotes,
-      reviewedAt: dataToUpdate.reviewedAt || new Date(),
-    },
-    include: { user: {select: {name:true, email:true}}, course: {select: {title: true}} }
-  });
+  try {
+    const updatedSubmission = await prisma.paymentSubmission.update({
+      where: { id: submissionId },
+      data: {
+        status: dataToUpdate.status,
+        adminNotes: dataToUpdate.adminNotes === null ? undefined : dataToUpdate.adminNotes, // Handle null for optional field
+        reviewedAt: dataToUpdate.reviewedAt || new Date(),
+      },
+      include: { user: {select: {id: true, name:true, email:true}}, course: {select: {id:true, title: true}} }
+    });
+    console.log(`[dbUtils] updatePaymentSubmissionInDb: Successfully updated submission ID ${submissionId}.`);
+    return updatedSubmission;
+  } catch (error) {
+    console.error(`[dbUtils] updatePaymentSubmissionInDb: Error updating submission ID ${submissionId}:`, error);
+    throw error;
+  }
 };
+
 
 // --- Enrollment (Using Prisma) ---
 export const getEnrollmentForUserAndCourseFromDb = async (userId: string, courseId: string): Promise<Enrollment | null> => {
@@ -856,7 +879,7 @@ export const seedCoursesToDb = async (): Promise<{ successCount: number; errorCo
       let cat=await prisma.category.findUnique({where:{name:cd.category}});
       if(!cat)cat=await prisma.category.create({data:{name:cd.category,iconName:'Shapes'}});
       const pcd:any={...cd,categoryId:cat.id,categoryNameCache:cat.name,quizzes:cd.quizzes?{create:cd.quizzes.map(q=>({...q,quizType: q.quizType.toUpperCase() as PrismaQuizTypeEnum, questions:q.questions?{create:q.questions.map(qs=>({...qs,options:{create:qs.options}}))}:undefined}))}:undefined,modules:cd.modules?{create:cd.modules.map(m=>({...m,lessons:m.lessons?{create:m.lessons}:undefined}))}:undefined};
-      delete pcd.category; // Remove the string 'category' field before Prisma create
+      delete pcd.category; 
       await prisma.course.create({data:pcd});s++;
     }catch(err){console.error(`Err seed course ${cd.title}:`,err);e++;}
   }
@@ -870,7 +893,7 @@ export const seedLearningPathsToDb = async (): Promise<{ successCount: number; e
   for(const lpd of mockLearningPathsForSeeding){
     try{
       if(await prisma.learningPath.findUnique({where:{id:lpd.id}})){sk++;continue;}
-      const { courseIds, ...restOfLpData } = lpd; // Separate courseIds
+      const { courseIds, ...restOfLpData } = lpd; 
       await prisma.learningPath.create({data:{...restOfLpData,id:lpd.id,learningPathCourses:{create:courseIds.map((ci,i)=>({courseId:ci,order:i}))}}});s++;
     }catch(err){console.error(`Err seed LP ${lpd.title}:`,err);e++;}
   }
@@ -884,7 +907,7 @@ export const seedVideosToDb = async (): Promise<{ successCount: number; errorCou
   for(const vd of mockVideosForSeeding){
     try{
       if(await prisma.video.findUnique({where:{id:vd.id}})){sk++;continue;}
-      const {createdAt,updatedAt,videoUrl, ...restOfVd} = vd; // videoUrl not in schema, createdAt/updatedAt managed by Prisma
+      const {createdAt,updatedAt,videoUrl, ...restOfVd} = vd; 
       await prisma.video.create({data:{...restOfVd,id:vd.id}});s++;
     }catch(err){console.error(`Err seed Video ${vd.title}:`,err);e++;}
   }
@@ -895,7 +918,7 @@ export const seedVideosToDb = async (): Promise<{ successCount: number; errorCou
 export const seedPaymentSettingsToDb = async (): Promise<{ successCount: number; errorCount: number; skippedCount: number }> => {
   console.log("[dbUtils] seedPaymentSettingsToDb: Seeding payment settings to DB. DATABASE_URL:", process.env.DATABASE_URL ? "Exists" : "MISSING");
   try{
-    const {updatedAt, ...restOfSettings} = mockDefaultPaymentSettings; // updatedAt managed by Prisma
+    const {updatedAt, ...restOfSettings} = mockDefaultPaymentSettings; 
     await prisma.paymentSettings.upsert({where:{id:'global'},update:restOfSettings,create:{id:'global',...restOfSettings}});
     console.log(`[dbUtils] seedPaymentSettingsToDb: Done. Success: 1`);
     return{successCount:1,errorCount:0,skippedCount:0};
