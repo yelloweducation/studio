@@ -5,9 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image'; 
 import { useAuth } from '@/hooks/useAuth';
-import { type Course, type PaymentSubmission, type User, type PaymentSettings } from '@/lib/dbUtils'; // Now uses mock data types
-import { initialPaymentSettings as mockDefaultPaymentSettings } from '@/data/mockData'; 
-import { getCourseByIdFromDb, getPaymentSettingsFromDb, addPaymentSubmissionToDb } from '@/lib/dbUtils'; // Now uses mock data functions
+import { type Course, type PaymentSubmission, type PaymentSettings } from '@/lib/dbUtils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -16,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ChevronLeft, AlertTriangle, ShoppingCart, UploadCloud, Info, ArrowRight, Home, Banknote, UserCircle as UserCircleIcon, ClipboardList, FileImage, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { serverGetCourseById, serverGetPaymentSettings, serverAddPaymentSubmission } from '@/actions/adminDataActions'; // Use Server Actions
 
 const checkoutPageTranslations = {
   en: {
@@ -99,6 +98,15 @@ const checkoutPageTranslations = {
     imageUploadHelp: "ငွေပေးချေမှုပြေစာ၏ပုံတစ်ပုံ (ဥပမာ JPG, PNG) တင်ပါ။ အများဆုံးဖိုင်အရွယ်အစား: 5MB။"
   }
 };
+const defaultPaymentSettingsData: PaymentSettings = {
+  id: 'global', 
+  bankName: null,
+  accountNumber: null,
+  accountHolderName: null,
+  additionalInstructions: null,
+  updatedAt: new Date(), 
+};
+
 
 export default function CheckoutPage() {
   const params = useParams();
@@ -122,20 +130,31 @@ export default function CheckoutPage() {
     const fetchData = async () => {
       setIsLoadingSettings(true);
       setIsLoadingCourse(true);
+      try {
+        const [settingsFromServer, courseFromServer] = await Promise.all([
+          serverGetPaymentSettings(), 
+          serverGetCourseById(courseId) 
+        ]);
 
-      const [settingsFromDb, courseFromDb] = await Promise.all([
-        getPaymentSettingsFromDb(), 
-        getCourseByIdFromDb(courseId) 
-      ]);
-
-      setPaymentSettings(settingsFromDb || (mockDefaultPaymentSettings as PaymentSettings)); 
-      setIsLoadingSettings(false);
-
-      setCurrentCourse(courseFromDb);
-      setIsLoadingCourse(false);
+        setPaymentSettings(settingsFromServer || defaultPaymentSettingsData); 
+        setCurrentCourse(courseFromServer);
+      } catch (error) {
+        console.error("Error fetching initial checkout data:", error);
+        toast({ variant: "destructive", title: "Error", description: "Could not load course or payment details." });
+        setPaymentSettings(defaultPaymentSettingsData);
+        setCurrentCourse(null);
+      } finally {
+        setIsLoadingSettings(false);
+        setIsLoadingCourse(false);
+      }
     };
-    fetchData();
-  }, [courseId]);
+    if (courseId) {
+      fetchData();
+    } else {
+      setIsLoadingCourse(false);
+      setIsLoadingSettings(false);
+    }
+  }, [courseId, toast]);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -179,8 +198,7 @@ export default function CheckoutPage() {
 
     setIsSubmitting(true);
 
-    // For mock, we don't actually upload the file, just use the preview URL
-    const submissionData: Omit<PaymentSubmission, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'submittedAt' | 'reviewedAt' | 'adminNotes' | 'user' | 'course'> = {
+    const submissionData = {
       userId: user.id,
       courseId: currentCourse.id,
       amount: currentCourse.price,
@@ -189,12 +207,16 @@ export default function CheckoutPage() {
     };
 
     try {
-      await addPaymentSubmissionToDb(submissionData); 
-      toast({ title: t.paymentSubmitted, description: t.paymentSubmittedDesc });
-      router.push(`/courses/${courseId}`);
+      const result = await serverAddPaymentSubmission(submissionData); 
+      if (result) {
+        toast({ title: t.paymentSubmitted, description: t.paymentSubmittedDesc });
+        router.push(`/courses/${courseId}`);
+      } else {
+        throw new Error("Server action returned null for payment submission.");
+      }
     } catch (error) {
       console.error("Error saving payment submission:", error);
-      toast({ variant: "destructive", title: t.submissionFailed, description: t.submissionFailedDesc });
+      toast({ variant: "destructive", title: t.submissionFailed, description: (error as Error).message || t.submissionFailedDesc });
     } finally {
       setIsSubmitting(false);
     }

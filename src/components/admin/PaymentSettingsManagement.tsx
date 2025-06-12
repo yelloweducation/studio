@@ -1,8 +1,7 @@
 
 "use client";
 import React, { useState, useEffect, type FormEvent } from 'react';
-import { type PaymentSettings } from '@/lib/dbUtils'; // Use Prisma type from dbUtils
-// Removed: import { initialPaymentSettings as mockDefaultSettings } from '@/data/mockData';
+import { type PaymentSettings } from '@/lib/dbUtils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,19 +9,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Label } from '@/components/ui/label';
 import { Settings, Save, Banknote, UserCircle, ClipboardList, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getPaymentSettingsFromDb, savePaymentSettingsToDb } from '@/lib/dbUtils'; // Use Prisma-based functions
+import { serverGetPaymentSettings, serverSavePaymentSettings } from '@/actions/adminDataActions'; // Use Server Actions
 
-const defaultPaymentSettings: PaymentSettings = {
-  id: 'global', // Prisma needs an id for upsert if it doesn't exist
+const defaultPaymentSettingsData: PaymentSettings = {
+  id: 'global', 
   bankName: null,
   accountNumber: null,
   accountHolderName: null,
   additionalInstructions: null,
-  updatedAt: new Date(), // Prisma will manage this, but good for type consistency
+  updatedAt: new Date(), 
 };
 
 export default function PaymentSettingsManagement() {
-  const [settings, setSettings] = useState<PaymentSettings>(defaultPaymentSettings);
+  const [settings, setSettings] = useState<PaymentSettings>(defaultPaymentSettingsData);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
@@ -30,16 +29,22 @@ export default function PaymentSettingsManagement() {
   useEffect(() => {
     const loadSettings = async () => {
       setIsLoading(true);
-      const dbSettings = await getPaymentSettingsFromDb(); 
-      if (dbSettings) {
-        setSettings(dbSettings);
-      } else {
-        setSettings(defaultPaymentSettings); 
+      try {
+        const dbSettings = await serverGetPaymentSettings(); 
+        if (dbSettings) {
+          setSettings(dbSettings);
+        } else {
+          setSettings(defaultPaymentSettingsData); 
+        }
+      } catch (error) {
+        console.error("Error fetching payment settings:", error);
+        toast({ variant: "destructive", title: "Error", description: "Could not load payment settings."});
+        setSettings(defaultPaymentSettingsData);
       }
       setIsLoading(false);
     };
     loadSettings();
-  }, []);
+  }, [toast]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -56,7 +61,8 @@ export default function PaymentSettingsManagement() {
           accountHolderName: settings.accountHolderName || null,
           additionalInstructions: settings.additionalInstructions || null,
       };
-      await savePaymentSettingsToDb(dataToSave); 
+      const savedSettings = await serverSavePaymentSettings(dataToSave); 
+      setSettings(savedSettings); // Update state with potentially new updatedAt from server
       toast({
         title: "Settings Saved",
         description: "Your payment configuration has been updated.",

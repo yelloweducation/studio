@@ -1,12 +1,12 @@
 
 "use client";
 import { useState, useEffect, type FormEvent } from 'react';
-import { type Video as PrismaVideo } from '@/lib/dbUtils'; // Use Prisma types from dbUtils
+import { type Video as PrismaVideo } from '@/lib/dbUtils'; 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Edit3, Trash2, Video as VideoIcon, Link as LinkIcon, Loader2 } from 'lucide-react';
+import { PlusCircle, Edit3, Trash2, Video as VideoIconLucide, Link as LinkIcon, Loader2 } from 'lucide-react'; // Renamed VideoIcon to VideoIconLucide
 import {
   Dialog,
   DialogContent,
@@ -20,7 +20,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
-import { getVideosFromDb, addVideoToDb, updateVideoInDb, deleteVideoFromDb } from '@/lib/dbUtils'; // Use Prisma-based functions from dbUtils
+import { serverGetVideos, serverAddVideo, serverUpdateVideo, serverDeleteVideo } from '@/actions/adminDataActions'; // Use Server Actions
 import { Label } from '../ui/label';
 
 const VideoForm = ({
@@ -48,7 +48,6 @@ const VideoForm = ({
       thumbnailUrl,
       embedUrl,
       dataAiHint,
-      // videoUrl: video?.videoUrl || '', // This field is not in Prisma schema
     };
     await onSubmit(videoData);
   };
@@ -84,6 +83,7 @@ const VideoForm = ({
                     placeholder="e.g., https://www.youtube.com/watch?v=..."
                     className="pl-8"
                     disabled={isSubmitting}
+                    required // Embed URL is now required
                 />
                 <LinkIcon className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             </div>
@@ -120,22 +120,27 @@ export default function VideoManagement() {
   useEffect(() => {
     const loadVideos = async () => {
       setIsLoadingData(true);
-      const dbVideos = await getVideosFromDb(); 
-      setVideos(dbVideos);
+      try {
+        const dbVideos = await serverGetVideos(); 
+        setVideos(dbVideos);
+      } catch (error) {
+        console.error("Error loading videos: ", error);
+        toast({ variant: "destructive", title: "Error", description: "Could not load videos."});
+      }
       setIsLoadingData(false);
     };
     loadVideos();
-  }, []);
+  }, [toast]);
 
   const handleAddVideo = async (data: Omit<PrismaVideo, 'id' | 'createdAt' | 'updatedAt'>) => {
     setIsSubmittingForm(true);
     try {
-      const newVideo = await addVideoToDb(data); 
+      const newVideo = await serverAddVideo(data); 
       setVideos(prev => [newVideo, ...prev].sort((a, b) => (new Date(b.createdAt!) as any) - (new Date(a.createdAt!) as any) || 0));
       closeForm();
       toast({ title: "Video Added", description: `${data.title} has been successfully added.` });
     } catch (error) {
-      toast({ variant: "destructive", title: "Error Adding Video", description: "Could not add video. Please try again."});
+      toast({ variant: "destructive", title: "Error Adding Video", description: (error as Error).message || "Could not add video. Please try again."});
     } finally {
       setIsSubmittingForm(false);
     }
@@ -145,12 +150,12 @@ export default function VideoManagement() {
     if (!editingVideo || !editingVideo.id) return;
     setIsSubmittingForm(true);
     try {
-      const updatedVideo = await updateVideoInDb(editingVideo.id, data); 
+      const updatedVideo = await serverUpdateVideo(editingVideo.id, data); 
       setVideos(prev => prev.map(v => v.id === editingVideo.id ? updatedVideo : v).sort((a,b) => (new Date(b.createdAt!) as any) - (new Date(a.createdAt!) as any) || 0));
       closeForm();
       toast({ title: "Video Updated", description: `${data.title} has been successfully updated.` });
     } catch (error) {
-       toast({ variant: "destructive", title: "Error Updating Video", description: "Could not update video. Please try again."});
+       toast({ variant: "destructive", title: "Error Updating Video", description: (error as Error).message || "Could not update video. Please try again."});
     } finally {
       setIsSubmittingForm(false);
     }
@@ -159,11 +164,11 @@ export default function VideoManagement() {
   const handleDeleteVideo = async (videoId: string) => {
     const videoToDelete = videos.find(v => v.id === videoId);
     try {
-      await deleteVideoFromDb(videoId); 
+      await serverDeleteVideo(videoId); 
       setVideos(prev => prev.filter(v => v.id !== videoId));
       toast({ title: "Video Deleted", description: `${videoToDelete?.title} has been deleted.`, variant: "destructive" });
     } catch (error) {
-      toast({ variant: "destructive", title: "Error Deleting Video", description: "Could not delete video. Please try again."});
+      toast({ variant: "destructive", title: "Error Deleting Video", description: (error as Error).message || "Could not delete video. Please try again."});
     }
   };
 
@@ -181,7 +186,7 @@ export default function VideoManagement() {
     <Card className="shadow-lg">
       <CardHeader>
         <CardTitle className="flex items-center text-xl md:text-2xl font-headline">
-          <VideoIcon className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Video Management
+          <VideoIconLucide className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Video Management
         </CardTitle>
         <CardDescription>Add, edit, or delete videos for the Reels feed using your Neon/Postgres database via Prisma. Provide YouTube or TikTok URLs for embedding.</CardDescription>
       </CardHeader>
