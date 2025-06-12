@@ -24,7 +24,7 @@ import {
   type Question as MockQuestionType,
   type Option as MockOptionType,
 } from '@/data/mockData';
-import type { Course, Category, LearningPath, Module, Lesson, Quiz, Question, Option, QuizType, Video, PaymentSettings, PaymentSubmission, Enrollment, User, PaymentSubmissionStatus as PrismaPaymentStatus } from '@prisma/client';
+import { QuizType as PrismaQuizTypeEnum, type Course, type Category, type LearningPath, type Module, type Lesson, type Quiz, type Question, type Option, type QuizType as PrismaQuizTypeTypeAlias, type Video, type PaymentSettings, type PaymentSubmission, type Enrollment, type User, type PaymentSubmissionStatus as PrismaPaymentStatus } from '@prisma/client'; // Correctly import QuizType enum object
 import { z } from 'zod';
 
 console.log("[dbUtils] Loading dbUtils.ts module. DATABASE_URL from env (initial check):", process.env.DATABASE_URL ? "Exists" : "NOT FOUND/EMPTY");
@@ -37,7 +37,7 @@ export type {
     Category, Course, Module, Lesson, Quiz, Question, Option, 
     LearningPath, User, Video, PaymentSettings, PaymentSubmission, Enrollment,
     PrismaPaymentStatus as PaymentSubmissionStatus, // Use Prisma enum type
-    QuizType 
+    PrismaQuizTypeTypeAlias as QuizType // Exporting the Prisma Type for QuizType
 };
 
 
@@ -67,7 +67,7 @@ const QuestionInputSchema = z.object({
 const QuizInputSchema = z.object({
   id: z.string().optional(),
   title: z.string().min(1, "Quiz title is required"),
-  quizType: z.nativeEnum(QuizType), // Use Prisma enum
+  quizType: z.nativeEnum(PrismaQuizTypeEnum), // Use imported Prisma enum object
   passingScore: z.number().int().min(0).max(100).optional().nullable(),
   questions: z.array(QuestionInputSchema).optional(), 
 });
@@ -235,7 +235,7 @@ export const addCourseToDb = async (
   courseData: Omit<Course, 'id'|'createdAt'|'updatedAt'|'categoryId'|'categoryNameCache'|'modules'|'quizzes'|'learningPathCourses'|'category'|'enrollments'|'paymentSubmissions'> & { 
     categoryName: string, 
     modules?: Array<Partial<Omit<Module, 'id'|'courseId'|'createdAt'|'updatedAt'|'lessons'>> & { lessons?: Array<Partial<Omit<Lesson, 'id'|'moduleId'|'createdAt'|'updatedAt'>>> }>,
-    quizzes?: Array<Partial<Omit<Quiz, 'id'|'courseId'|'createdAt'|'updatedAt'|'questions'>> & { quizType: QuizType, questions?: Array<Partial<Omit<Question, 'id'|'quizId'|'createdAt'|'updatedAt'|'options'|'correctOptionId'>> & { options: Array<Partial<Omit<Option, 'id'|'questionId'|'createdAt'|'updatedAt'>>>, correctOptionText?: string }> }>
+    quizzes?: Array<Partial<Omit<Quiz, 'id'|'courseId'|'createdAt'|'updatedAt'|'questions'>> & { quizType: PrismaQuizTypeEnum, questions?: Array<Partial<Omit<Question, 'id'|'quizId'|'createdAt'|'updatedAt'|'options'|'correctOptionId'>> & { options: Array<Partial<Omit<Option, 'id'|'questionId'|'createdAt'|'updatedAt'>>>, correctOptionText?: string }> }>
   }
 ): Promise<Course> => {
   console.log("[dbUtils] addCourseToDb: Function called. DATABASE_URL:", process.env.DATABASE_URL ? "Exists" : "MISSING");
@@ -370,7 +370,7 @@ export const updateCourseInDb = async (
   courseData: Partial<Omit<Course, 'id'|'createdAt'|'updatedAt'|'categoryId'|'categoryNameCache'|'modules'|'quizzes'|'learningPathCourses'|'category'|'enrollments'|'paymentSubmissions'>> & { 
     categoryName?: string, 
     modules?: Array<Partial<Omit<Module, 'id'|'courseId'|'createdAt'|'updatedAt'|'lessons'>> & { id?: string, lessons?: Array<Partial<Omit<Lesson, 'id'|'moduleId'|'createdAt'|'updatedAt'>> & {id?: string}> }>,
-    quizzes?: Array<Partial<Omit<Quiz, 'id'|'courseId'|'createdAt'|'updatedAt'|'questions'>> & { id?: string, quizType: QuizType, questions?: Array<Partial<Omit<Question, 'id'|'quizId'|'createdAt'|'updatedAt'|'options'|'correctOptionId'>> & { id?: string, options: Array<Partial<Omit<Option, 'id'|'questionId'|'createdAt'|'updatedAt'>> & {id?:string}>, correctOptionText?: string }> }>
+    quizzes?: Array<Partial<Omit<Quiz, 'id'|'courseId'|'createdAt'|'updatedAt'|'questions'>> & { id?: string, quizType: PrismaQuizTypeEnum, questions?: Array<Partial<Omit<Question, 'id'|'quizId'|'createdAt'|'updatedAt'|'options'|'correctOptionId'>> & { id?: string, options: Array<Partial<Omit<Option, 'id'|'questionId'|'createdAt'|'updatedAt'>> & {id?:string}>, correctOptionText?: string }> }>
   }
 ): Promise<Course> => {
   console.log(`[dbUtils] updateCourseInDb: Attempting to update course ID ${courseId}. DATABASE_URL:`, process.env.DATABASE_URL ? "Exists" : "MISSING", "Data (first 500 chars):", JSON.stringify(courseData).substring(0,500)+"...");
@@ -654,7 +654,7 @@ export const saveQuizWithQuestionsToDb = async (
             
             const updatedQuiz = await prisma.quiz.update({
                 where: { id: existingQuiz.id },
-                data: { title: quizData.title, quizType: quizData.quizType as QuizType, passingScore: quizData.passingScore },
+                data: { title: quizData.title, quizType: quizData.quizType as PrismaQuizTypeEnum, passingScore: quizData.passingScore },
                 include: { questions: { include: { options: true }, orderBy: {order: 'asc'} } }
             });
             console.log(`[dbUtils] saveQuizWithQuestionsToDb: Quiz ID ${existingQuiz.id} updated successfully.`);
@@ -665,7 +665,7 @@ export const saveQuizWithQuestionsToDb = async (
                 data: {
                     courseId: courseIdForQuiz,
                     title: quizData.title,
-                    quizType: quizData.quizType as QuizType,
+                    quizType: quizData.quizType as PrismaQuizTypeEnum,
                     passingScore: quizData.passingScore,
                     questions: quizData.questionsToUpsert ? {
                         create: quizData.questionsToUpsert.map(qData => {
@@ -855,7 +855,7 @@ export const seedCoursesToDb = async (): Promise<{ successCount: number; errorCo
       if(await prisma.course.findUnique({where:{id:cd.id}})){sk++;continue;}
       let cat=await prisma.category.findUnique({where:{name:cd.category}});
       if(!cat)cat=await prisma.category.create({data:{name:cd.category,iconName:'Shapes'}});
-      const pcd:any={...cd,categoryId:cat.id,categoryNameCache:cat.name,quizzes:cd.quizzes?{create:cd.quizzes.map(q=>({...q,questions:q.questions?{create:q.questions.map(qs=>({...qs,options:{create:qs.options}}))}:undefined}))}:undefined,modules:cd.modules?{create:cd.modules.map(m=>({...m,lessons:m.lessons?{create:m.lessons}:undefined}))}:undefined};
+      const pcd:any={...cd,categoryId:cat.id,categoryNameCache:cat.name,quizzes:cd.quizzes?{create:cd.quizzes.map(q=>({...q,quizType: q.quizType.toUpperCase() as PrismaQuizTypeEnum, questions:q.questions?{create:q.questions.map(qs=>({...qs,options:{create:qs.options}}))}:undefined}))}:undefined,modules:cd.modules?{create:cd.modules.map(m=>({...m,lessons:m.lessons?{create:m.lessons}:undefined}))}:undefined};
       delete pcd.category; // Remove the string 'category' field before Prisma create
       await prisma.course.create({data:pcd});s++;
     }catch(err){console.error(`Err seed course ${cd.title}:`,err);e++;}
@@ -901,4 +901,5 @@ export const seedPaymentSettingsToDb = async (): Promise<{ successCount: number;
     return{successCount:1,errorCount:0,skippedCount:0};
   }catch(err){console.error('Err seed PaymentSettings:',err);return{successCount:0,errorCount:1,skippedCount:0};}
 };
+    
     
