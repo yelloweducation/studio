@@ -2,7 +2,7 @@
 // This file is now a Server Component
 import React from 'react';
 import type { Metadata, ResolvingMetadata } from 'next';
-import { getCourseByIdFromDb } from '@/lib/dbUtils'; // Use mock data functions
+import { getCourseByIdFromDb } from '@/lib/dbUtils'; 
 import CourseDetailClient from './course-detail-client'; 
 
 type Props = {
@@ -14,7 +14,7 @@ export async function generateMetadata(
   parent: ResolvingMetadata
 ): Promise<Metadata> {
   const id = params.id;
-  const course = await getCourseByIdFromDb(id); // Now fetches from mock data
+  const course = await getCourseByIdFromDb(id); 
 
   if (!course) {
     return {
@@ -24,7 +24,7 @@ export async function generateMetadata(
   }
 
   const previousImages = (await parent).openGraph?.images || [];
-  const categoryName = course.category; // Use 'category' from mock Course type
+  const categoryName = course.categoryNameCache; 
 
   return {
     title: `${course.title} | Yellow Institute`,
@@ -40,6 +40,9 @@ export async function generateMetadata(
   }
 }
 
-export default function CoursePage({ params }: Props) {
-  return <CourseDetailClient courseId={params.id} />;
+// Server component: fetch data and pass to client component
+export default async function CoursePageContainer({ params }: Props) {
+  const course = await getCourseByIdFromDb(params.id); // Fetch full course data here
+  // Note: CourseDetailClient will handle displaying "Not Found" if course is null
+  return <CourseDetailClient initialCourse={course} courseId={params.id} />;
 }

@@ -5,16 +5,17 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { type Course, type Module, type Lesson, type User, type Enrollment, type PaymentSubmission, type PaymentSubmissionStatus, type Quiz, type QuizType } from '@/lib/dbUtils'; 
-import { getCourseByIdFromDb, getPaymentSubmissionsFromDb, getEnrollmentForUserAndCourseFromDb, createEnrollmentInDb } from '@/lib/dbUtils'; 
+// Removed direct dbUtils imports, will use server actions
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChevronLeft, BookOpenText, PlayCircle, Lock, CheckCircle, AlertTriangle, Clock, ExternalLink, ArrowRight, Home, ShoppingCart, BadgeDollarSign, Hourglass, ListChecks, Users as TargetAudienceIcon, ShieldCheck, Timer, FileQuestion, Edit3 as PracticeQuizIcon, CheckSquare as GradedQuizIcon } from 'lucide-react';
+import { ChevronLeft, BookOpenText, PlayCircle, Lock, CheckCircle, AlertTriangle, Clock, ExternalLink, ArrowRight, Home, ShoppingCart, BadgeDollarSign, Hourglass, ListChecks, Users as TargetAudienceIcon, ShieldCheck, Timer, FileQuestion, Edit3 as PracticeQuizIcon, CheckSquare as GradedQuizIcon, Loader2 } from 'lucide-react';
 import { getEmbedUrl } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { serverGetEnrollmentForCourse, serverGetPaymentSubmissionForCourse } from '@/actions/adminDataActions'; // Using existing file for now
 
 interface CompletionInfo {
   isCompleted: boolean;
@@ -111,79 +112,76 @@ const courseDetailTranslations = {
 };
 
 interface CourseDetailClientProps {
-  courseId: string;
+  initialCourse: Course | null;
+  courseId: string; 
 }
 
-export default function CourseDetailClient({ courseId }: CourseDetailClientProps) {
+export default function CourseDetailClient({ initialCourse, courseId }: CourseDetailClientProps) {
   const router = useRouter();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const { language } = useLanguage();
   const t = courseDetailTranslations[language];
 
-  const [currentCourse, setCurrentCourse] = useState<Course | null>(null);
+  const [currentCourse, setCurrentCourse] = useState<Course | null>(initialCourse);
   const [firstLessonPath, setFirstLessonPath] = useState<string | null>(null);
   const [completionInfo, setCompletionInfo] = useState<CompletionInfo | null>(null);
   const [paymentInfo, setPaymentInfo] = useState<PaymentInfo | null>(null);
-  const [isLoadingPage, setIsLoadingPage] = useState(true);
+  const [isLoadingUserSpecificData, setIsLoadingUserSpecificData] = useState(true);
 
   useEffect(() => {
-    const fetchCourseData = async () => {
-      if (!courseId) {
-        setIsLoadingPage(false);
-        return;
-      }
-      setIsLoadingPage(true);
-      setCurrentCourse(null);
+    setCurrentCourse(initialCourse); // Update local state when prop changes
+    if (initialCourse?.modules?.[0]?.lessons?.[0]) {
+      setFirstLessonPath(`/courses/${initialCourse.id}/learn/${initialCourse.modules[0].id}/${initialCourse.modules[0].lessons[0].id}`);
+    } else {
       setFirstLessonPath(null);
-
-      const courseFromDb = await getCourseByIdFromDb(courseId); 
-      setCurrentCourse(courseFromDb);
-
-      if (courseFromDb?.modules?.[0]?.lessons?.[0]) {
-        setFirstLessonPath(`/courses/${courseFromDb.id}/learn/${courseFromDb.modules[0].id}/${courseFromDb.modules[0].lessons[0].id}`);
-      } else {
-        setFirstLessonPath(null);
-      }
-    };
-    fetchCourseData();
-  }, [courseId]);
+    }
+  }, [initialCourse]);
 
   useEffect(() => {
     const fetchUserSpecificData = async () => {
-      if (authLoading || !currentCourse) { 
-        if (!currentCourse && !isLoadingPage) {
-        } else if (authLoading) {
-        }
+      if (authLoading) {
+        // Still waiting for auth. isLoadingUserSpecificData will be true.
         return;
       }
-      
-      setIsLoadingPage(true); 
+      if (!currentCourse) {
+        setIsLoadingUserSpecificData(false); // No course, so no user-specific data to load.
+        return;
+      }
 
-      if (isAuthenticated && user) {
-        const enrollment = await getEnrollmentForUserAndCourseFromDb(user.id, currentCourse.id); 
-        if (enrollment) {
-          setCompletionInfo({ isCompleted: enrollment.progress === 100, progress: enrollment.progress });
-        } else {
+      setIsLoadingUserSpecificData(true); // Set loading before async operations
+      try {
+        if (isAuthenticated && user) {
+          const enrollment = await serverGetEnrollmentForCourse(user.id, currentCourse.id);
+          if (enrollment) {
+            setCompletionInfo({ isCompleted: enrollment.progress === 100, progress: enrollment.progress });
+          } else {
+            setCompletionInfo({ isCompleted: false, progress: 0 });
+            // TODO: Consider auto-enroll for free courses logic here or in serverCreateEnrollment
+          }
+
+          if (currentCourse.price && currentCourse.price > 0) {
+            const userSubmission = await serverGetPaymentSubmissionForCourse(user.id, currentCourse.id);
+            setPaymentInfo({ status: userSubmission?.status || null, submission: userSubmission || undefined });
+          } else {
+            setPaymentInfo({ status: null }); 
+          }
+        } else { // Not authenticated or no user
           setCompletionInfo({ isCompleted: false, progress: 0 });
+          setPaymentInfo({ status: null });
         }
-
-        if (currentCourse.price && currentCourse.price > 0) {
-          const allSubmissions = await getPaymentSubmissionsFromDb(); 
-          const userSubmission = allSubmissions.find(s => s.userId === user.id && s.courseId === currentCourse.id);
-          setPaymentInfo({ status: userSubmission?.status || null, submission: userSubmission });
-        } else {
-          setPaymentInfo({ status: null }); 
-        }
-      } else {
+      } catch (error) {
+        console.error("Error fetching user-specific course data:", error);
+        toast({ variant: "destructive", title: "Error", description: "Could not load your course progress or payment status." });
         setCompletionInfo({ isCompleted: false, progress: 0 });
         setPaymentInfo({ status: null });
+      } finally {
+        setIsLoadingUserSpecificData(false);
       }
-      setIsLoadingPage(false);
     };
 
     fetchUserSpecificData();
-  }, [user, isAuthenticated, authLoading, currentCourse, toast, isLoadingPage]);
+  }, [user, isAuthenticated, authLoading, currentCourse, toast, language]);
 
 
   const renderCTAButton = () => {
@@ -296,7 +294,9 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
     );
   };
 
-  if (isLoadingPage || authLoading) { 
+  // Loading state: Show skeleton if auth is loading OR if user-specific data is loading (for an existing course)
+  // The initialCourse being null is handled by the "Not Found" message.
+  if (authLoading || (currentCourse && isLoadingUserSpecificData)) { 
     return (
       <div className="max-w-4xl mx-auto py-4 md:py-8 space-y-6">
         <Skeleton className="h-8 w-1/4" />
@@ -338,7 +338,7 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
     );
   }
 
-  if (!currentCourse) {
+  if (!currentCourse) { // This means initialCourse was null and all loading is done
     return (
       <div className="max-w-lg mx-auto py-6 sm:py-12 text-center">
         <Button variant="outline" onClick={() => router.push('/')} className="mb-6">
@@ -380,10 +380,10 @@ export default function CourseDetailClient({ courseId }: CourseDetailClientProps
                 <Image
                   src={imageUrl}
                   alt={title}
-                  fill // Changed from layout="fill" to fill for Next 13+
+                  fill 
                   objectFit="cover"
                   data-ai-hint={dataAiHint || 'course education'}
-                  priority // Added priority for LCP
+                  priority 
                 />
               </div>
             )}
