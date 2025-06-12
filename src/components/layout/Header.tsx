@@ -2,25 +2,15 @@
 "use client";
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
-import LuminaLogo from '@/components/LuminaLogo';
+// import LuminaLogo from '@/components/LuminaLogo'; // Logo removed
 import { Button } from '@/components/ui/button';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Compass, User as UserIcon, BookOpen, Layers, Brain, Loader2, Menu, Circle, Search as SearchIcon } from 'lucide-react';
+import { Home, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Compass, User as UserIcon, BookOpen, Layers, Brain, Loader2 } from 'lucide-react'; // Menu, Circle removed
 import { useTheme } from '@/contexts/ThemeContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import React, { useEffect, useState } from 'react';
 import { cn } from "@/lib/utils";
 import { useLanguage } from '@/contexts/LanguageContext';
-import {
-  Sheet,
-  SheetContent,
-  SheetClose,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet';
-import { Separator } from '@/components/ui/separator';
-
 
 const headerTranslations = {
   en: {
@@ -36,9 +26,7 @@ const headerTranslations = {
     login: "Login",
     register: "Register",
     toggleTheme: "Toggle Theme",
-    openMenu: "Open menu",
     loading: "Loading...",
-    menuTitle: "Navigation"
   },
   my: {
     home: "ပင်မ",
@@ -53,9 +41,7 @@ const headerTranslations = {
     login: "ဝင်ရန်",
     register: "စာရင်းသွင်းရန်",
     toggleTheme: "အသွင်ပြောင်းရန်",
-    openMenu: "မီနူးဖွင့်ပါ",
     loading: "လုပ်ဆောင်နေသည်...",
-    menuTitle: "လမ်းညွှန်"
   }
 };
 
@@ -72,9 +58,7 @@ const Header = () => {
   const useScrollHidingHeader = isOnHomepage; 
   const headerScrollThreshold = 100;
 
-  const [dynamicHeaderBackgroundClasses, setDynamicHeaderBackgroundClasses] = useState(
-     pathname === '/videos' ? '' : 'bg-background/80 backdrop-blur-md border-b'
-  );
+  const [dynamicHeaderBackgroundClasses, setDynamicHeaderBackgroundClasses] = useState('');
   const [headerVisible, setHeaderVisible] = useState(true);
 
 
@@ -82,8 +66,8 @@ const Header = () => {
     if (typeof window === 'undefined') return;
 
     const controlHeaderBackground = () => {
-      if (pathname === '/videos') {
-        setDynamicHeaderBackgroundClasses(''); 
+      if (pathname === '/videos' || isMobile) { 
+        setDynamicHeaderBackgroundClasses('');
       } else {
         setDynamicHeaderBackgroundClasses(window.scrollY < 50 ? '' : 'bg-background/80 backdrop-blur-md border-b');
       }
@@ -93,7 +77,7 @@ const Header = () => {
 
     window.addEventListener('scroll', controlHeaderBackground, { passive: true });
     return () => window.removeEventListener('scroll', controlHeaderBackground);
-  }, [pathname]);
+  }, [pathname, isMobile]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !useScrollHidingHeader || isMobile) { 
@@ -138,11 +122,6 @@ const Header = () => {
     pathname === targetPath && "bg-accent text-accent-foreground font-semibold"
   );
   
-  const mobileNavLinkClasses = (targetPath: string) => cn(
-    "flex items-center w-full p-3 rounded-md text-base font-medium hover:bg-accent hover:text-accent-foreground transition-colors",
-    pathname === targetPath && "bg-accent text-accent-foreground"
-  );
-
   const commonNavItems = [
     { href: "/", label: t.home, Icon: Home },
     { href: "/courses/search", label: t.explore, Icon: Compass },
@@ -151,19 +130,15 @@ const Header = () => {
     { href: "/personality-tests", label: t.personalityTest, Icon: Brain }
   ];
 
-  const ThemeToggleButton = React.memo(({ isMobileSheet = false }: { isMobileSheet?: boolean}) => (
+  const ThemeToggleButton = React.memo(() => (
     <Button
       variant="ghost"
-      size={isMobileSheet ? "default" : "icon"}
+      size="icon"
       onClick={toggleTheme}
       aria-label={t.toggleTheme}
-      className={cn(
-        "hover:bg-accent/20 text-foreground",
-        isMobileSheet ? "w-full justify-start p-3 text-base" : "w-9 h-9"
-      )}
+      className="hover:bg-accent/20 text-foreground w-9 h-9"
     >
       {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-      {isMobileSheet && <span className="ml-2">{t.toggleTheme} ({theme === 'light' ? 'Dark' : 'Light'})</span>}
     </Button>
   ));
   ThemeToggleButton.displayName = 'ThemeToggleButton';
@@ -175,44 +150,44 @@ const Header = () => {
           <Link href={item.href}><item.Icon className="mr-1.5 h-4 w-4" />{item.label}</Link>
         </Button>
       ))}
-      <Separator orientation="vertical" className="h-6 mx-1 lg:mx-2"/>
       {authLoading ? (
-        <Button variant="ghost" size="sm" disabled><Loader2 className="h-4 w-4 animate-spin mr-1" /> {t.loading}</Button>
+        <Button variant="ghost" size="sm" disabled className="ml-1 lg:ml-2"><Loader2 className="h-4 w-4 animate-spin mr-1" /> {t.loading}</Button>
       ) : isAuthenticated ? (
         <>
-          <span className="text-sm text-muted-foreground hidden lg:inline">{t.welcome}, {user?.name}!</span>
-          <Button variant="ghost" size="sm" asChild className={navLinkClasses(getDashboardPath())}>
+          <span className="text-sm text-muted-foreground hidden lg:inline ml-1 lg:ml-2">{t.welcome}, {user?.name}!</span>
+          <Button variant="ghost" size="sm" asChild className={cn(navLinkClasses(getDashboardPath()), "ml-1 lg:ml-2")}>
             <Link href={getDashboardPath()}><LayoutDashboard className="mr-1 h-4 w-4" /> {t.dashboard}</Link>
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={handleLogout}
-            className="border-primary/50 text-primary hover:bg-primary/10 hover:text-primary"
+            className="border-primary/50 text-primary hover:bg-primary/10 hover:text-primary ml-1 lg:ml-2"
           >
             <LogOut className="mr-1 h-4 w-4" /> {t.logout}
           </Button>
         </>
       ) : (
         <>
-          <Button variant="ghost" size="sm" asChild className={navLinkClasses('/login')}>
+          <Button variant="ghost" size="sm" asChild className={cn(navLinkClasses('/login'), "ml-1 lg:ml-2")}>
             <Link href="/login"><LogIn className="mr-1 h-4 w-4" /> {t.login}</Link>
           </Button>
-          <Button variant="default" size="sm" asChild className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md hover:shadow-sm active:translate-y-px transition-all duration-150">
+          <Button variant="default" size="sm" asChild className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md hover:shadow-sm active:translate-y-px transition-all duration-150 ml-1 lg:ml-2">
             <Link href="/register"><UserPlus className="mr-1 h-4 w-4" /> {t.register}</Link>
           </Button>
         </>
       )}
-      <ThemeToggleButton />
+      <div className="ml-1 lg:ml-2">
+        <ThemeToggleButton />
+      </div>
     </nav>
   );
   
   const MobileHomepageAllLink = () => (
     <Link href="/" className={cn(
-        "group text-base font-bold font-headline transition-all py-1", // Removed px, rounded-md, shadow-md. Adjusted for plain text.
+        "group text-base font-bold font-headline transition-all py-1",
         "text-black dark:text-white", 
-        "underline decoration-primary underline-offset-4 decoration-2",
-        "hover:translate-x-px hover:-translate-y-px active:translate-x-0 active:translate-y-0" // Kept hover effects
+        "underline decoration-primary underline-offset-4 decoration-2"
       )}>
         {t.all}
     </Link>
@@ -257,7 +232,8 @@ const Header = () => {
           </>
         ) : (
           <>
-            <LuminaLogo />
+            {/* Logo was here, now this div pushes DesktopNav to the right */}
+            <div className="flex-1"></div>
             <DesktopNav />
           </>
         )}
@@ -267,3 +243,5 @@ const Header = () => {
 };
 
 export default Header;
+
+    
