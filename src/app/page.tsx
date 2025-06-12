@@ -3,9 +3,10 @@
 import React, { useState, type FormEvent, useEffect, Suspense, lazy } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image'; // Added Image import
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Video as VideoIcon, Search, Compass, Circle, Brain, Layers } from 'lucide-react'; 
+import { Video as VideoIcon, Search, Compass, Brain, Layers } from 'lucide-react'; // Removed Circle
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from "@/lib/utils";
@@ -65,11 +66,28 @@ export default function Home() {
       <section className="w-full max-w-2xl md:max-w-3xl lg:max-w-4xl text-center pt-12 md:pt-16 lg:pt-24 mb-10">
         <div className={cn(
           "flex items-center justify-center space-x-2 lg:space-x-3 font-bold font-headline text-foreground mb-4",
-          // Adjusted font size slightly for Burmese to better fit "Yellow Institute"
-          language === 'my' ? 'text-2xl sm:text-3xl lg:text-4xl' : 'text-3xl sm:text-4xl lg:text-5xl' 
+          // Consistent font size for both languages, based on Burmese reference
+          'text-2xl sm:text-3xl lg:text-4xl' 
         )}>
-          <Circle size={language === 'my' ? 28 : 32} className="text-primary block lg:hidden" /> 
-          <Circle size={language === 'my' ? 36 : 40} className="text-primary hidden lg:block" /> 
+          {/* Replaced Circle icon with Image component */}
+          <div className="relative block lg:hidden w-7 h-7 sm:w-8 sm:h-8 lg:w-9 lg:h-9"> {/* Adjusted sizes */}
+            <Image
+              src="/logo-flame-shield.png" 
+              alt="Yellow Institute Logo"
+              width={32} // Base size for mobile, adjust as needed
+              height={32}
+              className="object-contain"
+            />
+          </div>
+          <div className="relative hidden lg:block w-9 h-9 lg:w-10 lg:h-10"> {/* Adjusted sizes */}
+             <Image
+              src="/logo-flame-shield.png"
+              alt="Yellow Institute Logo"
+              width={40} // Base size for desktop, adjust as needed
+              height={40}
+              className="object-contain"
+            />
+          </div>
           <span>{t.title}</span>
         </div>
         <p className={cn(
@@ -180,4 +198,3 @@ export default function Home() {
     </div>
   );
 }
-    
