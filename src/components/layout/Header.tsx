@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import LuminaLogo from '@/components/LuminaLogo';
 import { Button } from '@/components/ui/button';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Compass, User as UserIcon, BookOpen, Layers, Brain, Loader2, Menu, Circle } from 'lucide-react'; // Added Circle
+import { Home, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Compass, User as UserIcon, BookOpen, Layers, Brain, Loader2, Menu, Circle, Search as SearchIcon } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import React, { useEffect, useState } from 'react';
@@ -25,7 +25,7 @@ import { Separator } from '@/components/ui/separator';
 const headerTranslations = {
   en: {
     home: "Home",
-    all: "ALL", // Added for the new link
+    all: "ALL", 
     explore: "Explore Courses",
     videos: "Reels",
     flashCards: "Flash Cards",
@@ -42,7 +42,7 @@ const headerTranslations = {
   },
   my: {
     home: "ပင်မ",
-    all: "အားလုံး", // Added for the new link
+    all: "အားလုံး", 
     explore: "သင်တန်းများ",
     videos: "ဗီဒီယို",
     flashCards: "ကတ်ပြားများ",
@@ -69,22 +69,23 @@ const Header = () => {
   const t = headerTranslations[language];
 
   const isOnHomepage = pathname === '/';
-  const useScrollHidingHeader = isOnHomepage;
+  const useScrollHidingHeader = isOnHomepage; 
   const headerScrollThreshold = 100;
 
   const [dynamicHeaderBackgroundClasses, setDynamicHeaderBackgroundClasses] = useState(
      pathname === '/videos' ? '' : 'bg-background/80 backdrop-blur-md border-b'
   );
   const [headerVisible, setHeaderVisible] = useState(true);
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const controlHeaderBackground = () => {
+      // This effect primarily controls background for DESKTOP on non-video pages
+      // Mobile transparency is handled by the main header's className conditional logic
       if (pathname === '/videos') {
-        setDynamicHeaderBackgroundClasses('');
+        setDynamicHeaderBackgroundClasses(''); 
       } else {
         setDynamicHeaderBackgroundClasses(window.scrollY < 50 ? '' : 'bg-background/80 backdrop-blur-md border-b');
       }
@@ -97,7 +98,7 @@ const Header = () => {
   }, [pathname]);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !useScrollHidingHeader) {
+    if (typeof window === 'undefined' || !useScrollHidingHeader || isMobile) { // Disable scroll hiding on mobile
       setHeaderVisible(true);
       return;
     }
@@ -116,28 +117,32 @@ const Header = () => {
     controlHeaderVisibility();
     window.addEventListener('scroll', controlHeaderVisibility, { passive: true });
     return () => window.removeEventListener('scroll', controlHeaderVisibility);
-  }, [pathname, useScrollHidingHeader, headerScrollThreshold]);
+  }, [pathname, useScrollHidingHeader, headerScrollThreshold, isMobile]); // Added isMobile
 
 
   if (pathname === '/videos') {
-    return null;
+    return null; 
   }
 
   const handleLogout = () => {
     logout();
     router.push('/');
-    setIsSheetOpen(false); // Close sheet if open on mobile
   };
 
   const getDashboardPath = () => {
     if (role === 'admin') return '/dashboard/admin';
     if (role === 'student') return '/dashboard/student';
-    return '/login'; // Fallback, though should ideally not be needed if role is set
+    return '/login'; 
   };
 
   const navLinkClasses = (targetPath: string) => cn(
     "text-sm font-medium text-foreground hover:text-primary transition-colors px-3 py-2 rounded-md",
     pathname === targetPath && "bg-accent text-accent-foreground font-semibold"
+  );
+  
+  const mobileNavLinkClasses = (targetPath: string) => cn(
+    "flex items-center w-full p-3 rounded-md text-base font-medium hover:bg-accent hover:text-accent-foreground transition-colors",
+    pathname === targetPath && "bg-accent text-accent-foreground"
   );
 
   const commonNavItems = [
@@ -148,15 +153,19 @@ const Header = () => {
     { href: "/personality-tests", label: t.personalityTest, Icon: Brain }
   ];
 
-  const ThemeToggleButton = React.memo(() => (
+  const ThemeToggleButton = React.memo(({ isMobileSheet = false }: { isMobileSheet?: boolean}) => (
     <Button
       variant="ghost"
-      size="icon"
+      size={isMobileSheet ? "default" : "icon"}
       onClick={toggleTheme}
       aria-label={t.toggleTheme}
-      className="hover:bg-accent/20 w-9 h-9 text-foreground"
+      className={cn(
+        "hover:bg-accent/20 text-foreground",
+        isMobileSheet ? "w-full justify-start p-3 text-base" : "w-9 h-9"
+      )}
     >
       {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+      {isMobileSheet && <span className="ml-2">{t.toggleTheme} ({theme === 'light' ? 'Dark' : 'Light'})</span>}
     </Button>
   ));
   ThemeToggleButton.displayName = 'ThemeToggleButton';
@@ -203,11 +212,11 @@ const Header = () => {
   // Mobile specific components
   const MobileHomepageAllLink = () => (
     <Link href="/" className={cn(
-        "group text-lg font-bold font-headline px-2 py-1 rounded-md transition-all",
-        "text-black dark:text-white", // Explicit black text, white in dark mode
+        "group text-base font-bold font-headline px-2 py-1 rounded-md transition-all", // Font size reduced to text-base
+        "text-black dark:text-white", 
         "underline decoration-primary underline-offset-4 decoration-2",
-        "shadow-md hover:shadow-lg active:shadow-sm", // Subtle 3D effect
-        "hover:translate-x-px hover:-translate-y-px active:translate-x-0 active:translate-y-0" // Pseudo 3D on hover/active
+        "shadow-md hover:shadow-lg active:shadow-sm", 
+        "hover:translate-x-px hover:-translate-y-px active:translate-x-0 active:translate-y-0"
       )}>
         {t.all}
     </Link>
@@ -239,13 +248,15 @@ const Header = () => {
   return (
     <header className={cn(
         "sticky top-0 z-50 transition-all duration-300 ease-in-out",
-        dynamicHeaderBackgroundClasses,
-        {'!-translate-y-full': !headerVisible && useScrollHidingHeader }
+        // Apply dynamic background classes only if not mobile, otherwise, it's transparent
+        !isMobile ? dynamicHeaderBackgroundClasses : 'bg-transparent border-transparent',
+        // Scroll hiding only for desktop and when useScrollHidingHeader is true
+        {'!-translate-y-full': !headerVisible && useScrollHidingHeader && !isMobile }
       )}>
       <div className="container mx-auto px-4 py-2.5 flex justify-between items-center min-h-[60px]">
         {isMobile ? (
           <>
-            <div className="flex-1"> {/* Left side container for mobile */}
+            <div className="flex-1">
               {isOnHomepage && <MobileHomepageAllLink />}
             </div>
             <MobileRightNav />
@@ -262,5 +273,3 @@ const Header = () => {
 };
 
 export default Header;
-
-    
