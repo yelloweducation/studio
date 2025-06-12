@@ -34,7 +34,13 @@ import {
     serverGetCourseById, 
     serverGetCategories,
 } from '@/actions/adminDataActions'; 
-import type { Course as MockCourseType, Module as MockModuleType, Lesson as MockLessonType, Quiz as MockQuizType, Question as MockQuestionType, Option as MockOptionType, QuizType as MockQuizEnumType } from '@/data/mockData';
+import type { QuizType as MockQuizEnumType } from '@/data/mockData'; // Keep for Quiz Type Enum
+// Define types based on Prisma where possible, but allow for form state structure
+type FormLesson = Partial<Omit<Lesson, 'moduleId'|'createdAt'|'updatedAt'>>;
+type FormModule = Partial<Omit<Module, 'courseId'|'createdAt'|'updatedAt'>> & { lessons?: FormLesson[] };
+type FormOption = Partial<Omit<Option, 'questionId'|'createdAt'|'updatedAt'>>;
+type FormQuestion = Partial<Omit<Question, 'quizId'|'createdAt'|'updatedAt'>> & { options?: FormOption[], correctOptionTextForNew?: string };
+type FormQuiz = Partial<Omit<Quiz, 'courseId'|'createdAt'|'updatedAt'>> & { quizType: MockQuizEnumType, questions?: FormQuestion[] };
 
 
 const generateQuestionId = () => `q-new-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
@@ -49,8 +55,8 @@ const LessonForm = ({
   lessonIndex,
   isSubmitting,
 }: {
-  lesson?: Partial<Omit<Lesson, 'moduleId'|'createdAt'|'updatedAt'>>;
-  onSave: (lesson: Partial<Omit<Lesson, 'moduleId'|'createdAt'|'updatedAt'>>, moduleIndex: number, lessonIndex?: number) => void;
+  lesson?: FormLesson;
+  onSave: (lesson: FormLesson, moduleIndex: number, lessonIndex?: number) => void;
   onCancel: () => void;
   moduleIndex: number;
   lessonIndex?: number;
@@ -118,13 +124,13 @@ const QuestionEditDialog = ({
   onCancel,
   isSubmitting,
 }: {
-  questionToEdit: Partial<Omit<Question, 'quizId'|'createdAt'|'updatedAt'>> & { options?: Partial<Omit<Option, 'questionId'|'createdAt'|'updatedAt'>>[], correctOptionId?: string | null };
-  onSaveQuestion: (questionData: Partial<Omit<Question, 'quizId'|'createdAt'|'updatedAt'>> & { options?: Partial<Omit<Option, 'questionId'|'createdAt'|'updatedAt'>>[], correctOptionTextForNew?: string }) => void;
+  questionToEdit: FormQuestion;
+  onSaveQuestion: (questionData: FormQuestion) => void;
   onCancel: () => void;
   isSubmitting: boolean;
 }) => {
   const [questionText, setQuestionText] = useState(questionToEdit.text || '');
-  const [currentOptions, setCurrentOptions] = useState<(Partial<Omit<Option, 'questionId'|'createdAt'|'updatedAt'>> & { isCorrect?: boolean })[]>(
+  const [currentOptions, setCurrentOptions] = useState<(FormOption & { isCorrect?: boolean })[]>(
     questionToEdit.options?.map(opt => ({...opt, isCorrect: opt.id === questionToEdit.correctOptionId })) || []
   );
   const [newOptionText, setNewOptionText] = useState('');
@@ -133,7 +139,7 @@ const QuestionEditDialog = ({
 
   const handleAddOption = () => {
     if (newOptionText.trim() === '') return;
-    const newOpt: Partial<Omit<Option, 'questionId'|'createdAt'|'updatedAt'>> & { isCorrect?: boolean } = { id: generateOptionId(), text: newOptionText.trim(), isCorrect: false };
+    const newOpt: FormOption & { isCorrect?: boolean } = { id: generateOptionId(), text: newOptionText.trim(), isCorrect: false };
     setCurrentOptions([...currentOptions, newOpt]);
     setNewOptionText('');
   };
@@ -169,6 +175,7 @@ const QuestionEditDialog = ({
       points,
       options: currentOptions.map(({ isCorrect, ...optData }) => optData), 
       correctOptionTextForNew: correctOption.text, 
+      correctOptionId: correctOption.id, // Also pass the ID
     });
   };
 
@@ -176,7 +183,7 @@ const QuestionEditDialog = ({
     <Dialog open={true} onOpenChange={(isOpen) => { if (!isOpen) onCancel(); }}>
       <DialogContent className="sm:max-w-lg md:max-w-xl">
         <DialogHeader>
-          <DialogTitle>{questionToEdit.id ? 'Edit Question' : 'Add New Question'}</DialogTitle>
+          <DialogTitle>{questionToEdit.id && !questionToEdit.id.startsWith('q-new-') ? 'Edit Question' : 'Add New Question'}</DialogTitle>
           <DialogDescription>Define the question, its options, and mark the correct answer.</DialogDescription>
         </DialogHeader>
         <ScrollArea className="h-[60vh] pr-3">
@@ -250,43 +257,44 @@ const QuizQuestionsDialog = ({
   onCancel,
   isSavingQuiz,
 }: {
-  quiz: MockQuizType & { questions?: (MockQuestionType & { options?: MockOptionType[] })[] };
-  onSaveQuiz: (updatedQuiz: MockQuizType & { questionsToUpsert?: any[], questionIdsToDelete?: string[] }) => Promise<void>;
+  quiz: FormQuiz;
+  onSaveQuiz: (updatedQuiz: FormQuiz & { questionsToUpsert?: any[], questionIdsToDelete?: string[] }) => Promise<void>;
   onCancel: () => void;
   isSavingQuiz: boolean;
 }) => {
-  const [currentQuizState, setCurrentQuizState] = useState<MockQuizType & { questions?: (MockQuestionType & { options?: MockOptionType[] })[] }>(JSON.parse(JSON.stringify(quiz)));
-  const [editingQuestion, setEditingQuestion] = useState<Partial<MockQuestionType> & { options?: Partial<MockOptionType>[] } | null>(null);
+  const [currentQuizState, setCurrentQuizState] = useState<FormQuiz>(JSON.parse(JSON.stringify(quiz)));
+  const [editingQuestion, setEditingQuestion] = useState<FormQuestion | null>(null);
   const [questionIdsToDelete, setQuestionIdsToDelete] = useState<string[]>([]);
 
   const handleAddNewQuestion = () => {
     setEditingQuestion({ text: '', order: (currentQuizState.questions?.length || 0), options: [], points: 10 });
   };
 
-  const handleEditQuestion = (questionToEdit: MockQuestionType & { options?: MockOptionType[] }) => {
+  const handleEditQuestion = (questionToEdit: FormQuestion) => {
     setEditingQuestion(JSON.parse(JSON.stringify(questionToEdit)));
   };
 
-  const handleDeleteQuestion = (questionId: string) => {
+  const handleDeleteQuestion = (questionId?: string) => {
+    if (!questionId) return;
     setCurrentQuizState(prev => ({
       ...prev,
       questions: prev.questions?.filter(q => q.id !== questionId),
     }));
-    if (!questionId.startsWith('q-new-')) {
+    if (questionId && !questionId.startsWith('q-new-')) {
       setQuestionIdsToDelete(prev => [...new Set([...prev, questionId])]);
     }
   };
 
-  const handleSaveQuestionFromDialog = (questionData: Partial<MockQuestionType> & { options?: Partial<MockOptionType>[], correctOptionTextForNew?: string }) => {
+  const handleSaveQuestionFromDialog = (questionData: FormQuestion) => {
     setCurrentQuizState(prev => {
       const existingIndex = prev.questions?.findIndex(q => q.id === questionData.id);
       let newQuestionsList;
-      const newQuestionEntry = {
+      const newQuestionEntry: FormQuestion = {
           ...questionData,
           id: questionData.id || generateQuestionId(), 
           options: questionData.options?.map(opt => ({ id: opt.id || generateOptionId(), text: opt.text! })) || [],
-          correctOptionId: questionData.options?.find(opt => opt.text === questionData.correctOptionTextForNew)?.id || '', // This is tricky, correctOptionId might need server-side linking
-      } as MockQuestionType & { options?: MockOptionType[] };
+          correctOptionId: questionData.correctOptionId, // Already determined in QuestionEditDialog
+      };
       
       if (existingIndex !== undefined && existingIndex > -1 && prev.questions) {
         newQuestionsList = [...prev.questions];
@@ -303,9 +311,9 @@ const QuizQuestionsDialog = ({
     const questionsToUpsert = currentQuizState.questions?.map(q => {
         return {
             ...q, 
-            optionsToCreate: q.options?.map(opt => ({ id: opt.id.startsWith('opt-new-') ? undefined : opt.id, text: opt.text })),
+            optionsToCreate: q.options?.map(opt => ({ id: opt.id?.startsWith('opt-new-') ? undefined : opt.id, text: opt.text })),
             correctOptionTextForNew: q.options?.find(o => o.id === q.correctOptionId)?.text,
-            id: q.id.startsWith('q-new-') ? undefined : q.id, 
+            id: q.id?.startsWith('q-new-') ? undefined : q.id, 
         };
     });
     await onSaveQuiz({ ...currentQuizState, questionsToUpsert, questionIdsToDelete });
@@ -382,7 +390,7 @@ const CourseForm = ({
 }: {
   course?: Course & { modules?: (Module & { lessons?: Lesson[] })[], quizzes?: (Quiz & { questions?: (Question & { options?: Option[]})[] })[] };
   categories: PrismaCategory[];
-  onSubmit: (data: Omit<Course, 'id' | 'createdAt' | 'updatedAt' | 'categoryId' | 'categoryNameCache'> & { categoryName: string, modules?: Array<Partial<Omit<Module, 'id'|'courseId'|'createdAt'|'updatedAt'>> & { lessons?: Array<Partial<Omit<Lesson, 'id'|'moduleId'|'createdAt'|'updatedAt'>>> }>, quizzes?: Array<Partial<Omit<Quiz, 'id'|'courseId'|'createdAt'|'updatedAt'>> & { questions?: Array<Partial<Omit<Question, 'id'|'quizId'|'createdAt'|'updatedAt'|'options'|'correctOptionId'>> & { options: Array<Partial<Omit<Option, 'id'|'questionId'|'createdAt'|'updatedAt'>>>, correctOptionText?: string }> }> }) => Promise<void>;
+  onSubmit: (data: Omit<Course, 'id' | 'createdAt' | 'updatedAt' | 'categoryId' | 'categoryNameCache'> & { categoryName: string, modules?: FormModule[], quizzes?: FormQuiz[] }) => Promise<void>;
   onCancel: () => void;
   isSubmitting: boolean;
 }) => {
@@ -396,9 +404,9 @@ const CourseForm = ({
   const [currency, setCurrency] = useState(course?.currency || 'USD');
   const [isFeatured, setIsFeatured] = useState(course?.isFeatured || false);
   
-  const [modules, setModules] = useState<(Partial<Omit<Module, 'courseId'|'createdAt'|'updatedAt'>> & { lessons?: Partial<Omit<Lesson, 'moduleId'|'createdAt'|'updatedAt'>>[] })[]>(course?.modules?.map(m => ({...m, lessons: m.lessons.map(l => ({...l}))})) || []);
+  const [modules, setModules] = useState<FormModule[]>(course?.modules?.map(m => ({...m, lessons: m.lessons.map(l => ({...l}))})) || []);
   
-  const [quizzes, setQuizzes] = useState<(MockQuizType & { questions?: (MockQuestionType & { options?: MockOptionType[] })[] })[]>(
+  const [quizzes, setQuizzes] = useState<FormQuiz[]>(
     course?.quizzes?.map(q => ({
         id: q.id,
         title: q.title,
@@ -415,7 +423,7 @@ const CourseForm = ({
     })) || []
   );
 
-  const [editingQuizForQuestions, setEditingQuizForQuestions] = useState<(MockQuizType & { questions?: (MockQuestionType & { options?: MockOptionType[] })[] }) | null>(null);
+  const [editingQuizForQuestions, setEditingQuizForQuestions] = useState<FormQuiz | null>(null);
 
 
   const [learningObjectives, setLearningObjectives] = useState(course?.learningObjectives?.join('\n') || '');
@@ -424,12 +432,12 @@ const CourseForm = ({
   const [estimatedTimeToComplete, setEstimatedTimeToComplete] = useState(course?.estimatedTimeToComplete || undefined);
 
 
-  const [editingLesson, setEditingLesson] = useState<{ moduleIndex: number, lessonIndex?: number, lesson?: Partial<Omit<Lesson, 'moduleId'|'createdAt'|'updatedAt'>> } | null>(null);
+  const [editingLesson, setEditingLesson] = useState<{ moduleIndex: number, lessonIndex?: number, lesson?: FormLesson } | null>(null);
 
   const [newQuizTitle, setNewQuizTitle] = useState('');
   const [newQuizType, setNewQuizType] = useState<MockQuizEnumType>('practice');
 
-  const handleModuleChange = (index: number, field: keyof Omit<Module, 'id'|'courseId'|'createdAt'|'updatedAt'>, value: string | number) => {
+  const handleModuleChange = (index: number, field: keyof FormModule, value: string | number) => {
     const newModules = [...modules];
     (newModules[index] as any)[field] = value;
     setModules(newModules);
@@ -444,12 +452,12 @@ const CourseForm = ({
   };
   
 
-  const saveLesson = (lessonData: Partial<Omit<Lesson, 'moduleId'|'createdAt'|'updatedAt'>>, moduleIndex: number, lessonIndex?: number) => {
+  const saveLesson = (lessonData: FormLesson, moduleIndex: number, lessonIndex?: number) => {
     const newModules = [...modules];
     const currentModule = newModules[moduleIndex];
     if (!currentModule.lessons) currentModule.lessons = [];
     
-    if (lessonIndex !== undefined) {
+    if (lessonIndex !== undefined && currentModule.lessons[lessonIndex]) {
       currentModule.lessons[lessonIndex] = { ...currentModule.lessons[lessonIndex], ...lessonData };
     } else {
       currentModule.lessons.push({id: `l-new-${Date.now()}`, ...lessonData });
@@ -471,7 +479,7 @@ const CourseForm = ({
       alert("Quiz title cannot be empty."); 
       return;
     }
-    const newQuizEntry: MockQuizType & { questions?: (MockQuestionType & { options?: MockOptionType[] })[] } = {
+    const newQuizEntry: FormQuiz = {
       id: `quiz-new-${Date.now()}`,
       title: newQuizTitle,
       quizType: newQuizType,
@@ -483,26 +491,27 @@ const CourseForm = ({
     setNewQuizType('practice');
   };
 
-  const removeQuiz = (quizId: string) => {
+  const removeQuiz = (quizId?: string) => {
+    if (!quizId) return;
     setQuizzes(prev => prev.filter(q => q.id !== quizId));
   };
 
-  const handleSaveQuizWithQuestions = async (quizToSave: MockQuizType & { questionsToUpsert?: any[], questionIdsToDelete?: string[] }) => {
+  const handleSaveQuizWithQuestions = async (quizToSave: FormQuiz & { questionsToUpsert?: any[], questionIdsToDelete?: string[] }) => {
+    // If course is new (no ID), just update local state. DB save happens with full course.
     if (!course?.id) { 
         setQuizzes(prevQuizzes => prevQuizzes.map(q => q.id === quizToSave.id ? quizToSave : q));
         setEditingQuizForQuestions(null);
-        // toast({ title: "Quiz Structure Saved (Locally)", description: `Quiz "${quizToSave.title}" structure updated. This will be saved with the course.` });
         return;
     }
+    // If course exists, save quiz to DB via server action
     try {
-        const savedQuiz = await serverSaveQuizWithQuestions(course.id, quizToSave); // Use server action
+        // @ts-ignore // Prisma Quiz type might differ slightly from FormQuiz for server action
+        const savedQuiz = await serverSaveQuizWithQuestions(course.id, quizToSave);
         setQuizzes(prevQuizzes => prevQuizzes.map(q => q.id === savedQuiz.id ? 
-            {...savedQuiz, quizType: savedQuiz.quizType as MockQuizEnumType, questions: savedQuiz.questions as any[]} : q));
+            {...savedQuiz, quizType: savedQuiz.quizType as MockQuizEnumType, questions: savedQuiz.questions as FormQuestion[]} : q));
         setEditingQuizForQuestions(null);
-        // toast({ title: "Quiz Saved to DB", description: `Quiz "${savedQuiz.title}" and its questions have been updated.` });
     } catch (error) {
         console.error("Error saving quiz with questions to DB:", error);
-        // toast({ variant: "destructive", title: "Quiz Save Error", description: "Could not save quiz questions to database." });
     }
 };
 
@@ -538,17 +547,17 @@ const CourseForm = ({
         }))
       })),
       quizzes: quizzes.map(q => ({ 
-          id: q.id.startsWith('quiz-new-') ? undefined : q.id,
+          id: q.id?.startsWith('quiz-new-') ? undefined : q.id,
           title: q.title,
           quizType: q.quizType,
           passingScore: q.passingScore,
           questions: q.questions?.map(ques => ({
-              id: ques.id.startsWith('q-new-') ? undefined : ques.id,
+              id: ques.id?.startsWith('q-new-') ? undefined : ques.id,
               text: ques.text,
               order: ques.order,
               points: ques.points,
               options: ques.options?.map(opt => ({
-                id: opt.id.startsWith('opt-new-') ? undefined: opt.id,
+                id: opt.id?.startsWith('opt-new-') ? undefined: opt.id,
                 text: opt.text,
               })),
               correctOptionText: ques.options?.find(opt => opt.id === ques.correctOptionId)?.text,
@@ -682,7 +691,7 @@ const CourseForm = ({
             <h3 className="text-lg font-semibold flex items-center"><BookOpen className="mr-2 h-5 w-5 text-primary"/> Modules</h3>
             <Accordion type="multiple" className="w-full" defaultValue={modules.map((m, idx) => m.id || `module-${idx}`)}>
               {modules.map((module, moduleIndex) => (
-                <AccordionItem value={module.id || `module-${moduleIndex}`} key={module.id || `module-item-${moduleIndex}`}>
+                <AccordionItem value={module.id || `module-item-${moduleIndex}`} key={module.id || `module-item-${moduleIndex}`}>
                   <AccordionTrigger className="hover:no-underline">
                     <Input
                       value={module.title || ''}
@@ -824,14 +833,16 @@ export default function CourseManagement() {
     const loadInitialData = async () => {
       setIsLoadingData(true);
       try {
+        console.log("[CourseManagement] Fetching initial courses and categories...");
         const [dbCourses, dbCategories] = await Promise.all([
             serverGetCourses(), // Use server action
             serverGetCategories() // Use server action
         ]);
+        console.log(`[CourseManagement] Fetched ${dbCourses.length} courses and ${dbCategories.length} categories.`);
         setCourses(dbCourses);
         setCategories(dbCategories);
       } catch (error) {
-        console.error("Error loading courses or categories:", error);
+        console.error("[CourseManagement] Error loading courses or categories:", error);
         toast({ variant: "destructive", title: "Load Error", description: "Could not load courses or categories." });
       }
       setIsLoadingData(false);
@@ -839,10 +850,10 @@ export default function CourseManagement() {
     loadInitialData();
   }, [toast]);
 
-  const handleAddCourse = async (data: Omit<Course, 'id' | 'createdAt' | 'updatedAt'| 'categoryId' | 'categoryNameCache'> & { categoryName: string, modules?: any[], quizzes?: any[] }) => {
+  const handleAddCourse = async (data: Omit<Course, 'id' | 'createdAt' | 'updatedAt'| 'categoryId' | 'categoryNameCache'> & { categoryName: string, modules?: FormModule[], quizzes?: FormQuiz[] }) => {
     setIsSubmittingForm(true);
     try {
-      const newCourse = await serverAddCourse(data); // Use server action
+      const newCourse = await serverAddCourse(data); 
       setCourses(prev => [newCourse, ...prev].sort((a, b) => a.title.localeCompare(b.title)));
       closeForm();
       toast({ title: "Course Added", description: `"${data.title}" has been successfully added.` });
@@ -854,11 +865,12 @@ export default function CourseManagement() {
     }
   };
 
-  const handleEditCourse = async (data: Partial<Omit<Course, 'id' | 'createdAt' | 'updatedAt' | 'categoryId'| 'categoryNameCache'>> & { categoryName?: string, modules?: any[], quizzes?: any[] }) => {
+  const handleEditCourse = async (data: Partial<Omit<Course, 'id' | 'createdAt' | 'updatedAt' | 'categoryId'| 'categoryNameCache'>> & { categoryName?: string, modules?: FormModule[], quizzes?: FormQuiz[] }) => {
     if (!editingCourse || !editingCourse.id) return;
     setIsSubmittingForm(true);
     try {
-      const updatedCourse = await serverUpdateCourse(editingCourse.id, data); // Use server action
+      // @ts-ignore // Prisma types can be tricky with partials for server actions
+      const updatedCourse = await serverUpdateCourse(editingCourse.id, data); 
       setCourses(prev => prev.map(c => c.id === editingCourse.id ? updatedCourse : c).sort((a,b) => a.title.localeCompare(b.title)));
       closeForm();
       toast({ title: "Course Updated", description: `"${data.title}" has been successfully updated.` });
@@ -873,17 +885,17 @@ export default function CourseManagement() {
   const handleDeleteCourse = async (courseId: string) => {
     const courseToDelete = courses.find(c => c.id === courseId);
     try {
-      await serverDeleteCourse(courseId); // Use server action
+      await serverDeleteCourse(courseId); 
       setCourses(prev => prev.filter(c => c.id !== courseId));
       toast({ title: "Course Deleted", description: `"${courseToDelete?.title ?? 'Course'}" has been deleted.`, variant: "destructive" });
     } catch (error) {
-      toast({ variant: "destructive", title: "Error Deleting Course", description: "Could not delete course." });
+      toast({ variant: "destructive", title: "Error Deleting Course", description: (error as Error).message || "Could not delete course." });
     }
   };
 
   const openForm = async (courseId?: string) => {
     if (courseId) {
-        const courseToEdit = await serverGetCourseById(courseId); // Use server action
+        const courseToEdit = await serverGetCourseById(courseId); 
         if (courseToEdit) {
             setEditingCourse(courseToEdit);
         } else {
