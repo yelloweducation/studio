@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import LuminaLogo from '@/components/LuminaLogo';
 import { Button } from '@/components/ui/button';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Menu, Search, LayoutGrid, Loader2 } from 'lucide-react';
+import { Home, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Menu, Search, Loader2 } from 'lucide-react'; // Removed LayoutGrid as it wasn't used in nav
 import { useTheme } from '@/contexts/ThemeContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
@@ -19,11 +19,11 @@ import {
 import { Separator } from '@/components/ui/separator';
 import React, { useEffect, useState, useRef } from 'react';
 import { cn } from "@/lib/utils";
-import { useLanguage, type Language } from '@/contexts/LanguageContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const headerTranslations = {
   en: {
-    home: "Home", // Will be overridden by "ALL" for display
+    home: "ALL", // Changed from "Home"
     explore: "Explore",
     welcome: "Welcome",
     dashboard: "Dashboard",
@@ -33,10 +33,10 @@ const headerTranslations = {
     toggleTheme: "Toggle Theme",
     openMenu: "Open menu",
     loading: "Loading...",
-    all: "ALL", // Added for clarity, though we'll use "ALL" directly
+    all: "ALL",
   },
   my: {
-    home: "ပင်မ", // Will be overridden by "ALL" for display
+    home: "အားလုံး", // Changed from "ပင်မ"
     explore: "ရှာဖွေရန်",
     welcome: "ကြိုဆိုပါတယ်",
     dashboard: "ဒက်ရှ်ဘုတ်",
@@ -46,7 +46,7 @@ const headerTranslations = {
     toggleTheme: "အသွင်ပြောင်းရန်",
     openMenu: "မီနူးဖွင့်ပါ",
     loading: "လုပ်ဆောင်နေသည်...",
-    all: "အားလုံး", // Added for clarity
+    all: "အားလုံး",
   }
 };
 
@@ -60,66 +60,75 @@ const Header = () => {
   const { language } = useLanguage();
   const t = headerTranslations[language];
 
-  const [headerVisible, setHeaderVisible] = useState(true);
-  const lastScrollY = useRef(0);
-  const headerScrollThreshold = 100; // Pixels to scroll before header potentially hides
-
   const isOnHomepage = pathname === '/';
-  const isOnCourseSearchPage = pathname === '/courses/search';
-  // Determine if scroll-based header effects (hiding, background change) should apply
-  const useScrollHidingHeader = isOnHomepage; // Only apply these effects on the homepage
+  const useScrollHidingHeader = isOnHomepage;
+  const headerScrollThreshold = 100;
 
-  // State for dynamic background classes based on scroll and page
-  const [dynamicHeaderBackgroundClasses, setDynamicHeaderBackgroundClasses] = useState(
-    useScrollHidingHeader && typeof window !== 'undefined' && window.scrollY < 50
-      ? '' // Transparent on homepage top
-      : 'bg-background/80 backdrop-blur-md border-b' // Default for other pages or scrolled homepage
-  );
+  // Initialize to the state that the server renders for the homepage (which has background, per the error).
+  // Then client useEffect will adjust it for homepage top-scroll transparency.
+  const [dynamicHeaderBackgroundClasses, setDynamicHeaderBackgroundClasses] = useState('bg-background/80 backdrop-blur-md border-b');
+  const [headerVisible, setHeaderVisible] = useState(true);
 
-
+  // Effect for header visibility (hiding on scroll down on homepage)
   useEffect(() => {
-    const controlHeader = () => {
-      if (pathname === '/videos') {
+    if (typeof window === 'undefined') {
+      setHeaderVisible(true); // Default to visible if no window (SSR or pre-mount)
+      return;
+    }
+
+    if (!useScrollHidingHeader) {
+      setHeaderVisible(true); // Always visible on non-homepage
+      return;
+    }
+
+    // Below logic only applies if useScrollHidingHeader is true (homepage)
+    let lastScrollYLocal = window.scrollY;
+    const controlHeaderVisibility = () => {
+      const currentScrollY = window.scrollY;
+      if (currentScrollY > headerScrollThreshold && currentScrollY > lastScrollYLocal) {
         setHeaderVisible(false);
-        setDynamicHeaderBackgroundClasses('');
+      } else {
+        setHeaderVisible(true);
+      }
+      lastScrollYLocal = currentScrollY;
+    };
+
+    window.addEventListener('scroll', controlHeaderVisibility, { passive: true });
+    controlHeaderVisibility(); // Initial check
+
+    return () => window.removeEventListener('scroll', controlHeaderVisibility);
+  }, [pathname, useScrollHidingHeader, headerScrollThreshold]); // usePathname() ensures pathname is stable, added to deps
+
+  // Effect for header background (transparent on homepage top)
+  useEffect(() => {
+    if (typeof window === 'undefined') { // Should not run on server
+      return;
+    }
+
+    const controlHeaderBackground = () => {
+      if (pathname === '/videos') {
+        setDynamicHeaderBackgroundClasses(''); // Videos page has its own header style or no standard header
         return;
       }
-
-      const currentScrollY = window.scrollY;
-
-      if (useScrollHidingHeader) { // Only on homepage
-        if (currentScrollY > headerScrollThreshold && currentScrollY > lastScrollY.current) {
-          setHeaderVisible(false); // Hide on scroll down
-        } else {
-          setHeaderVisible(true);  // Show on scroll up or if at top
-        }
-        lastScrollY.current = currentScrollY;
-        
-        // Set background based on scroll position on homepage
+      if (useScrollHidingHeader) { // True for homepage
+        const currentScrollY = window.scrollY;
         const newBackgroundClasses = (currentScrollY < 50) ? '' : 'bg-background/80 backdrop-blur-md border-b';
         setDynamicHeaderBackgroundClasses(newBackgroundClasses);
-
       } else { // For all other pages
-        setHeaderVisible(true);
         setDynamicHeaderBackgroundClasses('bg-background/80 backdrop-blur-md border-b');
       }
     };
+    
+    window.addEventListener('scroll', controlHeaderBackground, { passive: true });
+    // Call on mount to set initial client-side state correctly after hydration
+    controlHeaderBackground(); 
 
-    if (typeof window !== 'undefined') {
-      window.addEventListener('scroll', controlHeader, { passive: true });
-      controlHeader(); // Initial check
-    }
-
-    return () => {
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('scroll', controlHeader);
-      }
-    };
+    return () => window.removeEventListener('scroll', controlHeaderBackground);
   }, [pathname, useScrollHidingHeader]);
 
 
   if (pathname === '/videos') {
-    return null; // Videos page has its own header
+    return null;
   }
 
   const handleLogout = () => {
@@ -131,19 +140,17 @@ const Header = () => {
   const getDashboardPath = () => {
     if (role === 'admin') return '/dashboard/admin';
     if (role === 'student') return '/dashboard/student';
-    return '/'; // Fallback, though should not happen if role is set
+    return '/';
   };
 
   const commonNavButtonClasses = "w-full justify-start py-3 px-2 text-base";
   const commonIconClasses = "mr-2 h-5 w-5";
-
   const headerBaseClasses = 'sticky top-0 z-50 transition-transform duration-300 ease-in-out';
-
 
   const desktopNavItems = (
     <>
       <Button variant="ghost" size="sm" asChild className={cn("hover:bg-accent/20", pathname === '/' && "bg-accent/10 text-primary font-semibold")}>
-        <Link href="/"><Home className="mr-1 h-4 w-4" /> ALL</Link>
+        <Link href="/"><Home className="mr-1 h-4 w-4" /> {t.all}</Link>
       </Button>
       <Button variant="ghost" size="sm" asChild className={cn("hover:bg-accent/20", pathname === '/courses/search' && "bg-accent/10 text-primary font-semibold")}>
           <Link href="/courses/search"><Search className="mr-1 h-4 w-4" /> {t.explore}</Link>
@@ -191,29 +198,27 @@ const Header = () => {
     <header className={cn(
         headerBaseClasses,
         dynamicHeaderBackgroundClasses,
-        {'!-translate-y-full': !headerVisible && useScrollHidingHeader } // Apply hiding class if not visible and on a page that uses scroll hiding
+        {'!-translate-y-full': !headerVisible && useScrollHidingHeader }
       )}>
       <nav className="container mx-auto px-4 py-3 flex justify-between items-center min-h-[57px]">
-        {/* Conditionally render LuminaLogo: only if not on homepage */}
         {!isOnHomepage && <LuminaLogo />}
 
         {isMobile ? (
             <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
               <SheetTrigger asChild>
-                 {/* Ensure SheetTrigger is always on the right, even if logo is hidden */}
-                <Button variant="ghost" size="icon" className={cn(isOnHomepage && "ml-auto")}> {/* Adjust margin if on homepage and logo is hidden */}
+                <Button variant="ghost" size="icon" className={cn(isOnHomepage && "ml-auto")}>
                   <Menu className="h-6 w-6" />
                   <span className="sr-only">{t.openMenu}</span>
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-[280px] sm:w-[320px] p-0">
                 <SheetHeader className="p-4 border-b">
-                    <SheetTitle><LuminaLogo /></SheetTitle> {/* Logo always shown in sheet menu header */}
+                    <SheetTitle><LuminaLogo /></SheetTitle>
                 </SheetHeader>
                 <div className="flex flex-col space-y-1 p-4">
                   <SheetClose asChild>
                     <Button variant="ghost" asChild className={cn(commonNavButtonClasses, pathname === '/' && "bg-accent text-accent-foreground")}>
-                      <Link href="/"><Home className={commonIconClasses} /> ALL</Link>
+                      <Link href="/"><Home className={commonIconClasses} /> {t.all}</Link>
                     </Button>
                   </SheetClose>
                   <SheetClose asChild>
@@ -265,7 +270,6 @@ const Header = () => {
               </SheetContent>
             </Sheet>
         ) : ( 
-          // Desktop navigation items: pushed to right if on homepage (logo hidden)
           <div className={cn("flex items-center space-x-1", isOnHomepage && "ml-auto")}>
             {desktopNavItems}
           </div>
