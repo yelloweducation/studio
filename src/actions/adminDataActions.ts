@@ -11,9 +11,10 @@ import {
   type Question,
   type Option,
   type LearningPath,
-  type Enrollment, // Added
-  type PaymentSubmission, // Added
-  type PaymentSubmissionStatus, // Added
+  type Enrollment, 
+  type PaymentSubmission, 
+  type PaymentSubmissionStatus, 
+  type QuizType as PrismaQuizType, // Explicitly import Prisma's QuizType
   // Mock types for forms or data structures if still needed by components
   type Course as MockCourseType,
   type Quiz as MockQuizType,
@@ -37,10 +38,21 @@ import {
   seedCategoriesToDb as seedCategoriesDbUtil,
   seedCoursesToDb as seedCoursesDbUtil,
   seedLearningPathsToDb as seedLearningPathsDbUtil,
-  getEnrollmentForUserAndCourseFromDb, // Added
-  getPaymentSubmissionsFromDb, // This will be updated to fetch all, then filter if needed, or direct fetch
-  createEnrollmentInDb as createEnrollmentDbUtil, // Added
-  // Video and PaymentSettings still use client-side utils, actions for them will be added when they are migrated to DB
+  getEnrollmentForUserAndCourseFromDb, 
+  getPaymentSubmissionsFromDb, 
+  createEnrollmentInDb as createEnrollmentDbUtil, 
+  addPaymentSubmissionToDb as addPaymentSubmissionDbUtil,
+  updatePaymentSubmissionInDb as updatePaymentSubmissionDbUtil,
+  getEnrollmentsByUserIdFromDb as getEnrollmentsByUserIdDbUtil,
+  // Video and PaymentSettings actions (if needed for server-side logic not directly tied to UI component state)
+  getVideosFromDb, 
+  addVideoToDb, 
+  updateVideoInDb, 
+  deleteVideoFromDb,
+  getPaymentSettingsFromDb, 
+  savePaymentSettingsToDb,
+  seedVideosToDb as seedVideosDbUtil,
+  seedPaymentSettingsToDb as seedPaymentSettingsDbUtil,
 } from '@/lib/dbUtils';
 
 // --- Category Actions ---
@@ -73,22 +85,37 @@ export async function serverAddCourse(
   courseData: Omit<Course, 'id'|'createdAt'|'updatedAt'|'categoryId'|'categoryNameCache'|'modules'|'quizzes'|'learningPathCourses'|'category'|'enrollments'|'paymentSubmissions'> & { 
     categoryName: string, 
     modules?: Array<Partial<Omit<Module, 'id'|'courseId'|'createdAt'|'updatedAt'|'lessons'>> & { lessons?: Array<Partial<Omit<Lesson, 'id'|'moduleId'|'createdAt'|'updatedAt'>>> }>,
-    quizzes?: Array<Partial<Omit<Quiz, 'id'|'courseId'|'createdAt'|'updatedAt'|'questions'>> & { questions?: Array<Partial<Omit<Question, 'id'|'quizId'|'createdAt'|'updatedAt'|'options'|'correctOptionId'>> & { options: Array<Partial<Omit<Option, 'id'|'questionId'|'createdAt'|'updatedAt'>>>, correctOptionText?: string }> }>
+    quizzes?: Array<Partial<Omit<Quiz, 'id'|'courseId'|'createdAt'|'updatedAt'|'questions'>> & { quizType: PrismaQuizType, questions?: Array<Partial<Omit<Question, 'id'|'quizId'|'createdAt'|'updatedAt'|'options'|'correctOptionId'>> & { options: Array<Partial<Omit<Option, 'id'|'questionId'|'createdAt'|'updatedAt'>>>, correctOptionText?: string }> }>
   }
 ): Promise<Course> {
-  // @ts-ignore
-  return addCourseToDb(courseData);
+  console.log("[ServerAction serverAddCourse] Action called. Received data (first 200 chars):", JSON.stringify(courseData).substring(0,200) + "...");
+  try {
+    // @ts-ignore - The input type for addCourseToDb is specific and derived from Zod schema in dbUtils.
+    // This server action's input type is a simplified representation for external calls.
+    // The actual validation happens within addCourseToDb.
+    const newCourse = await addCourseToDb(courseData);
+    console.log("[ServerAction serverAddCourse] addCourseToDb successful, returning course ID:", newCourse.id);
+    return newCourse;
+  } catch (error) {
+    console.error("[ServerAction serverAddCourse] Error calling addCourseToDb. Full error:", error);
+    if (error instanceof Error) {
+        console.error("[ServerAction serverAddCourse] Error name:", error.name);
+        console.error("[ServerAction serverAddCourse] Error message:", error.message);
+    }
+    throw new Error(`Failed to add course. Server log may have details. Message: ${error instanceof Error ? error.message : 'Unknown server error'}`);
+  }
 }
+
 
 export async function serverUpdateCourse(
   courseId: string, 
   courseData: Partial<Omit<Course, 'id'|'createdAt'|'updatedAt'|'categoryId'|'categoryNameCache'|'modules'|'quizzes'|'learningPathCourses'|'category'|'enrollments'|'paymentSubmissions'>> & { 
     categoryName?: string, 
     modules?: Array<Partial<Omit<Module, 'id'|'courseId'|'createdAt'|'updatedAt'|'lessons'>> & { id?: string, lessons?: Array<Partial<Omit<Lesson, 'id'|'moduleId'|'createdAt'|'updatedAt'>> & {id?: string}> }>,
-    quizzes?: Array<Partial<Omit<Quiz, 'id'|'courseId'|'createdAt'|'updatedAt'|'questions'>> & { id?: string, questions?: Array<Partial<Omit<Question, 'id'|'quizId'|'createdAt'|'updatedAt'|'options'|'correctOptionId'>> & { id?: string, options: Array<Partial<Omit<Option, 'id'|'questionId'|'createdAt'|'updatedAt'>> & {id?:string}>, correctOptionText?: string }> }>
+    quizzes?: Array<Partial<Omit<Quiz, 'id'|'courseId'|'createdAt'|'updatedAt'|'questions'>> & { id?: string, quizType: PrismaQuizType, questions?: Array<Partial<Omit<Question, 'id'|'quizId'|'createdAt'|'updatedAt'|'options'|'correctOptionId'>> & { id?: string, options: Array<Partial<Omit<Option, 'id'|'questionId'|'createdAt'|'updatedAt'>> & {id?:string}>, correctOptionText?: string }> }>
   }
 ): Promise<Course> {
-  // @ts-ignore
+  // @ts-ignore - Similar to serverAddCourse, detailed validation is in updateCourseInDb.
   return updateCourseInDb(courseId, courseData);
 }
 
@@ -98,9 +125,14 @@ export async function serverDeleteCourse(courseId: string): Promise<void> {
 
 export async function serverSaveQuizWithQuestions(
     courseIdForQuiz: string,
-    quizData: MockQuizType & { questionsToUpsert?: any[], questionIdsToDelete?: string[] }
+    quizData: MockQuizType & { questionsToUpsert?: any[], questionIdsToDelete?: string[] } // MockQuizType uses string for quizType
 ): Promise<Quiz> { 
-    // @ts-ignore
+    // dbUtils.saveQuizWithQuestionsToDb expects Prisma's QuizType enum.
+    // The quizData.quizType here will be a string like "practice" or "graded".
+    // saveQuizWithQuestionsToDb in dbUtils now handles this by casting to Prisma's QuizType internally
+    // after Zod validation which is not explicitly run here but should be added or ensured.
+    // For now, @ts-ignore allows it to proceed, assuming dbUtils handles the string->enum.
+    // @ts-ignore 
     return saveQuizWithQuestionsToDb(courseIdForQuiz, quizData);
 }
 
@@ -137,6 +169,13 @@ export async function serverSeedCourses(): Promise<{ successCount: number; error
 export async function serverSeedLearningPaths(): Promise<{ successCount: number; errorCount: number; skippedCount: number }> {
     return seedLearningPathsDbUtil();
 }
+export async function serverSeedVideos(): Promise<{ successCount: number; errorCount: number; skippedCount: number }> {
+    return seedVideosDbUtil();
+}
+export async function serverSeedPaymentSettings(): Promise<{ successCount: number; errorCount: number; skippedCount: number }> {
+    return seedPaymentSettingsDbUtil();
+}
+
 
 // --- User-Specific Data Fetching for Course Display ---
 export async function serverGetEnrollmentForCourse(userId: string, courseId: string): Promise<Enrollment | null> {
@@ -144,9 +183,7 @@ export async function serverGetEnrollmentForCourse(userId: string, courseId: str
 }
 
 export async function serverGetPaymentSubmissionForCourse(userId: string, courseId: string): Promise<PaymentSubmission | null> {
-  // getPaymentSubmissionsFromDb will now use Prisma.
-  // For a single course, we might want a more targeted query in dbUtils if performance becomes an issue.
-  const allUserSubmissions = await getPaymentSubmissionsFromDb({ userId: userId }); // Assuming getPaymentSubmissionsFromDb can filter
+  const allUserSubmissions = await getPaymentSubmissionsFromDb({ userId: userId }); 
   return allUserSubmissions.find(s => s.courseId === courseId) || null;
 }
 
@@ -161,7 +198,7 @@ export async function serverCreateEnrollment(userId: string, courseId: string): 
 
 // --- Student Dashboard Actions ---
 export async function serverGetEnrollmentsByUserId(userId: string): Promise<Enrollment[]> {
-    return getEnrollmentsByUserIdFromDb(userId);
+    return getEnrollmentsByUserIdDbUtil(userId);
 }
 
 // --- Checkout Page Actions ---
@@ -169,10 +206,50 @@ export async function serverAddPaymentSubmission(
     submissionData: Omit<PaymentSubmission, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'submittedAt' | 'reviewedAt' | 'adminNotes' | 'user' | 'course'> & { userId: string, courseId: string }
 ): Promise<PaymentSubmission | null> {
     try {
-        // @ts-ignore // dbUtils.addPaymentSubmissionToDb expects Prisma compatible type now
-        return await addPaymentSubmissionToDb(submissionData);
+        // addPaymentSubmissionDbUtil expects data validated by PaymentSubmissionInputSchema
+        return await addPaymentSubmissionDbUtil(submissionData);
     } catch (error) {
         console.error("[ServerAction] Error adding payment submission:", error);
         return null;
     }
+}
+
+// --- Admin Panel Payment Submission Review Actions ---
+export async function serverGetAllPaymentSubmissions(): Promise<PaymentSubmission[]> {
+    return getPaymentSubmissionsFromDb(); // Gets all by default
+}
+
+export async function serverUpdatePaymentSubmissionStatus(
+    submissionId: string, 
+    newStatus: PaymentSubmissionStatus, 
+    adminNotes?: string | null
+): Promise<PaymentSubmission | null> {
+    try {
+        return await updatePaymentSubmissionDbUtil(submissionId, { status: newStatus, adminNotes: adminNotes, reviewedAt: new Date() });
+    } catch (error) {
+        console.error("[ServerAction] Error updating payment submission status:", error);
+        return null;
+    }
+}
+
+// --- Video Actions (Admin Panel) ---
+export async function serverGetVideos(): Promise<Video[]> {
+    return getVideosFromDb();
+}
+export async function serverAddVideo(videoData: Omit<Video, 'id' | 'createdAt' | 'updatedAt'>): Promise<Video> {
+    return addVideoToDb(videoData);
+}
+export async function serverUpdateVideo(videoId: string, videoData: Partial<Omit<Video, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Video> {
+    return updateVideoInDb(videoId, videoData);
+}
+export async function serverDeleteVideo(videoId: string): Promise<void> {
+    return deleteVideoFromDb(videoId);
+}
+
+// --- Payment Settings Actions (Admin Panel) ---
+export async function serverGetPaymentSettings(): Promise<PaymentSettings | null> {
+    return getPaymentSettingsFromDb();
+}
+export async function serverSavePaymentSettings(settingsData: Omit<PaymentSettings, 'id'| 'updatedAt'>): Promise<PaymentSettings> {
+    return savePaymentSettingsToDb(settingsData);
 }
