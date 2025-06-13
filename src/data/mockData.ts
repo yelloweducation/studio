@@ -241,6 +241,7 @@ export const mockCoursesForSeeding: Course[] = [
 export const mockUsersForSeeding: User[] = [
   { id: 'user-super-admin-seed', name: 'Super Admin', email: 'admin@example.com', role: 'admin', passwordHash: 'superadminpass_PLAINTEXT' },
   { id: 'user-student-seed', name: 'Student User', email: 'student@example.com', role: 'student', passwordHash: 'password123_PLAINTEXT' },
+  { id: 'user-nanghtikeaung-seed', name: 'Nang Htike Aung', email: 'nanghtikeaung@gmail.com', role: 'admin', passwordHash: 'password123_PLAINTEXT' },
 ];
 
 export const mockVideosForSeeding: Video[] = [
@@ -306,3 +307,4 @@ export const initialPaymentSettings: PaymentSettings = {
 export const initialLearningPaths_DEPRECATED_USE_FIRESTORE: LearningPath[] = mockLearningPathsForSeeding;
 export const initialLearningPaths = initialLearningPaths_DEPRECATED_USE_FIRESTORE;
 
+export type QuizType = 'practice' | 'graded'; // Export this for CourseManagement

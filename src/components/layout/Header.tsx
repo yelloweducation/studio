@@ -2,10 +2,9 @@
 "use client";
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
-// import LuminaLogo from '@/components/LuminaLogo'; // Logo removed
 import { Button } from '@/components/ui/button';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Compass, User as UserIcon, BookOpen, Layers, Brain, Loader2 } from 'lucide-react'; // Menu, Circle removed
+import { Home, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Compass, User as UserIcon, BookOpen, Layers, Brain, Loader2 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import React, { useEffect, useState } from 'react';
@@ -67,7 +66,7 @@ const Header = () => {
 
     const controlHeaderBackground = () => {
       if (pathname === '/videos' || isMobile) { 
-        setDynamicHeaderBackgroundClasses('');
+        setDynamicHeaderBackgroundClasses('bg-transparent border-transparent'); // Ensure mobile header is transparent
       } else {
         setDynamicHeaderBackgroundClasses(window.scrollY < 50 ? '' : 'bg-background/80 backdrop-blur-md border-b');
       }
@@ -185,10 +184,11 @@ const Header = () => {
   
   const MobileHomepageAllLink = () => (
     <Link href="/" className={cn(
-        "group text-base font-bold font-headline transition-all py-1",
+        "group text-sm font-bold font-headline transition-all py-1 flex items-center gap-1", // Reduced font size, added flex and gap
         "text-black dark:text-white", 
         "underline decoration-primary underline-offset-4 decoration-2"
       )}>
+        <Home className="h-4 w-4 text-primary group-hover:text-accent transition-colors" /> {/* Added Home icon */}
         {t.all}
     </Link>
   );
@@ -219,7 +219,7 @@ const Header = () => {
   return (
     <header className={cn(
         "sticky top-0 z-50 transition-all duration-300 ease-in-out",
-        isMobile ? 'bg-transparent border-transparent' : dynamicHeaderBackgroundClasses,
+        isMobile ? 'bg-transparent border-transparent' : dynamicHeaderBackgroundClasses, // Mobile header always transparent
         {'!-translate-y-full': !headerVisible && useScrollHidingHeader && !isMobile }
       )}>
       <div className="container mx-auto px-4 py-2.5 flex justify-between items-center min-h-[60px]">
@@ -232,8 +232,7 @@ const Header = () => {
           </>
         ) : (
           <>
-            {/* Logo was here, now this div pushes DesktopNav to the right */}
-            <div className="flex-1"></div>
+            <div className="flex-1"></div> {/* Spacer for desktop to push nav right */}
             <DesktopNav />
           </>
         )}
@@ -243,5 +242,3 @@ const Header = () => {
 };
 
 export default Header;
-
-    
