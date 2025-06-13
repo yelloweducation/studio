@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home as HomeIcon, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Compass, Layers, Brain, Loader2 } from 'lucide-react';
+import { Home as HomeIcon, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Compass, Layers, Brain, Loader2, Menu as MenuIcon } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import React, { useEffect, useState } from 'react';
@@ -35,6 +35,7 @@ const headerTranslations = {
     toggleTheme: "Toggle Theme",
     loading: "Loading...",
     menu: "Menu",
+    adminDashboard: "Admin Panel" // Added for admin specific link
   },
   my: {
     home: "ပင်မ",
@@ -52,6 +53,7 @@ const headerTranslations = {
     toggleTheme: "အသွင်ပြောင်းရန်",
     loading: "လုပ်ဆောင်နေသည်...",
     menu: "မီနူး",
+    adminDashboard: "အက်ဒမင်"
   }
 };
 
@@ -149,7 +151,7 @@ const Header = () => {
   const commonNavItems = [
     { href: "/", label: t.home, Icon: HomeIcon },
     { href: "/courses/search", label: t.explore, Icon: Compass },
-    { href: "/videos", label: t.videos, Icon: HomeIcon },
+    { href: "/videos", label: t.videos, Icon: HomeIcon }, // VideoIcon was used, HomeIcon for consistency with mobile potentially
     { href: "/flash-cards", label: t.flashCards, Icon: Layers },
     { href: "/personality-tests", label: t.personalityTest, Icon: Brain }
   ];
@@ -184,6 +186,7 @@ const Header = () => {
         "text-sm",
         "hover:opacity-80"
       )}
+      onClick={() => setMobileSheetOpen(false)}
       style={{ textShadow: '1px 1px 2px hsl(var(--primary-darker))' }}
     >
       <HomeIcon className="h-4 w-4 text-primary group-hover:text-accent transition-colors" />
@@ -192,18 +195,44 @@ const Header = () => {
   );
 
   const MobileLeftContent = () => {
-    if (isOnHomepage || isOnFlashCardsPage || isOnPersonalityTestsPage || isOnCoursesPage) {
+    if (authLoading) {
+        return <div className="w-8 h-8 flex items-center justify-center shrink-0"><Loader2 className="h-4 w-4 animate-spin" /></div>;
+    }
+
+    if (isOnHomepage) {
+      if (isAuthenticated && role === 'admin') {
+        return (
+          <Link
+            href="/dashboard/admin"
+            className={cn(
+              "group font-headline transition-all py-1 flex items-center gap-1.5", // Increased gap
+              "text-foreground",
+              "text-sm font-medium", // Make it stand out slightly more
+              "hover:text-primary"
+            )}
+            onClick={() => setMobileSheetOpen(false)}
+          >
+            <LayoutDashboard className="h-4 w-4 text-accent group-hover:text-primary transition-colors" />
+            {t.adminDashboard}
+          </Link>
+        );
+      } else {
+        return <MobileHomepageAllLink />;
+      }
+    } else if (isOnFlashCardsPage || isOnPersonalityTestsPage || isOnCoursesPage) {
       return <MobileHomepageAllLink />;
     }
-    return <div className="flex-1"></div>;
+    return <div className="flex-1"></div>; // Empty for pages that will show hamburger
   };
-
+  
   const shouldShowHamburgerMenu = !isOnHomepage && !isOnFlashCardsPage && !isOnPersonalityTestsPage && !isOnCoursesPage;
 
 
   const DesktopNav = () => (
     <>
-      <div className="flex-1"></div>
+      <div className="flex-1">
+         {/* Potentially a logo or brand name here if desired */}
+      </div>
       <nav className="mx-auto flex justify-center items-center space-x-1 lg:space-x-2">
         {commonNavItems.map(item => (
           <Button key={item.label} variant="ghost" size="sm" asChild className={navLinkClasses(item.href)}>
@@ -250,7 +279,7 @@ const Header = () => {
 
   const MobileNav = () => (
     <div className="flex items-center justify-between w-full">
-      <div className="flex-shrink-0">
+      <div className="flex-shrink-0 min-w-[60px]"> {/* Ensure left content has some space */}
         <MobileLeftContent />
       </div>
 
@@ -283,12 +312,12 @@ const Header = () => {
           <Sheet open={mobileSheetOpen} onOpenChange={setMobileSheetOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="text-foreground hover:text-primary w-8 h-8" aria-label={t.menu}>
-                <HomeIcon className="h-5 w-5" />
+                <MenuIcon className="h-5 w-5" />
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-[280px] p-4 flex flex-col">
-              <SheetHeader className="mb-4">
-                <SheetTitle className="sr-only">{t.menu}</SheetTitle> {/* Added sr-only title for accessibility */}
+               <SheetHeader className="mb-4">
+                <SheetTitle className="sr-only">{t.menu}</SheetTitle>
               </SheetHeader>
               <nav className="flex-grow space-y-1.5">
                 {commonNavItems.map(item => (
