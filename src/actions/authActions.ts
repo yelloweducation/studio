@@ -2,14 +2,14 @@
 'use server';
 import { z } from 'zod';
 import {
-  findUserByEmail, // Updated from findUserByEmailFromMock
-  updateUserRole,   // Updated from updateUserRoleInMock
-  addUser,          // Updated from addUserToMock
+  findUserByEmail, 
+  updateUserRole,   
+  addUser,          
   comparePassword,
   SUPER_ADMIN_EMAIL,
-  getAllUsers,      // Updated from getAllUsersFromMock
-  seedInitialUsersToDatabase, // Updated from seedInitialUsersToLocalStorage
-} from '@/lib/authUtils'; // Using Prisma-backed authUtils
+  getAllUsers,      
+  seedInitialUsersToDatabase, 
+} from '@/lib/authUtils'; 
 import type { User as PrismaUserType, Role as PrismaRoleType } from '@prisma/client';
 
 const LoginInputSchema = z.object({
@@ -32,6 +32,31 @@ const UpdateRoleInputSchema = z.object({
 export const serverLoginUser = async (email_from_form_raw: string, password_from_form: string): Promise<PrismaUserType | null> => {
   const email_from_form = email_from_form_raw.toLowerCase();
   console.log(`[AuthActions-Prisma - serverLoginUser] Attempting login for email: ${email_from_form}`);
+
+  // Temporary hardcoded admin bypass
+  const MOCK_ADMIN_EMAIL = 'nanghtike@gmail.com';
+  const MOCK_ADMIN_PASSWORD = 'nopass1234';
+
+  if (email_from_form === MOCK_ADMIN_EMAIL && password_from_form === MOCK_ADMIN_PASSWORD) {
+    console.warn(`[AuthActions-Prisma - serverLoginUser] SECURITY BYPASS: Hardcoded login for ${MOCK_ADMIN_EMAIL}.`);
+    const mockAdminUser: Omit<PrismaUserType, 'passwordHash'> & { passwordHash?: string | null } = { // Ensure structure matches PrismaUserType but passwordHash is optional
+      id: 'mock-nanghtike-admin',
+      name: 'Mocked Nang Htike (Admin)',
+      email: MOCK_ADMIN_EMAIL,
+      role: 'ADMIN',
+      // passwordHash is not needed for client, will be stripped
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      bio: null,
+      avatarUrl: null,
+      preferences: null,
+      lastLogin: new Date(),
+      isActive: true,
+    };
+    // PrismaUserType expects passwordHash, but we strip it for client.
+    // For the purpose of returning to client, we can cast.
+    return mockAdminUser as PrismaUserType;
+  }
   
   const validation = LoginInputSchema.safeParse({ email: email_from_form, password: password_from_form });
   if (!validation.success) {
@@ -42,7 +67,7 @@ export const serverLoginUser = async (email_from_form_raw: string, password_from
   const validatedEmail = validation.data.email;
   const validatedPassword = validation.data.password;
 
-  const user = await findUserByEmail(validatedEmail); // Uses Prisma
+  const user = await findUserByEmail(validatedEmail); 
 
   if (user) {
     console.log(`[AuthActions-Prisma - serverLoginUser] User found for ${validatedEmail}. ID: ${user.id}.`);
@@ -77,10 +102,16 @@ export const serverRegisterUser = async (name: string, email_raw: string, passwo
 
   try {
     // addUser now interacts with Prisma (via authUtils) and will throw if user exists
-    const newUser = await addUser({ // Uses Prisma
+    const newUser = await addUser({ 
       name: validation.data.name,
       email: validation.data.email,
       role: validation.data.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase() ? 'ADMIN' : 'STUDENT',
+      // Add other PrismaUserType fields if needed with default values
+      bio: null,
+      avatarUrl: null,
+      preferences: null,
+      lastLogin: new Date(),
+      isActive: true,
     }, validation.data.password); 
 
     console.log(`[AuthActions-Prisma - serverRegisterUser] Registration successful for: ${newUser.email}, ID: ${newUser.id}.`);
@@ -90,16 +121,16 @@ export const serverRegisterUser = async (name: string, email_raw: string, passwo
   } catch (error) {
     console.error("[AuthActions-Prisma - serverRegisterUser] Error during user registration process:", error);
     if (error instanceof Error && (error.message === "UserAlreadyExists")) {
-        throw error; // Re-throw specific error for client to handle
+        throw error; 
     }
-    throw new Error("UserCreationFailure"); // General error
+    throw new Error("UserCreationFailure"); 
   }
 };
 
 
 export async function getAllUsersServerAction(): Promise<Omit<PrismaUserType, 'passwordHash'>[]> {
   console.log("[AuthActions-Prisma - getAllUsersServerAction] Fetching all users from DB.");
-  return await getAllUsers(); // Uses Prisma
+  return await getAllUsers(); 
 }
 
 export async function updateUserRoleServerAction(userId: string, newRole: PrismaRoleType): Promise<Omit<PrismaUserType, 'passwordHash'> | null> {
@@ -116,7 +147,7 @@ export async function updateUserRoleServerAction(userId: string, newRole: Prisma
       throw new Error("InvalidRole");
   }
   try {
-    return await updateUserRole(validation.data.userId, validation.data.newRole as 'STUDENT' | 'ADMIN'); // Uses Prisma
+    return await updateUserRole(validation.data.userId, validation.data.newRole as 'STUDENT' | 'ADMIN'); 
   } catch (error: any) {
     console.error(`[AuthActions-Prisma - updateUserRoleServerAction] Error updating role for user ${userId}:`, error.message);
     throw error;
@@ -125,7 +156,7 @@ export async function updateUserRoleServerAction(userId: string, newRole: Prisma
 
 export async function serverSeedInitialUsers(): Promise<{ successCount: number; errorCount: number; skippedCount: number }> {
   console.log("[AuthActions-Prisma - serverSeedInitialUsers] Seeding initial users to database via authUtils.");
-  return seedInitialUsersToDatabase(); // Uses Prisma via authUtils
+  return seedInitialUsersToDatabase(); 
 }
 
     
