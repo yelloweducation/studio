@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Compass, User as UserIcon, BookOpen, Layers, Brain, Loader2, Menu, Circle } from 'lucide-react';
+import { Home, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Compass, User as UserIcon, BookOpen, Layers, Brain, Loader2, Menu } from 'lucide-react'; // Added Menu back
 import { useTheme } from '@/contexts/ThemeContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import React, { useEffect, useState } from 'react';
@@ -13,8 +13,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import {
   Sheet,
   SheetContent,
-  SheetHeader, // Added SheetHeader
-  SheetTitle,  // Added SheetTitle
+  SheetHeader,
+  SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
 
@@ -23,6 +23,7 @@ const headerTranslations = {
     home: "Home",
     all: "ALL",
     explore: "Explore Courses",
+    exploreLearning: "Explore Learning", // New for courses page
     videos: "Reels",
     flashCards: "Flash Cards",
     personalityTest: "Assessments",
@@ -39,6 +40,7 @@ const headerTranslations = {
     home: "ပင်မ",
     all: "အားလုံး",
     explore: "သင်တန်းများ",
+    exploreLearning: "သင်ယူမှုများ ရှာဖွေရန်", // New
     videos: "ဗီဒီယို",
     flashCards: "ကတ်ပြားများ",
     personalityTest: "စစ်ဆေးမှုများ",
@@ -63,6 +65,10 @@ const Header = () => {
   const t = headerTranslations[language];
 
   const isOnHomepage = pathname === '/';
+  const isOnCoursesPage = pathname === '/courses/search';
+  const isOnFlashCardsPage = pathname === '/flash-cards';
+  const isOnPersonalityTestsPage = pathname === '/personality-tests';
+
   const useScrollHidingHeader = isOnHomepage && !isMobile;
   const headerScrollThreshold = 100;
 
@@ -74,7 +80,7 @@ const Header = () => {
     if (typeof window === 'undefined') return;
 
     const controlHeaderBackground = () => {
-      if (pathname === '/videos') {
+      if (pathname === '/videos') { // Video page header is handled separately
         setDynamicHeaderBackgroundClasses('bg-transparent border-transparent');
       } else if (isMobile) {
         setDynamicHeaderBackgroundClasses('bg-transparent border-transparent');
@@ -83,13 +89,14 @@ const Header = () => {
       }
     };
 
-    controlHeaderBackground();
+    controlHeaderBackground(); // Initial call
     window.addEventListener('scroll', controlHeaderBackground, { passive: true });
     return () => window.removeEventListener('scroll', controlHeaderBackground);
   }, [pathname, isMobile]);
 
+
   useEffect(() => {
-    if (typeof window === 'undefined' || !useScrollHidingHeader) {
+    if (typeof window === 'undefined' || !useScrollHidingHeader || isMobile) {
       setHeaderVisible(true);
       return;
     }
@@ -108,7 +115,7 @@ const Header = () => {
     controlHeaderVisibility();
     window.addEventListener('scroll', controlHeaderVisibility, { passive: true });
     return () => window.removeEventListener('scroll', controlHeaderVisibility);
-  }, [pathname, useScrollHidingHeader, headerScrollThreshold]);
+  }, [pathname, useScrollHidingHeader, headerScrollThreshold, isMobile]);
 
 
   if (pathname === '/videos') {
@@ -158,7 +165,7 @@ const Header = () => {
       aria-label={t.toggleTheme}
       className={cn(
         "hover:bg-accent/20 text-foreground",
-        isSheetButton ? "w-full justify-start text-base py-2.5 px-3 gap-2" : "w-9 h-9"
+        isSheetButton ? "w-full justify-start text-base py-2.5 px-3 gap-2" : "w-8 h-8" // Adjusted size for consistency
       )}
     >
       {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
@@ -167,32 +174,53 @@ const Header = () => {
   ));
   ThemeToggleButton.displayName = 'ThemeToggleButton';
 
-  const MobileHomepageAllLink = () => (
-    <Link
-      href="/"
-      className={cn(
-        "group text-sm font-bold font-headline transition-all py-1 flex items-center gap-1",
-        "text-black dark:text-white",
-        "underline decoration-primary underline-offset-4 decoration-2",
-        // "shadow-[0_1px_0px_hsl(var(--primary-darker))]" // Removed 3D shadow
-      )}
-    >
-      <Home className="h-4 w-4 text-primary group-hover:text-accent transition-colors" />
-      {t.all}
-    </Link>
-  );
+
+  const MobileLeftContent = () => {
+    if (isOnHomepage || isOnFlashCardsPage || isOnPersonalityTestsPage) {
+      return (
+        <Link
+          href="/"
+          className={cn(
+            "group font-headline transition-all py-1 flex items-center gap-1",
+            "text-black dark:text-white", // Text color
+            "underline decoration-primary underline-offset-4 decoration-2", // Yellow underline
+            "text-sm", // Reduced text size
+            "hover:opacity-80"
+          )}
+        >
+          <Home className="h-4 w-4 text-primary group-hover:text-accent transition-colors" />
+          {t.all}
+        </Link>
+      );
+    }
+    if (isOnCoursesPage) {
+      return (
+        <span className={cn(
+          "font-headline text-sm text-black dark:text-white flex items-center gap-1",
+          "hover:opacity-80"
+        )}>
+          <Compass className="h-4 w-4 text-primary"/>
+          {t.exploreLearning}
+        </span>
+      );
+    }
+    return <div className="flex-1"></div>; // Placeholder for other pages to keep right content aligned
+  };
+
 
   const DesktopNav = () => (
     <>
-      <div className="flex-1">
-        {/* Intentionally empty to push nav to the right, logo removed */}
+      <div className="flex-shrink-0">
+        {/* Potentially for a logo or home link if re-added for desktop */}
       </div>
-      <nav className="flex items-center space-x-1 lg:space-x-2">
+      <nav className="flex-grow flex justify-center items-center space-x-1 lg:space-x-2">
         {commonNavItems.map(item => (
           <Button key={item.label} variant="ghost" size="sm" asChild className={navLinkClasses(item.href)}>
             <Link href={item.href}><item.Icon className="mr-1.5 h-4 w-4" />{item.label}</Link>
           </Button>
         ))}
+      </nav>
+      <div className="flex items-center space-x-1 lg:space-x-2 flex-shrink-0">
         {authLoading ? (
           <Button variant="ghost" size="sm" disabled className="ml-1 lg:ml-2"><Loader2 className="h-4 w-4 animate-spin mr-1" /> {t.loading}</Button>
         ) : isAuthenticated ? (
@@ -223,14 +251,14 @@ const Header = () => {
         <div className="ml-1 lg:ml-2">
           <ThemeToggleButton />
         </div>
-      </nav>
+      </div>
     </>
   );
 
   const MobileNav = () => (
     <div className="flex items-center justify-between w-full">
-      <div className="flex-1">
-        {isOnHomepage && <MobileHomepageAllLink />}
+      <div className="flex-shrink-0">
+        <MobileLeftContent />
       </div>
 
       <div className="flex items-center gap-1">
@@ -246,60 +274,60 @@ const Header = () => {
           </Button>
         )}
         <ThemeToggleButton />
-         {/* Mobile Sheet Menu - kept for non-homepage mobile navigation if needed, or general access */}
-        <Sheet open={mobileSheetOpen} onOpenChange={setMobileSheetOpen}>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="text-foreground hover:text-primary w-8 h-8" aria-label={t.menu}>
-              <Menu className="h-5 w-5" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="right" className="w-[280px] p-4 flex flex-col">
-            <SheetHeader className="mb-4">
-              <SheetTitle className="sr-only">{t.menu}</SheetTitle> {/* Visually hidden title for accessibility */}
-            </SheetHeader>
-            <nav className="flex-grow space-y-1.5">
-              {commonNavItems.map(item => (
-                <Button key={item.label} variant="ghost" asChild className={navLinkClasses(item.href, true)} onClick={() => setMobileSheetOpen(false)}>
-                  <Link href={item.href}><item.Icon className="mr-2 h-5 w-5" />{item.label}</Link>
-                </Button>
-              ))}
-              <hr className="my-2 border-border"/>
-              {authLoading ? (
-                 <Button variant="ghost" disabled className={cn(navLinkClasses('', true), "opacity-50")}>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" /> {t.loading}
-                 </Button>
-              ) : isAuthenticated ? (
-                <>
-                  <Button variant="ghost" asChild className={navLinkClasses(getDashboardPath(), true)} onClick={() => setMobileSheetOpen(false)}>
-                    <Link href={getDashboardPath()}><LayoutDashboard className="mr-2 h-5 w-5" /> {t.dashboard}</Link>
+        {!isOnHomepage && ( // Only show hamburger menu if NOT on homepage for mobile
+          <Sheet open={mobileSheetOpen} onOpenChange={setMobileSheetOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="text-foreground hover:text-primary w-8 h-8" aria-label={t.menu}>
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-[280px] p-4 flex flex-col">
+              <SheetHeader className="mb-4">
+                <SheetTitle className="sr-only">{t.menu}</SheetTitle>
+              </SheetHeader>
+              <nav className="flex-grow space-y-1.5">
+                {commonNavItems.map(item => (
+                  <Button key={item.label} variant="ghost" asChild className={navLinkClasses(item.href, true)} onClick={() => setMobileSheetOpen(false)}>
+                    <Link href={item.href}><item.Icon className="mr-2 h-5 w-5" />{item.label}</Link>
                   </Button>
-                  <Button variant="ghost" onClick={handleLogout} className={cn(navLinkClasses('', true), "text-destructive hover:text-destructive")}>
-                    <LogOut className="mr-2 h-5 w-5" /> {t.logout}
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button variant="ghost" asChild className={navLinkClasses('/login', true)} onClick={() => setMobileSheetOpen(false)}>
-                    <Link href="/login"><LogIn className="mr-2 h-5 w-5" /> {t.login}</Link>
-                  </Button>
-                  <Button variant="default" asChild className={cn(navLinkClasses('/register', true), "bg-primary text-primary-foreground hover:bg-primary/90")} onClick={() => setMobileSheetOpen(false)}>
-                    <Link href="/register"><UserPlus className="mr-2 h-5 w-5" /> {t.register}</Link>
-                  </Button>
-                </>
-              )}
-            </nav>
-          </SheetContent>
-        </Sheet>
+                ))}
+                <hr className="my-2 border-border"/>
+                {authLoading ? (
+                   <Button variant="ghost" disabled className={cn(navLinkClasses('', true), "opacity-50")}>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" /> {t.loading}
+                   </Button>
+                ) : isAuthenticated ? (
+                  <>
+                    <Button variant="ghost" asChild className={navLinkClasses(getDashboardPath(), true)} onClick={() => setMobileSheetOpen(false)}>
+                      <Link href={getDashboardPath()}><LayoutDashboard className="mr-2 h-5 w-5" /> {t.dashboard}</Link>
+                    </Button>
+                    <Button variant="ghost" onClick={handleLogout} className={cn(navLinkClasses('', true), "text-destructive hover:text-destructive")}>
+                      <LogOut className="mr-2 h-5 w-5" /> {t.logout}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button variant="ghost" asChild className={navLinkClasses('/login', true)} onClick={() => setMobileSheetOpen(false)}>
+                      <Link href="/login"><LogIn className="mr-2 h-5 w-5" /> {t.login}</Link>
+                    </Button>
+                    <Button variant="default" asChild className={cn(navLinkClasses('/register', true), "bg-primary text-primary-foreground hover:bg-primary/90")} onClick={() => setMobileSheetOpen(false)}>
+                      <Link href="/register"><UserPlus className="mr-2 h-5 w-5" /> {t.register}</Link>
+                    </Button>
+                  </>
+                )}
+              </nav>
+            </SheetContent>
+          </Sheet>
+        )}
       </div>
     </div>
   );
 
-
   return (
     <header className={cn(
         "sticky top-0 z-50 transition-all duration-300 ease-in-out",
-        isMobile ? 'bg-transparent border-transparent' : dynamicHeaderBackgroundClasses,
-        {'!-translate-y-full': !headerVisible && useScrollHidingHeader }
+        isMobile ? 'bg-transparent border-transparent' : dynamicHeaderBackgroundClasses, // Mobile header is always transparent
+        {'!-translate-y-full': !headerVisible && useScrollHidingHeader && !isMobile } // Scroll hiding only for desktop homepage
       )}>
       <div className="container mx-auto px-4 py-2.5 flex justify-between items-center min-h-[60px]">
         {isMobile ? <MobileNav /> : <DesktopNav /> }
@@ -309,3 +337,5 @@ const Header = () => {
 };
 
 export default Header;
+
+    
