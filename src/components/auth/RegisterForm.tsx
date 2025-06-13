@@ -9,9 +9,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { UserPlus } from "lucide-react";
-import React, { useState, useEffect } from 'react'; // Added useState and useEffect
-import type { User as PrismaUserType } from '@prisma/client'; // Import User type
+import { UserPlus, Loader2 } from "lucide-react"; // Added Loader2
+import React, { useState, useEffect } from 'react'; 
+import type { User as PrismaUserType } from '@prisma/client';
+import { useLanguage } from '@/contexts/LanguageContext'; // Added
 
 const registerSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -25,11 +26,59 @@ const registerSchema = z.object({
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
+const registerFormTranslations = {
+  en: {
+    nameLabel: "Full Name",
+    namePlaceholder: "John Doe",
+    emailLabel: "Email",
+    emailPlaceholder: "john.doe@example.com",
+    passwordLabel: "Password",
+    passwordPlaceholder: "••••••••",
+    confirmPasswordLabel: "Confirm Password",
+    registerButton: "Register",
+    processingButton: "Processing...",
+    toastSuccessTitle: "Registration Successful",
+    toastSuccessDescription: (name: string) => `Welcome, ${name}!`,
+    toastFailureTitle: "Registration Failed",
+    toastFailureDescription: "Please check your details and try again.",
+    toastErrorTitle: "Registration Error",
+    toastErrorUserExists: "This email address is already in use.",
+    toastErrorUserCreation: "Could not create user. Please try again.",
+    toastErrorUnexpected: "An unexpected error occurred during registration.",
+    toastStateIssueTitle: "Registration State Issue",
+    toastStateIssueDescription: "Please try logging in manually.",
+  },
+  my: {
+    nameLabel: "အမည်အပြည့်အစုံ",
+    namePlaceholder: "ဥပမာ - အောင်အောင်",
+    emailLabel: "အီးမေးလ်",
+    emailPlaceholder: "john.doe@example.com",
+    passwordLabel: "စကားဝှက်",
+    passwordPlaceholder: "••••••••",
+    confirmPasswordLabel: "စကားဝှက်ကို အတည်ပြုပါ",
+    registerButton: "စာရင်းသွင်းရန်",
+    processingButton: "လုပ်ဆောင်နေသည်...",
+    toastSuccessTitle: "စာရင်းသွင်းခြင်း အောင်မြင်သည်",
+    toastSuccessDescription: (name: string) => `${name}၊ ကြိုဆိုပါသည်။`,
+    toastFailureTitle: "စာရင်းသွင်းခြင်း မအောင်မြင်ပါ",
+    toastFailureDescription: "သင်၏အချက်အလက်များကို စစ်ဆေးပြီး ထပ်မံကြိုးစားပါ။",
+    toastErrorTitle: "စာရင်းသွင်းခြင်း အမှား",
+    toastErrorUserExists: "ဤအီးမေးလ်လိပ်စာကို အသုံးပြုပြီးသားဖြစ်ပါသည်။",
+    toastErrorUserCreation: "အသုံးပြုသူကို ဖန်တီး၍မရပါ။ ထပ်မံကြိုးစားပါ။",
+    toastErrorUnexpected: "စာရင်းသွင်းနေစဉ် မမျှော်လင့်သော အမှားတစ်ခု ဖြစ်ပွားခဲ့သည်။",
+    toastStateIssueTitle: "စာရင်းသွင်းမှု အခြေအနေ ပြဿနာ",
+    toastStateIssueDescription: "ကျေးဇူးပြု၍ ကိုယ်တိုင်လော့ဂ်အင်ဝင်ကြည့်ပါ။",
+  }
+};
+
+
 export function RegisterForm() {
-  const { register, isAuthenticated, loading: authLoading } = useAuth(); // Added isAuthenticated, authLoading
+  const { register, isAuthenticated, loading: authLoading } = useAuth(); 
   const router = useRouter();
   const { toast } = useToast();
   const [registrationSuccessUser, setRegistrationSuccessUser] = useState<PrismaUserType | null>(null);
+  const { language } = useLanguage(); // Added
+  const t = registerFormTranslations[language]; // Added
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -42,45 +91,40 @@ export function RegisterForm() {
   });
 
   const onSubmit: SubmitHandler<RegisterFormValues> = async (data) => {
-    setRegistrationSuccessUser(null); // Reset before new attempt
+    setRegistrationSuccessUser(null); 
     try {
       const user = await register(data.name, data.email, data.password);
       if (user) {
-        // Don't redirect immediately. Set user to trigger useEffect.
         setRegistrationSuccessUser(user);
-        // Toast will be shown in useEffect after auth state is confirmed.
       } else {
-        // This handles cases where serverRegisterUser might return null (e.g., if not throwing specific errors)
-        toast({ variant: "destructive", title: "Registration Failed", description: "Please check your details and try again." });
+        toast({ variant: "destructive", title: t.toastFailureTitle, description: t.toastFailureDescription });
       }
     } catch (error: any) {
-      let errorMessage = "An unexpected error occurred during registration.";
+      let errorMessage = t.toastErrorUnexpected;
       if (error.message === "UserAlreadyExists") {
-        errorMessage = "This email address is already in use.";
+        errorMessage = t.toastErrorUserExists;
       } else if (error.message === "UserCreationFailure") {
-        errorMessage = "Could not create user. Please try again.";
+        errorMessage = t.toastErrorUserCreation;
       } else if (error.message) {
-        errorMessage = error.message;
+        errorMessage = error.message; // Use specific error message if available
       }
-      toast({ variant: "destructive", title: "Registration Error", description: errorMessage });
-      setRegistrationSuccessUser(null); // Ensure reset on error
+      toast({ variant: "destructive", title: t.toastErrorTitle, description: errorMessage });
+      setRegistrationSuccessUser(null); 
     }
   };
 
   useEffect(() => {
     if (registrationSuccessUser && isAuthenticated && !authLoading) {
-      toast({ title: "Registration Successful", description: `Welcome, ${registrationSuccessUser.name}!` });
+      toast({ title: t.toastSuccessTitle, description: t.toastSuccessDescription(registrationSuccessUser.name!) });
       router.push('/dashboard/student');
-      setRegistrationSuccessUser(null); // Reset after redirect
+      setRegistrationSuccessUser(null); 
     } else if (registrationSuccessUser && !isAuthenticated && !authLoading) {
-      // This state indicates a potential issue where registration reported success
-      // but the AuthContext didn't update isAuthenticated correctly.
       console.warn("Registration successful, but AuthContext.isAuthenticated is false after loading.");
-      toast({ variant: "destructive", title: "Registration State Issue", description: "Please try logging in manually." });
-      router.push('/login'); // Fallback to login page
-      setRegistrationSuccessUser(null); // Reset
+      toast({ variant: "destructive", title: t.toastStateIssueTitle, description: t.toastStateIssueDescription });
+      router.push('/login'); 
+      setRegistrationSuccessUser(null); 
     }
-  }, [registrationSuccessUser, isAuthenticated, authLoading, router, toast]);
+  }, [registrationSuccessUser, isAuthenticated, authLoading, router, toast, t]);
 
   return (
     <Form {...form}>
@@ -90,9 +134,9 @@ export function RegisterForm() {
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Full Name</FormLabel>
+              <FormLabel>{t.nameLabel}</FormLabel>
               <FormControl>
-                <Input placeholder="John Doe" {...field} disabled={form.formState.isSubmitting || authLoading} />
+                <Input placeholder={t.namePlaceholder} {...field} disabled={form.formState.isSubmitting || authLoading} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -103,9 +147,9 @@ export function RegisterForm() {
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email</FormLabel>
+              <FormLabel>{t.emailLabel}</FormLabel>
               <FormControl>
-                <Input type="email" placeholder="john.doe@example.com" {...field} disabled={form.formState.isSubmitting || authLoading} />
+                <Input type="email" placeholder={t.emailPlaceholder} {...field} disabled={form.formState.isSubmitting || authLoading} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -116,9 +160,9 @@ export function RegisterForm() {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password</FormLabel>
+              <FormLabel>{t.passwordLabel}</FormLabel>
               <FormControl>
-                <Input type="password" placeholder="••••••••" {...field} disabled={form.formState.isSubmitting || authLoading} />
+                <Input type="password" placeholder={t.passwordPlaceholder} {...field} disabled={form.formState.isSubmitting || authLoading} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -129,16 +173,20 @@ export function RegisterForm() {
           name="confirmPassword"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Confirm Password</FormLabel>
+              <FormLabel>{t.confirmPasswordLabel}</FormLabel>
               <FormControl>
-                <Input type="password" placeholder="••••••••" {...field} disabled={form.formState.isSubmitting || authLoading} />
+                <Input type="password" placeholder={t.passwordPlaceholder} {...field} disabled={form.formState.isSubmitting || authLoading} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
         <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-md hover:shadow-sm active:translate-y-px transition-all duration-150" disabled={form.formState.isSubmitting || authLoading}>
-          {form.formState.isSubmitting || authLoading ? "Processing..." : <><UserPlus className="mr-2 h-5 w-5" /> Register</>}
+          {form.formState.isSubmitting || authLoading ? (
+            <><Loader2 className="mr-2 h-5 w-5 animate-spin" />{t.processingButton}</>
+          ) : (
+            <><UserPlus className="mr-2 h-5 w-5" /> {t.registerButton}</>
+          )}
         </Button>
       </form>
     </Form>
