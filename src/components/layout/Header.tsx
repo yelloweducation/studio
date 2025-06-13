@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Compass, User as UserIcon, BookOpen, Layers, Brain, Loader2, Menu } from 'lucide-react'; // Added Menu back
+import { Home as HomeIcon, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Compass, User as UserIconLucide, BookOpen, Layers, Brain, Loader2, Menu } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import React, { useEffect, useState } from 'react';
@@ -23,7 +23,7 @@ const headerTranslations = {
     home: "Home",
     all: "ALL",
     explore: "Explore Courses",
-    exploreLearning: "Explore Learning", // New for courses page
+    exploreLearning: "Explore Learning",
     videos: "Reels",
     flashCards: "Flash Cards",
     personalityTest: "Assessments",
@@ -40,7 +40,7 @@ const headerTranslations = {
     home: "ပင်မ",
     all: "အားလုံး",
     explore: "သင်တန်းများ",
-    exploreLearning: "သင်ယူမှုများ ရှာဖွေရန်", // New
+    exploreLearning: "သင်ယူမှုများ ရှာဖွေရန်",
     videos: "ဗီဒီယို",
     flashCards: "ကတ်ပြားများ",
     personalityTest: "စစ်ဆေးမှုများ",
@@ -80,7 +80,7 @@ const Header = () => {
     if (typeof window === 'undefined') return;
 
     const controlHeaderBackground = () => {
-      if (pathname === '/videos') { // Video page header is handled separately
+      if (pathname === '/videos') {
         setDynamicHeaderBackgroundClasses('bg-transparent border-transparent');
       } else if (isMobile) {
         setDynamicHeaderBackgroundClasses('bg-transparent border-transparent');
@@ -89,7 +89,7 @@ const Header = () => {
       }
     };
 
-    controlHeaderBackground(); // Initial call
+    controlHeaderBackground();
     window.addEventListener('scroll', controlHeaderBackground, { passive: true });
     return () => window.removeEventListener('scroll', controlHeaderBackground);
   }, [pathname, isMobile]);
@@ -147,7 +147,7 @@ const Header = () => {
   );
 
   const commonNavItems = [
-    { href: "/", label: t.home, Icon: Home },
+    { href: "/", label: t.home, Icon: HomeIcon },
     { href: "/courses/search", label: t.explore, Icon: Compass },
     { href: "/videos", label: t.videos, Icon: BookOpen },
     { href: "/flash-cards", label: t.flashCards, Icon: Layers },
@@ -165,7 +165,7 @@ const Header = () => {
       aria-label={t.toggleTheme}
       className={cn(
         "hover:bg-accent/20 text-foreground",
-        isSheetButton ? "w-full justify-start text-base py-2.5 px-3 gap-2" : "w-8 h-8" // Adjusted size for consistency
+        isSheetButton ? "w-full justify-start text-base py-2.5 px-3 gap-2" : "w-8 h-8" 
       )}
     >
       {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
@@ -174,24 +174,25 @@ const Header = () => {
   ));
   ThemeToggleButton.displayName = 'ThemeToggleButton';
 
+  const MobileHomepageAllLink = () => (
+    <Link
+      href="/"
+      className={cn(
+        "group font-headline transition-all py-1 flex items-center gap-1",
+        "text-black dark:text-white", 
+        "underline decoration-primary underline-offset-4 decoration-2",
+        "text-sm", 
+        "hover:opacity-80"
+      )}
+    >
+      <HomeIcon className="h-4 w-4 text-primary group-hover:text-accent transition-colors" />
+      {t.all}
+    </Link>
+  );
 
   const MobileLeftContent = () => {
     if (isOnHomepage || isOnFlashCardsPage || isOnPersonalityTestsPage) {
-      return (
-        <Link
-          href="/"
-          className={cn(
-            "group font-headline transition-all py-1 flex items-center gap-1",
-            "text-black dark:text-white", // Text color
-            "underline decoration-primary underline-offset-4 decoration-2", // Yellow underline
-            "text-sm", // Reduced text size
-            "hover:opacity-80"
-          )}
-        >
-          <Home className="h-4 w-4 text-primary group-hover:text-accent transition-colors" />
-          {t.all}
-        </Link>
-      );
+      return <MobileHomepageAllLink />;
     }
     if (isOnCoursesPage) {
       return (
@@ -204,23 +205,20 @@ const Header = () => {
         </span>
       );
     }
-    return <div className="flex-1"></div>; // Placeholder for other pages to keep right content aligned
+    return <div className="flex-1"></div>;
   };
-
 
   const DesktopNav = () => (
     <>
-      <div className="flex-shrink-0">
-        {/* Potentially for a logo or home link if re-added for desktop */}
-      </div>
-      <nav className="flex-grow flex justify-center items-center space-x-1 lg:space-x-2">
+      <div className="flex-1"></div> {/* Spacer to push nav to center */}
+      <nav className="mx-auto flex justify-center items-center space-x-1 lg:space-x-2">
         {commonNavItems.map(item => (
           <Button key={item.label} variant="ghost" size="sm" asChild className={navLinkClasses(item.href)}>
             <Link href={item.href}><item.Icon className="mr-1.5 h-4 w-4" />{item.label}</Link>
           </Button>
         ))}
       </nav>
-      <div className="flex items-center space-x-1 lg:space-x-2 flex-shrink-0">
+      <div className="flex items-center space-x-1 lg:space-x-2 flex-1 justify-end"> {/* flex-1 justify-end to align right */}
         {authLoading ? (
           <Button variant="ghost" size="sm" disabled className="ml-1 lg:ml-2"><Loader2 className="h-4 w-4 animate-spin mr-1" /> {t.loading}</Button>
         ) : isAuthenticated ? (
@@ -274,7 +272,8 @@ const Header = () => {
           </Button>
         )}
         <ThemeToggleButton />
-        {!isOnHomepage && ( // Only show hamburger menu if NOT on homepage for mobile
+        {/* Conditionally render Hamburger Menu */}
+        {!isOnHomepage && !isOnFlashCardsPage && !isOnPersonalityTestsPage && (
           <Sheet open={mobileSheetOpen} onOpenChange={setMobileSheetOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="text-foreground hover:text-primary w-8 h-8" aria-label={t.menu}>
@@ -326,8 +325,8 @@ const Header = () => {
   return (
     <header className={cn(
         "sticky top-0 z-50 transition-all duration-300 ease-in-out",
-        isMobile ? 'bg-transparent border-transparent' : dynamicHeaderBackgroundClasses, // Mobile header is always transparent
-        {'!-translate-y-full': !headerVisible && useScrollHidingHeader && !isMobile } // Scroll hiding only for desktop homepage
+        isMobile ? 'bg-transparent border-transparent' : dynamicHeaderBackgroundClasses,
+        {'!-translate-y-full': !headerVisible && useScrollHidingHeader && !isMobile }
       )}>
       <div className="container mx-auto px-4 py-2.5 flex justify-between items-center min-h-[60px]">
         {isMobile ? <MobileNav /> : <DesktopNav /> }
@@ -337,5 +336,3 @@ const Header = () => {
 };
 
 export default Header;
-
-    
