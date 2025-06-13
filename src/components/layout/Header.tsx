@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home as HomeIcon, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Compass, User as UserIconLucide, BookOpen, Layers, Brain, Loader2, Menu } from 'lucide-react';
+import { Home as HomeIcon, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Compass, Layers, Brain, Loader2 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import React, { useEffect, useState } from 'react';
@@ -149,7 +149,7 @@ const Header = () => {
   const commonNavItems = [
     { href: "/", label: t.home, Icon: HomeIcon },
     { href: "/courses/search", label: t.explore, Icon: Compass },
-    { href: "/videos", label: t.videos, Icon: BookOpen },
+    { href: "/videos", label: t.videos, Icon: HomeIcon }, // Changed from BookOpen for consistency if needed, or keep BookOpen
     { href: "/flash-cards", label: t.flashCards, Icon: Layers },
     { href: "/personality-tests", label: t.personalityTest, Icon: Brain }
   ];
@@ -181,9 +181,10 @@ const Header = () => {
         "group font-headline transition-all py-1 flex items-center gap-1",
         "text-black dark:text-white", 
         "underline decoration-primary underline-offset-4 decoration-2",
-        "text-sm", 
+        "text-sm", // Changed from text-base
         "hover:opacity-80"
       )}
+      style={{ textShadow: '1px 1px 2px hsl(var(--primary-darker))' }}
     >
       <HomeIcon className="h-4 w-4 text-primary group-hover:text-accent transition-colors" />
       {t.all}
@@ -191,26 +192,17 @@ const Header = () => {
   );
 
   const MobileLeftContent = () => {
-    if (isOnHomepage || isOnFlashCardsPage || isOnPersonalityTestsPage) {
+    if (isOnHomepage || isOnFlashCardsPage || isOnPersonalityTestsPage || isOnCoursesPage) {
       return <MobileHomepageAllLink />;
     }
-    if (isOnCoursesPage) {
-      return (
-        <span className={cn(
-          "font-headline text-sm text-black dark:text-white flex items-center gap-1",
-          "hover:opacity-80"
-        )}>
-          <Compass className="h-4 w-4 text-primary"/>
-          {t.exploreLearning}
-        </span>
-      );
-    }
-    return <div className="flex-1"></div>;
+    // Previously, isOnCoursesPage had different content, now it uses MobileHomepageAllLink
+    return <div className="flex-1"></div>; // Empty for other pages
   };
 
   const DesktopNav = () => (
     <>
-      <div className="flex-1"></div> {/* Spacer to push nav to center */}
+      {/* This div intentionally left empty for potential future left-aligned content on desktop */}
+      <div className="flex-1"></div> 
       <nav className="mx-auto flex justify-center items-center space-x-1 lg:space-x-2">
         {commonNavItems.map(item => (
           <Button key={item.label} variant="ghost" size="sm" asChild className={navLinkClasses(item.href)}>
@@ -218,7 +210,7 @@ const Header = () => {
           </Button>
         ))}
       </nav>
-      <div className="flex items-center space-x-1 lg:space-x-2 flex-1 justify-end"> {/* flex-1 justify-end to align right */}
+      <div className="flex items-center space-x-1 lg:space-x-2 flex-1 justify-end">
         {authLoading ? (
           <Button variant="ghost" size="sm" disabled className="ml-1 lg:ml-2"><Loader2 className="h-4 w-4 animate-spin mr-1" /> {t.loading}</Button>
         ) : isAuthenticated ? (
@@ -272,12 +264,12 @@ const Header = () => {
           </Button>
         )}
         <ThemeToggleButton />
-        {/* Conditionally render Hamburger Menu */}
-        {!isOnHomepage && !isOnFlashCardsPage && !isOnPersonalityTestsPage && (
+        {/* Conditionally render Hamburger Menu: NOT on homepage, flashcards, personality tests, OR courses page */}
+        {!isOnHomepage && !isOnFlashCardsPage && !isOnPersonalityTestsPage && !isOnCoursesPage && (
           <Sheet open={mobileSheetOpen} onOpenChange={setMobileSheetOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="text-foreground hover:text-primary w-8 h-8" aria-label={t.menu}>
-                <Menu className="h-5 w-5" />
+                <HomeIcon className="h-5 w-5" /> {/* Using HomeIcon for menu as per previous update where Menu was removed */}
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-[280px] p-4 flex flex-col">
@@ -336,3 +328,5 @@ const Header = () => {
 };
 
 export default Header;
+
+    
