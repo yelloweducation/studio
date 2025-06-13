@@ -2,7 +2,7 @@
 "use client";
 import type { ReactNode } from 'react';
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation'; // Added usePathname
 import { useAuth } from '@/hooks/useAuth';
 import { Skeleton } from "@/components/ui/skeleton"; // For loading state
 
@@ -14,34 +14,52 @@ type ProtectedRouteProps = {
 const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
   const { isAuthenticated, role, loading } = useAuth();
   const router = useRouter();
+  const currentPath = usePathname(); // Get current path
 
   useEffect(() => {
-    console.log(`[ProtectedRoute] Effect triggered. Path: ${router.asPath}, Loading: ${loading}, Authenticated: ${isAuthenticated}, Role: ${role}`);
+    console.log(`[ProtectedRoute DEBUG] Path: ${currentPath}, Loading: ${loading}, Authenticated: ${isAuthenticated}, User Role: '${role}'`);
+
     if (loading) {
-      console.log("[ProtectedRoute] Auth state is loading. Waiting...");
+      console.log("[ProtectedRoute DEBUG] Auth state is loading. Waiting...");
       return;
     }
 
     if (!isAuthenticated) {
-      console.log("[ProtectedRoute] User not authenticated. Redirecting to login.");
-      router.push(`/login?redirect=${encodeURIComponent(router.asPath)}`);
+      console.log(`[ProtectedRoute DEBUG] User NOT authenticated. Redirecting from ${currentPath} to login.`);
+      router.push(`/login?redirect=${encodeURIComponent(currentPath)}`);
       return;
     }
 
-    if (allowedRoles && role && !allowedRoles.includes(role)) {
-      console.log(`[ProtectedRoute] Role '${role}' not in allowedRoles (${allowedRoles.join(', ')}). Redirecting.`);
-      if (role === 'admin') {
-        router.push('/dashboard/admin');
-      } else if (role === 'student') {
-        router.push('/dashboard/student');
-      } else {
-        console.warn(`[ProtectedRoute] Unknown role '${role}', redirecting to home.`);
-        router.push('/');
+    // If authenticated, check roles
+    if (allowedRoles && allowedRoles.length > 0) {
+      if (!role) {
+        console.warn(`[ProtectedRoute DEBUG] User authenticated but role is '${role}'. This might be a context update delay. Path: ${currentPath}`);
+        // Potentially wait or redirect to a generic authenticated page or home, rather than login.
+        // For now, if role is critical and not yet set, this might cause issues if not handled.
+        // However, the primary check is !allowedRoles.includes(role)
       }
-      return;
+      
+      const isRoleAllowed = role && allowedRoles.includes(role);
+      console.log(`[ProtectedRoute DEBUG] Checking role. User role: '${role}', Allowed roles: [${allowedRoles.join(', ')}], Is role allowed: ${isRoleAllowed}`);
+
+      if (!isRoleAllowed) {
+        console.log(`[ProtectedRoute DEBUG] Role '${role}' is NOT in allowedRoles [${allowedRoles.join(', ')}]. Redirecting from ${currentPath}.`);
+        // Determine intelligent redirect based on current role
+        if (role === 'admin') {
+          router.push('/dashboard/admin');
+        } else if (role === 'student') {
+          router.push('/dashboard/student');
+        } else {
+          console.warn(`[ProtectedRoute DEBUG] Unknown or null role '${role}', redirecting to home ('/').`);
+          router.push('/'); 
+        }
+        return;
+      }
     }
-    console.log("[ProtectedRoute] User is authenticated and authorized. Rendering children.");
-  }, [isAuthenticated, role, loading, router, allowedRoles]);
+    // If no allowedRoles are specified, just being authenticated is enough
+    console.log(`[ProtectedRoute DEBUG] User is authenticated and authorized for ${currentPath}. Rendering children.`);
+
+  }, [isAuthenticated, role, loading, router, allowedRoles, currentPath]);
 
   if (loading) {
     return (
@@ -56,13 +74,17 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
     );
   }
 
-  if (!isAuthenticated || (allowedRoles && role && !allowedRoles.includes(role))) {
-    // This case should be handled by the useEffect redirect.
-    // Returning null prevents rendering children before redirect occurs.
-    console.log("[ProtectedRoute] Render check: Not authenticated or role not allowed. Awaiting redirect from useEffect.");
+  // If loading is false, and we haven't redirected, then access is granted
+  // The useEffect handles redirects for unauthorized cases.
+  // This ensures children are only rendered if all checks pass and no redirect is pending.
+  if (!isAuthenticated || (allowedRoles && allowedRoles.length > 0 && (!role || !allowedRoles.includes(role)))) {
+    // This state should ideally be caught by useEffect and result in a redirect.
+    // Returning null here prevents rendering children while waiting for redirect logic to execute.
+    // This can happen if the component re-renders before useEffect fully processes the redirect.
+    console.log(`[ProtectedRoute DEBUG] Render check: Waiting for auth checks or redirect. Auth: ${isAuthenticated}, Role: ${role}`);
     return null;
   }
-
+  
   return <>{children}</>;
 };
 
