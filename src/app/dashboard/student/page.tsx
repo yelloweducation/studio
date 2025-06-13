@@ -8,7 +8,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import CourseCard from "@/components/courses/CourseCard";
 import { type Course, type Enrollment } from "@/lib/dbUtils"; // Use Prisma types from dbUtils
-import { serverGetEnrollmentsByUserId } from '@/actions/adminDataActions'; // UPDATED IMPORT
+import { serverGetEnrollmentsByUserId } from '@/actions/adminDataActions';
 import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -22,7 +22,8 @@ const studentDashboardTranslations = {
     exploreCourses: "Explore Courses",
     noCoursesYet: "You haven't enrolled in any courses yet.",
     activityPlaceholder: "Your recent learning activity will appear here. (Completion progress is tracked per course).",
-    student: "Student"
+    student: "Student",
+    loadingCourses: "Loading your courses..."
   },
   my: {
     welcome: "ကြိုဆိုပါတယ်",
@@ -32,25 +33,31 @@ const studentDashboardTranslations = {
     exploreCourses: "အတန်းများ ရှာဖွေရန်",
     noCoursesYet: "သင်သည် မည်သည့်အတန်းမှ စာရင်းမသွင်းရသေးပါ။",
     activityPlaceholder: "သင်၏ မကြာသေးမီက သင်ယူမှု လှုပ်ရှားမှုများကို ဤနေရာတွင် ပြသပါမည်။ (ပြီးဆုံးမှု တိုးတက်မှုကို အတန်းအလိုက် ခြေရာခံသည်)။",
-    student: "ကျောင်းသား"
+    student: "ကျောင်းသား",
+    loadingCourses: "သင်၏အတန်းများကို တင်နေသည်..."
   }
 };
 
 export default function StudentDashboardPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { language } = useLanguage();
   const t = studentDashboardTranslations[language];
   const [enrolledCoursesDetails, setEnrolledCoursesDetails] = useState<Course[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingCourses, setIsLoadingCourses] = useState(true);
 
   useEffect(() => {
     const fetchEnrolledCourses = async () => {
+      if (authLoading) {
+        // Authentication state is still loading, keep the page in a loading state.
+        setIsLoadingCourses(true);
+        return;
+      }
+
       if (user) {
-        setIsLoading(true);
-        console.log("[StudentDashboard] Fetching enrollments for user:", user.id);
+        setIsLoadingCourses(true); // Explicitly start loading courses for this user.
+        console.log("[StudentDashboard] Auth loaded. Fetching enrollments for user:", user.id);
         try {
-          // Use server action instead of direct dbUtils import
-          const userEnrollments = await serverGetEnrollmentsByUserId(user.id); // UPDATED FUNCTION CALL
+          const userEnrollments = await serverGetEnrollmentsByUserId(user.id);
           console.log("[StudentDashboard] Fetched userEnrollments via server action:", userEnrollments);
           
           const coursesData = userEnrollments
@@ -63,15 +70,16 @@ export default function StudentDashboardPage() {
           console.error("[StudentDashboard] Error fetching enrolled courses from server action:", error);
           setEnrolledCoursesDetails([]);
         }
-        setIsLoading(false);
+        setIsLoadingCourses(false); // Finished loading courses (or failed)
       } else {
-        console.log("[StudentDashboard] No user, clearing enrolled courses details.");
+        // No user is authenticated (after auth has loaded)
+        console.log("[StudentDashboard] Auth loaded. No user authenticated.");
         setEnrolledCoursesDetails([]);
-        setIsLoading(false);
+        setIsLoadingCourses(false); // Not loading courses because there's no user.
       }
     };
     fetchEnrolledCourses();
-  }, [user]);
+  }, [user, authLoading]);
 
 
   return (
@@ -88,7 +96,7 @@ export default function StudentDashboardPage() {
             <h2 className="text-xl md:text-2xl font-headline font-semibold mb-4 flex items-center">
                 <GraduationCap className="mr-2 h-6 w-6 text-primary" /> {t.myEnrolledCourses}
             </h2>
-            {isLoading ? (
+            {(authLoading || isLoadingCourses) ? (
                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {[1,2,3].map(i => (
                         <Card key={i} className="flex flex-col overflow-hidden shadow-lg">
