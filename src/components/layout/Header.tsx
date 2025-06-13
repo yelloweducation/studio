@@ -149,7 +149,7 @@ const Header = () => {
   const commonNavItems = [
     { href: "/", label: t.home, Icon: HomeIcon },
     { href: "/courses/search", label: t.explore, Icon: Compass },
-    { href: "/videos", label: t.videos, Icon: HomeIcon }, // Changed from BookOpen for consistency if needed, or keep BookOpen
+    { href: "/videos", label: t.videos, Icon: HomeIcon },
     { href: "/flash-cards", label: t.flashCards, Icon: Layers },
     { href: "/personality-tests", label: t.personalityTest, Icon: Brain }
   ];
@@ -165,7 +165,7 @@ const Header = () => {
       aria-label={t.toggleTheme}
       className={cn(
         "hover:bg-accent/20 text-foreground",
-        isSheetButton ? "w-full justify-start text-base py-2.5 px-3 gap-2" : "w-8 h-8" 
+        isSheetButton ? "w-full justify-start text-base py-2.5 px-3 gap-2" : "w-8 h-8"
       )}
     >
       {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
@@ -179,9 +179,9 @@ const Header = () => {
       href="/"
       className={cn(
         "group font-headline transition-all py-1 flex items-center gap-1",
-        "text-black dark:text-white", 
+        "text-black dark:text-white",
         "underline decoration-primary underline-offset-4 decoration-2",
-        "text-sm", // Changed from text-base
+        "text-sm",
         "hover:opacity-80"
       )}
       style={{ textShadow: '1px 1px 2px hsl(var(--primary-darker))' }}
@@ -195,14 +195,15 @@ const Header = () => {
     if (isOnHomepage || isOnFlashCardsPage || isOnPersonalityTestsPage || isOnCoursesPage) {
       return <MobileHomepageAllLink />;
     }
-    // Previously, isOnCoursesPage had different content, now it uses MobileHomepageAllLink
-    return <div className="flex-1"></div>; // Empty for other pages
+    return <div className="flex-1"></div>;
   };
+
+  const shouldShowHamburgerMenu = !isOnHomepage && !isOnFlashCardsPage && !isOnPersonalityTestsPage && !isOnCoursesPage;
+
 
   const DesktopNav = () => (
     <>
-      {/* This div intentionally left empty for potential future left-aligned content on desktop */}
-      <div className="flex-1"></div> 
+      <div className="flex-1"></div>
       <nav className="mx-auto flex justify-center items-center space-x-1 lg:space-x-2">
         {commonNavItems.map(item => (
           <Button key={item.label} variant="ghost" size="sm" asChild className={navLinkClasses(item.href)}>
@@ -223,7 +224,7 @@ const Header = () => {
               variant="outline"
               size="sm"
               onClick={handleLogout}
-              className="border-primary/50 text-primary hover:bg-primary/10 hover:text-primary ml-1 lg:ml-2"
+              className="border-primary/50 text-primary hover:bg-primary/10 hover:text-accent-foreground ml-1 lg:ml-2"
             >
               <LogOut className="mr-1 h-4 w-4" /> {t.logout}
             </Button>
@@ -231,7 +232,9 @@ const Header = () => {
         ) : (
           <>
             <Button variant="ghost" size="sm" asChild className={cn(navLinkClasses('/login'), "ml-1 lg:ml-2")}>
-              <Link href="/login"><LogIn className="mr-1 h-4 w-4" /> {t.login}</Link>
+              <Link href="/login" className="text-foreground hover:text-accent-foreground">
+                <LogIn className="mr-1 h-4 w-4" /> {t.login}
+              </Link>
             </Button>
             <Button variant="default" size="sm" asChild className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md hover:shadow-sm active:translate-y-px transition-all duration-150 ml-1 lg:ml-2">
               <Link href="/register"><UserPlus className="mr-1 h-4 w-4" /> {t.register}</Link>
@@ -255,26 +258,37 @@ const Header = () => {
         {authLoading ? (
            <Button variant="ghost" size="icon" disabled className="w-8 h-8"><Loader2 className="h-5 w-5 animate-spin" /></Button>
         ) : isAuthenticated ? (
-          <Button variant="ghost" size="icon" asChild className="w-8 h-8 hover:text-primary">
-            <Link href={getDashboardPath()}><LayoutDashboard className="h-5 w-5" /></Link>
-          </Button>
+          <>
+            <Button variant="ghost" size="icon" asChild className="w-8 h-8 hover:text-primary">
+                <Link href={getDashboardPath()}><LayoutDashboard className="h-5 w-5" /></Link>
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleLogout}
+              className="border-primary/50 text-primary hover:bg-primary/10 hover:text-accent-foreground w-8 h-8"
+            >
+              <LogOut className="h-5 w-5" />
+            </Button>
+          </>
         ) : (
-          <Button variant="ghost" size="icon" asChild className="w-8 h-8 hover:text-primary">
-            <Link href="/login"><LogIn className="h-5 w-5" /></Link>
+          <Button variant="ghost" size="icon" asChild className="w-8 h-8">
+            <Link href="/login" className="text-foreground hover:text-accent-foreground">
+                <LogIn className="h-5 w-5" />
+            </Link>
           </Button>
         )}
         <ThemeToggleButton />
-        {/* Conditionally render Hamburger Menu: NOT on homepage, flashcards, personality tests, OR courses page */}
-        {!isOnHomepage && !isOnFlashCardsPage && !isOnPersonalityTestsPage && !isOnCoursesPage && (
+        {shouldShowHamburgerMenu && (
           <Sheet open={mobileSheetOpen} onOpenChange={setMobileSheetOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="text-foreground hover:text-primary w-8 h-8" aria-label={t.menu}>
-                <HomeIcon className="h-5 w-5" /> {/* Using HomeIcon for menu as per previous update where Menu was removed */}
+                <HomeIcon className="h-5 w-5" />
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-[280px] p-4 flex flex-col">
               <SheetHeader className="mb-4">
-                <SheetTitle className="sr-only">{t.menu}</SheetTitle>
+                <SheetTitle className="sr-only">{t.menu}</SheetTitle> {/* Added sr-only title for accessibility */}
               </SheetHeader>
               <nav className="flex-grow space-y-1.5">
                 {commonNavItems.map(item => (
@@ -299,7 +313,9 @@ const Header = () => {
                 ) : (
                   <>
                     <Button variant="ghost" asChild className={navLinkClasses('/login', true)} onClick={() => setMobileSheetOpen(false)}>
-                      <Link href="/login"><LogIn className="mr-2 h-5 w-5" /> {t.login}</Link>
+                      <Link href="/login" className="text-foreground hover:text-accent-foreground">
+                        <LogIn className="mr-2 h-5 w-5" /> {t.login}
+                      </Link>
                     </Button>
                     <Button variant="default" asChild className={cn(navLinkClasses('/register', true), "bg-primary text-primary-foreground hover:bg-primary/90")} onClick={() => setMobileSheetOpen(false)}>
                       <Link href="/register"><UserPlus className="mr-2 h-5 w-5" /> {t.register}</Link>
@@ -328,5 +344,3 @@ const Header = () => {
 };
 
 export default Header;
-
-    
