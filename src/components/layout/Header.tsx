@@ -4,18 +4,24 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Compass, User as UserIcon, BookOpen, Layers, Brain, Loader2, Menu } from 'lucide-react'; // Added Menu
+import { Home, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Compass, User as UserIcon, BookOpen, Layers, Brain, Loader2, Menu, Circle } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import React, { useEffect, useState } from 'react';
 import { cn } from "@/lib/utils";
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"; // Added Sheet imports
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader, // Added SheetHeader
+  SheetTitle,  // Added SheetTitle
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 const headerTranslations = {
   en: {
     home: "Home",
-    all: "ALL", 
+    all: "ALL",
     explore: "Explore Courses",
     videos: "Reels",
     flashCards: "Flash Cards",
@@ -31,7 +37,7 @@ const headerTranslations = {
   },
   my: {
     home: "ပင်မ",
-    all: "အားလုံး", 
+    all: "အားလုံး",
     explore: "သင်တန်းများ",
     videos: "ဗီဒီယို",
     flashCards: "ကတ်ပြားများ",
@@ -57,36 +63,33 @@ const Header = () => {
   const t = headerTranslations[language];
 
   const isOnHomepage = pathname === '/';
-  const useScrollHidingHeader = isOnHomepage; 
+  const useScrollHidingHeader = isOnHomepage && !isMobile;
   const headerScrollThreshold = 100;
 
-  const [dynamicHeaderBackgroundClasses, setDynamicHeaderBackgroundClasses] = useState('');
+  const [dynamicHeaderBackgroundClasses, setDynamicHeaderBackgroundClasses] = useState('bg-transparent border-transparent');
   const [headerVisible, setHeaderVisible] = useState(true);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
-
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const controlHeaderBackground = () => {
-      if (pathname === '/videos') { 
+      if (pathname === '/videos') {
         setDynamicHeaderBackgroundClasses('bg-transparent border-transparent');
       } else if (isMobile) {
-        // Mobile header is always transparent as per previous request
         setDynamicHeaderBackgroundClasses('bg-transparent border-transparent');
       } else {
-        setDynamicHeaderBackgroundClasses(window.scrollY < 50 ? '' : 'bg-background/80 backdrop-blur-md border-b');
+        setDynamicHeaderBackgroundClasses(window.scrollY < 50 ? 'bg-transparent border-transparent' : 'bg-background/80 backdrop-blur-md border-b');
       }
     };
 
     controlHeaderBackground();
-
     window.addEventListener('scroll', controlHeaderBackground, { passive: true });
     return () => window.removeEventListener('scroll', controlHeaderBackground);
   }, [pathname, isMobile]);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !useScrollHidingHeader || isMobile) { 
+    if (typeof window === 'undefined' || !useScrollHidingHeader) {
       setHeaderVisible(true);
       return;
     }
@@ -105,42 +108,41 @@ const Header = () => {
     controlHeaderVisibility();
     window.addEventListener('scroll', controlHeaderVisibility, { passive: true });
     return () => window.removeEventListener('scroll', controlHeaderVisibility);
-  }, [pathname, useScrollHidingHeader, headerScrollThreshold, isMobile]);
+  }, [pathname, useScrollHidingHeader, headerScrollThreshold]);
 
 
   if (pathname === '/videos') {
-    return null; 
+    return null;
   }
 
   const handleLogout = () => {
     logout();
-    setMobileSheetOpen(false); // Close sheet on logout
+    setMobileSheetOpen(false);
     router.push('/');
   };
 
   const getDashboardPath = () => {
-    if (!isAuthenticated) return '/login'; // Should not be hit if logic is correct, but good guard
+    if (!isAuthenticated) return '/login';
     if (role === 'admin') return '/dashboard/admin';
     if (role === 'student') return '/dashboard/student';
-    // Fallback for authenticated user if role is not yet set or unexpected
     console.warn(`[Header] Dashboard link: User is authenticated, but role is '${role}'. Defaulting dashboard path to home ('/').`);
-    return '/'; 
+    return '/';
   };
 
   const navLinkClasses = (targetPath: string, isMobileSheetLink: boolean = false) => cn(
     "font-medium transition-colors",
-    isMobileSheetLink 
-      ? "block w-full text-left px-3 py-2.5 rounded-md text-base" 
+    isMobileSheetLink
+      ? "block w-full text-left px-3 py-2.5 rounded-md text-base"
       : "text-sm px-3 py-2 rounded-md",
-    pathname === targetPath 
+    pathname === targetPath
       ? (isMobileSheetLink ? "bg-accent text-accent-foreground font-semibold" : "bg-accent text-accent-foreground font-semibold")
       : (isMobileSheetLink ? "text-foreground hover:bg-muted" : "text-foreground hover:text-primary")
   );
-  
+
   const commonNavItems = [
     { href: "/", label: t.home, Icon: Home },
     { href: "/courses/search", label: t.explore, Icon: Compass },
-    { href: "/videos", label: t.videos, Icon: BookOpen }, // Kept for consistency in sheet
+    { href: "/videos", label: t.videos, Icon: BookOpen },
     { href: "/flash-cards", label: t.flashCards, Icon: Layers },
     { href: "/personality-tests", label: t.personalityTest, Icon: Brain }
   ];
@@ -166,13 +168,13 @@ const Header = () => {
   ThemeToggleButton.displayName = 'ThemeToggleButton';
 
   const MobileHomepageAllLink = () => (
-    <Link 
-      href="/" 
+    <Link
+      href="/"
       className={cn(
         "group text-sm font-bold font-headline transition-all py-1 flex items-center gap-1",
-        "text-black dark:text-white", 
+        "text-black dark:text-white",
         "underline decoration-primary underline-offset-4 decoration-2",
-        "shadow-[0_1px_0px_hsl(var(--primary-darker))]"
+        // "shadow-[0_1px_0px_hsl(var(--primary-darker))]" // Removed 3D shadow
       )}
     >
       <Home className="h-4 w-4 text-primary group-hover:text-accent transition-colors" />
@@ -181,56 +183,70 @@ const Header = () => {
   );
 
   const DesktopNav = () => (
-    <nav className="flex items-center space-x-1 lg:space-x-2">
-      {commonNavItems.map(item => (
-        <Button key={item.label} variant="ghost" size="sm" asChild className={navLinkClasses(item.href)}>
-          <Link href={item.href}><item.Icon className="mr-1.5 h-4 w-4" />{item.label}</Link>
-        </Button>
-      ))}
-      {authLoading ? (
-        <Button variant="ghost" size="sm" disabled className="ml-1 lg:ml-2"><Loader2 className="h-4 w-4 animate-spin mr-1" /> {t.loading}</Button>
-      ) : isAuthenticated ? (
-        <>
-          <span className="text-sm text-muted-foreground hidden lg:inline ml-1 lg:ml-2">{t.welcome}, {user?.name}!</span>
-          <Button variant="ghost" size="sm" asChild className={cn(navLinkClasses(getDashboardPath()), "ml-1 lg:ml-2")}>
-            <Link href={getDashboardPath()}><LayoutDashboard className="mr-1 h-4 w-4" /> {t.dashboard}</Link>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleLogout}
-            className="border-primary/50 text-primary hover:bg-primary/10 hover:text-primary ml-1 lg:ml-2"
-          >
-            <LogOut className="mr-1 h-4 w-4" /> {t.logout}
-          </Button>
-        </>
-      ) : (
-        <>
-          <Button variant="ghost" size="sm" asChild className={cn(navLinkClasses('/login'), "ml-1 lg:ml-2")}>
-            <Link href="/login"><LogIn className="mr-1 h-4 w-4" /> {t.login}</Link>
-          </Button>
-          <Button variant="default" size="sm" asChild className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md hover:shadow-sm active:translate-y-px transition-all duration-150 ml-1 lg:ml-2">
-            <Link href="/register"><UserPlus className="mr-1 h-4 w-4" /> {t.register}</Link>
-          </Button>
-        </>
-      )}
-      <div className="ml-1 lg:ml-2">
-        <ThemeToggleButton />
+    <>
+      <div className="flex-1">
+        {/* Intentionally empty to push nav to the right, logo removed */}
       </div>
-    </nav>
+      <nav className="flex items-center space-x-1 lg:space-x-2">
+        {commonNavItems.map(item => (
+          <Button key={item.label} variant="ghost" size="sm" asChild className={navLinkClasses(item.href)}>
+            <Link href={item.href}><item.Icon className="mr-1.5 h-4 w-4" />{item.label}</Link>
+          </Button>
+        ))}
+        {authLoading ? (
+          <Button variant="ghost" size="sm" disabled className="ml-1 lg:ml-2"><Loader2 className="h-4 w-4 animate-spin mr-1" /> {t.loading}</Button>
+        ) : isAuthenticated ? (
+          <>
+            <span className="text-sm text-muted-foreground hidden lg:inline ml-1 lg:ml-2">{t.welcome}, {user?.name}!</span>
+            <Button variant="ghost" size="sm" asChild className={cn(navLinkClasses(getDashboardPath()), "ml-1 lg:ml-2")}>
+              <Link href={getDashboardPath()}><LayoutDashboard className="mr-1 h-4 w-4" /> {t.dashboard}</Link>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              className="border-primary/50 text-primary hover:bg-primary/10 hover:text-primary ml-1 lg:ml-2"
+            >
+              <LogOut className="mr-1 h-4 w-4" /> {t.logout}
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button variant="ghost" size="sm" asChild className={cn(navLinkClasses('/login'), "ml-1 lg:ml-2")}>
+              <Link href="/login"><LogIn className="mr-1 h-4 w-4" /> {t.login}</Link>
+            </Button>
+            <Button variant="default" size="sm" asChild className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md hover:shadow-sm active:translate-y-px transition-all duration-150 ml-1 lg:ml-2">
+              <Link href="/register"><UserPlus className="mr-1 h-4 w-4" /> {t.register}</Link>
+            </Button>
+          </>
+        )}
+        <div className="ml-1 lg:ml-2">
+          <ThemeToggleButton />
+        </div>
+      </nav>
+    </>
   );
-  
+
   const MobileNav = () => (
     <div className="flex items-center justify-between w-full">
       <div className="flex-1">
         {isOnHomepage && <MobileHomepageAllLink />}
       </div>
-      
+
       <div className="flex items-center gap-1">
-         {/* Icons that were previously on the right side for mobile, now moved to sheet mostly */}
-         {/* Dashboard/Login/Logout and Theme Toggle are now in the Sheet for non-homepage mobile */}
-         {/* Or some can be kept here based on final design */}
+        {authLoading ? (
+           <Button variant="ghost" size="icon" disabled className="w-8 h-8"><Loader2 className="h-5 w-5 animate-spin" /></Button>
+        ) : isAuthenticated ? (
+          <Button variant="ghost" size="icon" asChild className="w-8 h-8 hover:text-primary">
+            <Link href={getDashboardPath()}><LayoutDashboard className="h-5 w-5" /></Link>
+          </Button>
+        ) : (
+          <Button variant="ghost" size="icon" asChild className="w-8 h-8 hover:text-primary">
+            <Link href="/login"><LogIn className="h-5 w-5" /></Link>
+          </Button>
+        )}
         <ThemeToggleButton />
+         {/* Mobile Sheet Menu - kept for non-homepage mobile navigation if needed, or general access */}
         <Sheet open={mobileSheetOpen} onOpenChange={setMobileSheetOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" className="text-foreground hover:text-primary w-8 h-8" aria-label={t.menu}>
@@ -238,7 +254,10 @@ const Header = () => {
             </Button>
           </SheetTrigger>
           <SheetContent side="right" className="w-[280px] p-4 flex flex-col">
-            <nav className="flex-grow space-y-1.5 mt-4">
+            <SheetHeader className="mb-4">
+              <SheetTitle className="sr-only">{t.menu}</SheetTitle> {/* Visually hidden title for accessibility */}
+            </SheetHeader>
+            <nav className="flex-grow space-y-1.5">
               {commonNavItems.map(item => (
                 <Button key={item.label} variant="ghost" asChild className={navLinkClasses(item.href, true)} onClick={() => setMobileSheetOpen(false)}>
                   <Link href={item.href}><item.Icon className="mr-2 h-5 w-5" />{item.label}</Link>
@@ -269,7 +288,6 @@ const Header = () => {
                 </>
               )}
             </nav>
-            {/* Theme toggle can also be in the sheet footer if preferred */}
           </SheetContent>
         </Sheet>
       </div>
@@ -281,7 +299,7 @@ const Header = () => {
     <header className={cn(
         "sticky top-0 z-50 transition-all duration-300 ease-in-out",
         isMobile ? 'bg-transparent border-transparent' : dynamicHeaderBackgroundClasses,
-        {'!-translate-y-full': !headerVisible && useScrollHidingHeader && !isMobile }
+        {'!-translate-y-full': !headerVisible && useScrollHidingHeader }
       )}>
       <div className="container mx-auto px-4 py-2.5 flex justify-between items-center min-h-[60px]">
         {isMobile ? <MobileNav /> : <DesktopNav /> }
@@ -291,4 +309,3 @@ const Header = () => {
 };
 
 export default Header;
-
