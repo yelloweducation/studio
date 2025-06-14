@@ -41,7 +41,6 @@ import {
   getSitePageBySlug as getSitePageBySlugDbUtil,
   upsertSitePage as upsertSitePageDbUtil,
 } from '@/lib/dbUtils';
-import type { QuizType as MockQuizEnumType } from '@/data/mockData'; 
 import type { Prisma } from '@prisma/client';
 
 
@@ -61,16 +60,23 @@ export async function serverAddCourse(
     quizzes?: Array<Partial<Omit<Quiz, 'id'|'courseId'|'createdAt'|'updatedAt'|'questions'>> & { quizType: PrismaQuizType, questions?: Array<Partial<Omit<Question, 'id'|'quizId'|'createdAt'|'updatedAt'|'options'|'correctOptionId'>> & { options: Array<Partial<Omit<Option, 'id'|'questionId'|'createdAt'|'updatedAt'>>>, correctOptionText?: string }> }>
   }
 ): Promise<Course> {
-  console.log("[ServerAction serverAddCourse] Action called. Received data (first 200 chars):", JSON.stringify(courseData).substring(0,200) + "...");
+  console.log("[ServerAction serverAddCourse] Action called. Received data (first 500 chars):", JSON.stringify(courseData).substring(0,500) + "...");
+  console.log("[ServerAction serverAddCourse] Full courseData.modules (if any):", JSON.stringify(courseData.modules, null, 2));
+  console.log("[ServerAction serverAddCourse] Full courseData.quizzes (if any):", JSON.stringify(courseData.quizzes, null, 2));
   try {
     const newCourse = await addCourseToDb(courseData);
     console.log("[ServerAction serverAddCourse] addCourseToDb successful, returning course ID:", newCourse.id);
     return newCourse;
   } catch (error) {
-    console.error("[ServerAction serverAddCourse] Error calling addCourseToDb. Full error:", error);
+    console.error("[ServerAction serverAddCourse] Error calling addCourseToDb. Full error details below.");
     if (error instanceof Error) {
-        console.error("[ServerAction serverAddCourse] Error name:", error.name);
-        console.error("[ServerAction serverAddCourse] Error message:", error.message);
+        console.error("[ServerAction serverAddCourse] Error Name:", error.name);
+        console.error("[ServerAction serverAddCourse] Error Message:", error.message);
+        console.error("[ServerAction serverAddCourse] Error Stack:", error.stack);
+        // @ts-ignore
+        if (error.digest) { console.error("[ServerAction serverAddCourse] Error Digest:", error.digest); }
+    } else {
+        console.error("[ServerAction serverAddCourse] Non-Error object thrown:", error);
     }
     throw error; 
   }
@@ -83,16 +89,23 @@ export async function serverUpdateCourse(
     quizzes?: Array<Partial<Omit<Quiz, 'id'|'courseId'|'createdAt'|'updatedAt'|'questions'>> & { id?: string, quizType: PrismaQuizType, questions?: Array<Partial<Omit<Question, 'id'|'quizId'|'createdAt'|'updatedAt'|'options'|'correctOptionId'>> & { id?: string, options: Array<Partial<Omit<Option, 'id'|'questionId'|'createdAt'|'updatedAt'>> & {id?:string}>, correctOptionText?: string }> }>
   }
 ): Promise<Course> {
-  console.log(`[ServerAction serverUpdateCourse] Action called for course ID ${courseId}. Received data (first 200 chars):`, JSON.stringify(courseData).substring(0,200) + "...");
+  console.log(`[ServerAction serverUpdateCourse] Action called for course ID ${courseId}. Received data (first 500 chars):`, JSON.stringify(courseData).substring(0,500) + "...");
+  console.log("[ServerAction serverUpdateCourse] Full courseData.modules (if any):", JSON.stringify(courseData.modules, null, 2));
+  console.log("[ServerAction serverUpdateCourse] Full courseData.quizzes (if any):", JSON.stringify(courseData.quizzes, null, 2));
   try {
     const updatedCourse = await updateCourseInDb(courseId, courseData);
     console.log(`[ServerAction serverUpdateCourse] updateCourseInDb successful for course ID ${courseId}, returning course ID:`, updatedCourse.id);
     return updatedCourse;
   } catch (error) {
-    console.error(`[ServerAction serverUpdateCourse] Error calling updateCourseInDb for course ID ${courseId}. Full error:`, error);
+    console.error(`[ServerAction serverUpdateCourse] Error calling updateCourseInDb for course ID ${courseId}. Full error details below.`);
     if (error instanceof Error) {
         console.error(`[ServerAction serverUpdateCourse] Error name:`, error.name);
         console.error(`[ServerAction serverUpdateCourse] Error message:`, error.message);
+        console.error(`[ServerAction serverUpdateCourse] Error Stack:`, error.stack);
+        // @ts-ignore
+        if (error.digest) { console.error("[ServerAction serverUpdateCourse] Error Digest:", error.digest); }
+    } else {
+         console.error(`[ServerAction serverUpdateCourse] Non-Error object thrown for course ID ${courseId}:`, error);
     }
     throw error;
   }
@@ -137,7 +150,7 @@ export async function serverGetPaymentSubmissionForCourse(userId: string, course
   return allUserSubmissions.find(s => s.courseId === courseId) || null;
 }
 export async function serverCreateEnrollment(userId: string, courseId: string): Promise<Enrollment | null> {
-  try { return await createEnrollmentDbUtil(userId, courseId); } 
+  try { return await createEnrollmentInDb(userId, courseId); } 
   catch (error) { console.error("[ServerAction serverCreateEnrollment] Error creating enrollment:", error); throw error; }
 }
 export async function serverUpdateEnrollmentProgress(enrollmentId: string, progress: number): Promise<Enrollment | null> {
@@ -211,7 +224,7 @@ export async function serverGetSitePageBySlug(slug: string): Promise<SitePage | 
 export async function serverUpsertSitePage(
   slug: string,
   title: string,
-  content: Prisma.JsonValue | string // Allow string for simple HTML
+  content: Prisma.JsonValue | string 
 ): Promise<SitePage> {
   return upsertSitePageDbUtil(slug, title, content);
 }

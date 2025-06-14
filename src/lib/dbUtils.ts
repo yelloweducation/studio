@@ -1,15 +1,12 @@
 
 import prisma from './prisma'; 
-import type { Prisma } from '@prisma/client'; // Import Prisma for Json types
+import type { Prisma } from '@prisma/client'; 
 import { 
   mockCoursesForSeeding,
   mockCategoriesForSeeding,
   mockVideosForSeeding as mockVideosForSeedingData,
   mockLearningPathsForSeeding,
   initialPaymentSettings as mockDefaultPaymentSettingsData,
-  // We will now use Prisma for these, but mock data can still be a source for seeding
-  // paymentSubmissions_DEPRECATED_USE_FIRESTORE, 
-  // enrollments_DEPRECATED_USE_FIRESTORE,
 } from '@/data/mockData';
 import { QuizType as PrismaQuizTypeEnum, type SitePage, type Course, type Category, type LearningPath, type Module, type Lesson, type Quiz, type Question, type Option, type QuizType as PrismaQuizTypeTypeAlias, type Video, type PaymentSettings, type PaymentSubmission, type Enrollment, type User, type PaymentSubmissionStatus as PrismaPaymentStatus } from '@prisma/client';
 import { z } from 'zod';
@@ -235,12 +232,12 @@ export const addCourseToDb = async (
   }
 ): Promise<Course> => {
   console.log("[dbUtils-Prisma] addCourseToDb: Function called.");
-  console.log("[dbUtils-Prisma] addCourseToDb: Attempting to add course. Data (first 500 chars):", JSON.stringify(courseData).substring(0, 500) + "...");
+  console.log("[dbUtils-Prisma] addCourseToDb: Input courseData (raw, first 500 chars):", JSON.stringify(courseData).substring(0, 500) + "...");
   
   const validation = CourseInputSchema.safeParse(courseData);
   if (!validation.success) {
-    console.error("[dbUtils-Prisma] addCourseToDb: Course validation failed:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
-    throw new Error(validation.error.flatten().fieldErrors._errors?.join(', ') || "Invalid course data.");
+    console.error("[dbUtils-Prisma] addCourseToDb: Course Zod validation failed. Errors:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
+    throw new Error(validation.error.flatten().fieldErrors._errors?.join(', ') || "Invalid course data. Zod validation failed.");
   }
   console.log("[dbUtils-Prisma] addCourseToDb: Zod validation successful. Validated data (first 500 chars):", JSON.stringify(validation.data).substring(0,500) + "...");
   const { categoryName, modules, quizzes, ...mainCourseData } = validation.data;
@@ -294,7 +291,8 @@ export const addCourseToDb = async (
       } : undefined,
     };
     
-    console.log("[dbUtils-Prisma] addCourseToDb: Prepared prismaCourseData (first 500 chars):", JSON.stringify(prismaCourseData).substring(0,500) + "...");
+    console.log("[dbUtils-Prisma] addCourseToDb: FINAL prismaCourseData before create (first 500 chars):", JSON.stringify(prismaCourseData).substring(0,500) + "...");
+    console.log("[dbUtils-Prisma] addCourseToDb: FINAL prismaCourseData QUIZZES section before create:", JSON.stringify(prismaCourseData.quizzes, null, 2));
     console.log("[dbUtils-Prisma] addCourseToDb: Attempting prisma.course.create...");
     const createdCourse = await prisma.course.create({
       data: prismaCourseData,
@@ -355,7 +353,15 @@ export const addCourseToDb = async (
         console.error("[dbUtils-Prisma] addCourseToDb: Error Stack:", error.stack);
     }
     // @ts-ignore
-    if (error.code) {  console.error("[dbUtils-Prisma] addCourseToDb: Prisma Error Code:", error.code); }
+    if (error.code) {  
+        console.error("[dbUtils-Prisma] addCourseToDb: Prisma Error Code:", error.code); 
+        // @ts-ignore
+        if (error.code === 'P2002') { console.error("[dbUtils-Prisma] addCourseToDb: Unique constraint violation. Target fields:", error.meta?.target); }
+        // @ts-ignore
+        if (error.code === 'P2003') { console.error("[dbUtils-Prisma] addCourseToDb: Foreign key constraint violation. Field name:", error.meta?.field_name); }
+        // @ts-ignore
+        if (error.code === 'P2025') { console.error("[dbUtils-Prisma] addCourseToDb: Required record not found for relation. Details:", error.meta?.cause || error.message); }
+    }
     // @ts-ignore
     if (error.meta) { console.error("[dbUtils-Prisma] addCourseToDb: Prisma Error Meta:", JSON.stringify(error.meta, null, 1)); }
     throw error; 
@@ -372,7 +378,7 @@ export const updateCourseInDb = async (
   console.log(`[dbUtils-Prisma] updateCourseInDb: Attempting to update course ID ${courseId}. Data (first 500 chars):`, JSON.stringify(courseData).substring(0,500)+"...");
   const validation = CourseInputSchema.partial().safeParse(courseData);
   if (!validation.success) {
-    console.error("[dbUtils-Prisma] updateCourseInDb: Course validation failed:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
+    console.error("[dbUtils-Prisma] updateCourseInDb: Course Zod validation failed:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
     throw new Error(validation.error.flatten().fieldErrors._errors?.join(', ') || "Invalid course data for update.");
   }
   console.log("[dbUtils-Prisma] updateCourseInDb: Zod validation successful. Validated data (first 500 chars):", JSON.stringify(validation.data).substring(0,500) + "...");
@@ -489,7 +495,15 @@ export const updateCourseInDb = async (
         console.error("[dbUtils-Prisma] updateCourseInDb: Error Stack:", error.stack);
     }
     // @ts-ignore
-    if (error.code) {  console.error("[dbUtils-Prisma] updateCourseInDb: Prisma Error Code:", error.code); }
+    if (error.code) {  
+        console.error("[dbUtils-Prisma] updateCourseInDb: Prisma Error Code:", error.code);
+        // @ts-ignore
+        if (error.code === 'P2002') { console.error("[dbUtils-Prisma] updateCourseInDb: Unique constraint violation. Target fields:", error.meta?.target); }
+        // @ts-ignore
+        if (error.code === 'P2003') { console.error("[dbUtils-Prisma] updateCourseInDb: Foreign key constraint violation. Field name:", error.meta?.field_name); }
+        // @ts-ignore
+        if (error.code === 'P2025') { console.error("[dbUtils-Prisma] updateCourseInDb: Required record not found for relation. Details:", error.meta?.cause || error.message); }
+    }
     // @ts-ignore
     if (error.meta) { console.error("[dbUtils-Prisma] updateCourseInDb: Prisma Error Meta:", JSON.stringify(error.meta, null, 1)); }
     throw error;
@@ -912,7 +926,7 @@ export const getEnrollmentsByUserIdFromDb = async (userId: string): Promise<Enro
   try {
     return await prisma.enrollment.findMany({
       where: { userId },
-      include: { course: true }, // Ensure course data is included
+      include: { course: true }, 
       orderBy: { enrolledDate: 'desc' }
     });
   } catch (error) {
@@ -998,9 +1012,8 @@ export const seedCoursesToDb = async (): Promise<{ successCount: number; errorCo
                 id: qs.id, 
                 text: qs.text, 
                 points: qs.points, 
-                order: 0, // Set default order
+                order: 0, 
                 options: { create: optionsToCreate },
-                // correctOptionId will be linked after creation if necessary
             };
         });
         return { 
@@ -1034,7 +1047,6 @@ export const seedCoursesToDb = async (): Promise<{ successCount: number; errorCo
       
       const createdCourse = await prisma.course.create({data:courseCreateData, include: { quizzes: { include: {questions: { include: {options:true}}}}}});
       
-      // Link correctOptionId for quizzes
       if (createdCourse.quizzes && cd.quizzes) {
           for (let i=0; i < createdCourse.quizzes.length; i++) {
               const dbQuiz = createdCourse.quizzes[i];
@@ -1045,7 +1057,7 @@ export const seedCoursesToDb = async (): Promise<{ successCount: number; errorCo
                       const mockQuestion = mockQuiz.questions[j];
                       const correctMockOption = mockQuestion.options.find(o => o.id === mockQuestion.correctOptionId);
                       if (correctMockOption) {
-                          const correctDbOption = dbQuestion.options.find(o => o.text === correctMockOption.text); // Match by text as IDs might change if not preset
+                          const correctDbOption = dbQuestion.options.find(o => o.text === correctMockOption.text); 
                           if (correctDbOption && dbQuestion.correctOptionId !== correctDbOption.id) {
                               await prisma.question.update({
                                   where: {id: dbQuestion.id},
@@ -1085,9 +1097,8 @@ export const seedVideosToDb = async (): Promise<{ successCount: number; errorCou
     try{
       const existing = await prisma.video.findUnique({where:{id:vd.id}});
       if(existing){sk++;continue;}
-      // Ensure only fields present in the Prisma Video model are passed
       const { createdAt, updatedAt, videoUrl, ...prismaVideoData } = vd; 
-      await prisma.video.create({data:{...prismaVideoData, id:vd.id}});s++; // Use the mock ID for consistency
+      await prisma.video.create({data:{...prismaVideoData, id:vd.id}});s++; 
     }catch(err){console.error(`Err seed Video ${vd.title}:`,err);e++;}
   }
   console.log(`[dbUtils-Prisma] seedVideosToDb: Done. Success: ${s}, Errors: ${e}, Skipped: ${sk}`);
