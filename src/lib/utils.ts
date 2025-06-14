@@ -12,7 +12,7 @@ export function getEmbedUrl(url: string | undefined | null): string | null {
   }
 
   try {
-    const urlObj = new URL(url);
+    const urlObj = new URL(url); // This line can throw an error if URL is invalid
 
     // Handle YouTube URLs
     if (urlObj.hostname === 'www.youtube.com' && urlObj.pathname === '/watch') {
@@ -26,36 +26,28 @@ export function getEmbedUrl(url: string | undefined | null): string | null {
 
     // Handle TikTok URLs
     if (urlObj.hostname === 'www.tiktok.com') {
-      if (urlObj.pathname.startsWith('/embed/')) { // e.g. /embed/123 or /embed/v2/123
-        return url; // Already an embed URL
+      if (urlObj.pathname.startsWith('/embed/')) { 
+        return url; 
       }
       
       const pathParts = urlObj.pathname.split('/');
-      // Expected format: /@username/video/VIDEO_ID
-      // pathParts for /@username/video/VIDEO_ID will be ['', '@username', 'video', 'VIDEO_ID']
       if (pathParts.length >= 4 && pathParts[2] === 'video') {
         const videoId = pathParts[3];
-        if (videoId && /^\d+$/.test(videoId)) { // Ensure videoId is purely numeric
+        if (videoId && /^\d+$/.test(videoId)) { 
           return `https://www.tiktok.com/embed/v2/${videoId}`;
         }
-        // If videoId is not numeric, or if the path structure matched but ID was invalid.
         return null; 
       }
-      // If it's www.tiktok.com but not /embed/ and not the recognized /@user/video/ID format.
       return null;
     }
 
-    // Handle shortened TikTok URLs (e.g., vt.tiktok.com, vm.tiktok.com)
     if (urlObj.hostname === 'vt.tiktok.com' || urlObj.hostname === 'vm.tiktok.com') {
-      // These URLs redirect. Extracting the final video ID for embedding is not reliably
-      // feasible client-side due to potential CORS or network request needs.
       return null;
     }
     
-    // Handle Google Drive URLs for course lessons
     if (urlObj.hostname === 'drive.google.com') {
       if (urlObj.pathname.includes('/preview')) {
-        return url; // Already a preview/embed URL
+        return url;
       }
       let fileId: string | null = null;
       if (urlObj.pathname.startsWith('/file/d/')) {
@@ -68,13 +60,12 @@ export function getEmbedUrl(url: string | undefined | null): string | null {
       if (fileId) {
         return `https://drive.google.com/file/d/${fileId}/preview`;
       }
-      return null; // Could not extract fileId from Google Drive URL
+      return null;
     }
 
   } catch (error) {
-    // console.error("Error parsing or transforming embed URL:", url, error);
+    console.warn("Error parsing or transforming embed URL:", url, error); // Changed to console.warn
     return null;
   }
-  // If it's a valid URL but not handled by any specific logic above.
   return null;
 }

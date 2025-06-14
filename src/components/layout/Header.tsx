@@ -19,7 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import LuminaLogo from '@/components/LuminaLogo';
+// import LuminaLogo from '@/components/LuminaLogo'; // Logo removed
 
 const headerTranslations = {
   en: {
@@ -166,8 +166,15 @@ const Header = () => {
 
   const DesktopNav = () => (
     <>
-      <LuminaLogo /> 
-      <div className="flex-1"></div>
+      {/* <LuminaLogo /> Removed Logo */}
+      <div className="flex-1"> 
+        {/* Empty div to push nav to center and auth to right if no logo */}
+        {/* If you want "ALL" or similar text here, add it */}
+         <Link href="/" className="flex items-center space-x-2 text-xl font-bold font-headline text-foreground hover:text-foreground/70 transition-colors">
+            {/* You can add an icon here if desired, e.g., <Circle size={24} className="text-primary" /> */}
+            <span>Yellow Institute</span> {/* Or just keep it empty if no text/logo desired */}
+        </Link>
+      </div>
       <nav className="mx-auto flex justify-center items-center space-x-1 lg:space-x-2">
         {commonNavItems.map(item => (
           <Button key={item.label} variant="ghost" size="sm" asChild className={navLinkClasses(item.href)}>
@@ -235,7 +242,7 @@ const Header = () => {
   
     return (
       <div className="flex items-center justify-between w-full">
-        <Link href="/" className="text-lg font-bold text-foreground relative group py-1">
+        <Link href="/" className="text-lg font-bold text-foreground hover:text-primary/80 transition-colors relative group py-1">
           {t.all}
           <span className="absolute bottom-[-2px] left-0 w-full h-[3px] bg-primary transform scale-x-100 transition-transform duration-300 ease-out group-hover:scale-x-105"></span>
         </Link>
@@ -243,7 +250,7 @@ const Header = () => {
         <div className="flex items-center gap-1.5 sm:gap-2">
           {authLoading ? (
             <Button variant="ghost" size="icon" disabled className="w-8 h-8">
-              <Loader2 className="h-5 w-5 animate-spin" />
+              <Loader2 className="h-5 w-5 animate-spin text-foreground" />
             </Button>
           ) : isAuthenticated && user ? (
             <>

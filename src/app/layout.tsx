@@ -49,14 +49,14 @@ export const metadata: Metadata = {
   manifest: '/manifest.json', // Ensure manifest.json exists in /public and icons listed within are correct.
   openGraph: {
     type: "website",
-    locale: "en_US", // Consider adding other locales if supported
+    locale: "en_US", 
     url: siteConfig.url,
     title: siteConfig.name,
     description: siteConfig.description,
     siteName: siteConfig.name,
     images: siteConfig.ogImage ? [
       {
-        url: siteConfig.ogImage, // Ensure this image (e.g., /public/og-image.png) exists
+        url: siteConfig.ogImage, 
         width: 1200,
         height: 630,
         alt: `${siteConfig.name} - Online Learning Platform`,
@@ -71,13 +71,14 @@ export const metadata: Metadata = {
     creator: siteConfig.links?.twitter ? `@${siteConfig.links.twitter.split('/').pop()}` : undefined,
   },
   icons: {
-    icon: "/favicon.ico", // Ensure /public/favicon.ico exists
-    shortcut: "/favicon-16x16.png", // Ensure /public/favicon-16x16.png exists
-    apple: "/apple-touch-icon.png", // Ensure /public/apple-touch-icon.png exists
-    // Add other icon sizes if needed, e.g., for PWA manifest
+    icon: "/favicon.ico", 
+    shortcut: "/favicon-16x16.png", 
+    apple: "/apple-touch-icon.png", 
+    // Ensure these icons (e.g., icon-192x192.png, icon-512x512.png) exist in your /public/icons folder
+    // if they are referenced by your manifest.json or for PWA purposes.
     // other: [
     //   { rel: 'icon', url: '/icons/icon-32x32.png', sizes: '32x32' },
-    //   { rel: 'icon', url: '/icons/icon-192x192.png', sizes: '192x192' }, // This one was mentioned in an error log
+    //   { rel: 'icon', url: '/icons/icon-192x192.png', sizes: '192x192' }, 
     // ],
   }
 };
@@ -85,10 +86,10 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1, // Consider if user scaling is desired for accessibility
+  maximumScale: 1, 
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#FACC15' }, // Yellow for light mode
-    { media: '(prefers-color-scheme: dark)', color: '#423A0E' },  // Dark Yellow/Brown for dark mode
+    { media: '(prefers-color-scheme: light)', color: '#FACC15' }, 
+    { media: '(prefers-color-scheme: dark)', color: '#423A0E' },  
   ],
 };
 
@@ -98,27 +99,33 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const requestHeaders = headers();
-  const nextUrl = requestHeaders.get('next-url');
-  const pathname = nextUrl ? nextUrl : '';
+  // Read the pathname from the 'next-url' header if it exists, otherwise default to an empty string.
+  // This is a common pattern for accessing the URL in Server Components.
+  const pathname = requestHeaders.get('next-url') || '';
+
+
+  // Conditional rendering for the main layout structure
+  // The /videos page will have its own layout handled by videos-client.tsx (full screen, custom header/footer)
+  const isVideoPage = pathname === '/videos';
 
   return (
     <html lang="en" suppressHydrationWarning className={`${poppins.variable} ${ptSans.variable}`}>
       <head>
         {/* Any critical head tags can go here, but most are handled by Next.js Metadata API */}
       </head>
-      <body className="font-body antialiased flex flex-col min-h-screen">
+      <body className="font-body antialiased flex flex-col min-h-screen bg-background"> {/* Added bg-background here */}
         <ThemeProvider>
           <AuthProvider>
             <LanguageProvider>
-              <Header />
-              {pathname === '/videos' ? (
-                children // Video page takes full screen
+              {!isVideoPage && <Header />} {/* Render Header only if not on the video page */}
+              {isVideoPage ? (
+                children // Video page takes full control of its layout
               ) : (
                 <main className="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                   {children}
                 </main>
               )}
-              <Footer />
+              {!isVideoPage && <Footer />} {/* Render Footer only if not on the video page */}
               <Toaster />
             </LanguageProvider>
           </AuthProvider>
@@ -127,4 +134,3 @@ export default async function RootLayout({
     </html>
   );
 }
-
