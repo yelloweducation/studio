@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { type Course, type Module, type Lesson, type Enrollment } from '@/lib/dbUtils'; 
-import { getCourseByIdFromDb, getEnrollmentForUserAndCourseFromDb, updateEnrollmentProgressInDb, createEnrollmentInDb } from '@/lib/dbUtils'; 
+// Removed direct dbUtils imports for functions, will use server actions
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +15,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
+// Import server actions
+import { 
+  serverGetCourseById, 
+  serverGetEnrollmentForCourse, 
+  serverUpdateEnrollmentProgress, 
+  serverCreateEnrollment 
+} from '@/actions/adminDataActions';
 
 const lessonViewerTranslations = {
   en: {
@@ -92,23 +99,30 @@ export default function LessonViewerPage() {
         setIsLoading(false);
         return;
       }
-      const courseData = await getCourseByIdFromDb(courseId); 
-      setCurrentCourse(courseData);
+      try {
+        const courseData = await serverGetCourseById(courseId); // Use server action
+        setCurrentCourse(courseData);
 
-      if (user && courseData) {
-        let enrollment = await getEnrollmentForUserAndCourseFromDb(user.id, courseId); 
-        if (!enrollment) {
-          if (courseData.price === 0 || courseData.price === null) { 
-             enrollment = await createEnrollmentInDb(user.id, courseId); 
-             if (enrollment) toast({ title: t.enrollmentCreated });
+        if (user && courseData) {
+          let enrollment = await serverGetEnrollmentForCourse(user.id, courseId); // Use server action
+          if (!enrollment) {
+            if (courseData.price === 0 || courseData.price === null) { 
+               enrollment = await serverCreateEnrollment(user.id, courseId); // Use server action
+               if (enrollment) toast({ title: t.enrollmentCreated });
+            }
           }
+          setCurrentEnrollment(enrollment);
         }
-        setCurrentEnrollment(enrollment);
+      } catch (error) {
+        console.error("Error fetching lesson viewer data:", error);
+        toast({ variant: "destructive", title: "Error", description: "Could not load lesson content." });
+        setCurrentCourse(null);
+        setCurrentEnrollment(null);
       }
       setIsLoading(false);
     };
     fetchData();
-  }, [courseId, user, toast, t.enrollmentCreated]);
+  }, [courseId, user?.id, toast, t.enrollmentCreated]); // Added user.id to dependencies
 
 
   const markLessonCompleted = async () => {
@@ -140,10 +154,14 @@ export default function LessonViewerPage() {
 
     if (newProgress > (currentEnrollment.progress || 0)) {
         try {
-            await updateEnrollmentProgressInDb(currentEnrollment.id, newProgress); 
-            setCurrentEnrollment(prev => prev ? { ...prev, progress: newProgress } : null);
-            if (newProgress < 100) {
-                // toast({ title: t.progressUpdated, description: `Progress: ${newProgress}%` });
+            const updatedEnrollment = await serverUpdateEnrollmentProgress(currentEnrollment.id, newProgress); // Use server action
+            if (updatedEnrollment) {
+              setCurrentEnrollment(updatedEnrollment);
+              if (newProgress < 100) {
+                  // toast({ title: t.progressUpdated, description: `Progress: ${newProgress}%` });
+              }
+            } else {
+              throw new Error("Server action returned null for enrollment update.");
             }
         } catch (error) {
             console.error("Failed to update progress:", error);
@@ -153,11 +171,11 @@ export default function LessonViewerPage() {
   };
 
  useEffect(() => {
-    if (isAuthenticated && currentLesson) {
+    if (isAuthenticated && currentLesson && currentEnrollment) { // Ensure enrollment is present before marking complete
       markLessonCompleted();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentLesson, isAuthenticated]); 
+  }, [currentLesson, isAuthenticated, currentEnrollment]); // Added currentEnrollment
 
 
   const handleFinishCourse = async () => {
@@ -167,8 +185,12 @@ export default function LessonViewerPage() {
     }
     try {
         if (currentEnrollment.progress < 100) {
-            await updateEnrollmentProgressInDb(currentEnrollment.id, 100); 
-            setCurrentEnrollment(prev => prev ? { ...prev, progress: 100 } : null);
+            const updatedEnrollment = await serverUpdateEnrollmentProgress(currentEnrollment.id, 100); // Use server action
+            if (updatedEnrollment) {
+              setCurrentEnrollment(updatedEnrollment);
+            } else {
+              throw new Error("Server action returned null for final progress update.");
+            }
         }
         toast({ title: "Course Completed!", description: "Congratulations on finishing the course." });
         router.push(`/courses/${courseId}`);
@@ -349,3 +371,4 @@ export default function LessonViewerPage() {
     </div>
   );
 }
+
