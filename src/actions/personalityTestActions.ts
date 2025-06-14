@@ -15,7 +15,8 @@ interface SubmitMbtiResultData {
 }
 
 export async function serverSubmitMbtiResult(data: SubmitMbtiResultData): Promise<MbtiQuizResult | null> {
-  console.log('[ServerAction serverSubmitMbtiResult] Received data for submission:', data);
+  console.log('============================================================');
+  console.log('[ServerAction serverSubmitMbtiResult] ACTION CALLED. Received data:', JSON.stringify(data, null, 2));
   try {
     const newResult = await prisma.mbtiQuizResult.create({
       data: {
@@ -33,16 +34,38 @@ export async function serverSubmitMbtiResult(data: SubmitMbtiResultData): Promis
       },
     });
     console.log('[ServerAction serverSubmitMbtiResult] Result saved to DB with ID:', newResult.id);
+    console.log('============================================================');
     return newResult;
-  } catch (error) {
-    console.error('[ServerAction serverSubmitMbtiResult] Error saving MBTI result to DB:', error);
-    // Consider how to handle this error. Re-throwing might be appropriate,
-    // or returning null and letting the client show a generic error.
-    // For now, re-throw to make sure server errors are visible.
+  } catch (error: any) {
+    console.error('============================================================');
+    console.error('[ServerAction serverSubmitMbtiResult] Error calling prisma.mbtiQuizResult.create. Full error details below.');
     if (error instanceof Error) {
-        throw new Error(`Failed to save MBTI result: ${error.message}`);
+        console.error('[ServerAction serverSubmitMbtiResult] Error Name:', error.name);
+        console.error('[ServerAction serverSubmitMbtiResult] Error Message:', error.message);
+        console.error('[ServerAction serverSubmitMbtiResult] Error Stack:', error.stack);
+    } else {
+        console.error('[ServerAction serverSubmitMbtiResult] Non-Error object thrown:', error);
     }
-    throw new Error('An unknown error occurred while saving MBTI result.');
+    
+    let detailedErrorMessage = error instanceof Error ? error.message : String(error);
+    if (error.code) { 
+        console.error("[ServerAction serverSubmitMbtiResult] Prisma Error Code (from caught error):", error.code); 
+        detailedErrorMessage += ` (Prisma Code: ${error.code}`;
+        if (error.meta) {
+            console.error("[ServerAction serverSubmitMbtiResult] Prisma Error Meta (from caught error):", JSON.stringify(error.meta, null, 2)); 
+            detailedErrorMessage += `, Meta: ${JSON.stringify(error.meta)}`;
+        }
+        detailedErrorMessage += `)`;
+    }
+    if (error.clientVersion) { console.error("[ServerAction serverSubmitMbtiResult] Prisma Client Version (from caught error):", error.clientVersion); }
+    if (error.digest) { console.error("[ServerAction serverSubmitMbtiResult] Error Digest:", error.digest); }
+    
+    console.error('============================================================');
+    // Re-throw a new error with potentially more details to aid client-side debugging if possible
+    const newError = new Error(`ServerAction serverSubmitMbtiResult failed: ${detailedErrorMessage}`);
+    // @ts-ignore
+    newError.digest = error.digest || error.code || `serverSubmitMbtiResult-error-${Date.now()}`;
+    throw newError;
   }
 }
 
