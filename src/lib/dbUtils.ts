@@ -232,14 +232,14 @@ export const addCourseToDb = async (
   }
 ): Promise<Course> => {
   console.log("[dbUtils-Prisma] addCourseToDb: Function called.");
-  console.log("[dbUtils-Prisma] addCourseToDb: Input courseData (raw, first 500 chars):", JSON.stringify(courseData).substring(0, 500) + "...");
+  console.log("[dbUtils-Prisma] addCourseToDb: Input courseData (raw):", JSON.stringify(courseData, null, 2));
   
   const validation = CourseInputSchema.safeParse(courseData);
   if (!validation.success) {
     console.error("[dbUtils-Prisma] addCourseToDb: Course Zod validation failed. Errors:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
     throw new Error(validation.error.flatten().fieldErrors._errors?.join(', ') || "Invalid course data. Zod validation failed.");
   }
-  console.log("[dbUtils-Prisma] addCourseToDb: Zod validation successful. Validated data (first 500 chars):", JSON.stringify(validation.data).substring(0,500) + "...");
+  console.log("[dbUtils-Prisma] addCourseToDb: Zod validation successful. Validated data:", JSON.stringify(validation.data, null, 2));
   const { categoryName, modules, quizzes, ...mainCourseData } = validation.data;
 
   try {
@@ -291,8 +291,7 @@ export const addCourseToDb = async (
       } : undefined,
     };
     
-    console.log("[dbUtils-Prisma] addCourseToDb: FINAL prismaCourseData before create (first 500 chars):", JSON.stringify(prismaCourseData).substring(0,500) + "...");
-    console.log("[dbUtils-Prisma] addCourseToDb: FINAL prismaCourseData QUIZZES section before create:", JSON.stringify(prismaCourseData.quizzes, null, 2));
+    console.log("[dbUtils-Prisma] addCourseToDb: FINAL prismaCourseData before create:", JSON.stringify(prismaCourseData, null, 2));
     console.log("[dbUtils-Prisma] addCourseToDb: Attempting prisma.course.create...");
     const createdCourse = await prisma.course.create({
       data: prismaCourseData,
@@ -346,24 +345,31 @@ export const addCourseToDb = async (
     return finalCourse;
 
   } catch (error) {
-    console.error("[dbUtils-Prisma] addCourseToDb: CAUGHT ERROR DURING PRISMA OPERATION OR SUBSEQUENT LOGIC:", error);
+    console.error("[dbUtils-Prisma] addCourseToDb: CAUGHT ERROR DURING PRISMA OPERATION OR SUBSEQUENT LOGIC.");
     if (error instanceof Error) {
         console.error("[dbUtils-Prisma] addCourseToDb: Error Name:", error.name);
         console.error("[dbUtils-Prisma] addCourseToDb: Error Message:", error.message);
         console.error("[dbUtils-Prisma] addCourseToDb: Error Stack:", error.stack);
     }
+    // Log Prisma-specific error details if available
     // @ts-ignore
     if (error.code) {  
+        // @ts-ignore
         console.error("[dbUtils-Prisma] addCourseToDb: Prisma Error Code:", error.code); 
         // @ts-ignore
-        if (error.code === 'P2002') { console.error("[dbUtils-Prisma] addCourseToDb: Unique constraint violation. Target fields:", error.meta?.target); }
+        if (error.code === 'P2002') { console.error("[dbUtils-Prisma] addCourseToDb: Prisma P2002 (Unique constraint violation). Target fields:", error.meta?.target); }
         // @ts-ignore
-        if (error.code === 'P2003') { console.error("[dbUtils-Prisma] addCourseToDb: Foreign key constraint violation. Field name:", error.meta?.field_name); }
+        else if (error.code === 'P2003') { console.error("[dbUtils-Prisma] addCourseToDb: Prisma P2003 (Foreign key constraint violation). Field name:", error.meta?.field_name); }
         // @ts-ignore
-        if (error.code === 'P2025') { console.error("[dbUtils-Prisma] addCourseToDb: Required record not found for relation. Details:", error.meta?.cause || error.message); }
+        else if (error.code === 'P2025') { console.error("[dbUtils-Prisma] addCourseToDb: Prisma P2025 (Required record not found for relation). Details:", error.meta?.cause || error.message); }
+        else { console.error("[dbUtils-Prisma] addCourseToDb: Received other Prisma error code."); }
     }
     // @ts-ignore
-    if (error.meta) { console.error("[dbUtils-Prisma] addCourseToDb: Prisma Error Meta:", JSON.stringify(error.meta, null, 1)); }
+    if (error.meta) { console.error("[dbUtils-Prisma] addCourseToDb: Prisma Error Meta:", JSON.stringify(error.meta, null, 2)); }
+    
+    // @ts-ignore
+    if (error.clientVersion) { console.error("[dbUtils-Prisma] addCourseToDb: Prisma Client Version:", error.clientVersion); }
+
     throw error; 
   }
 };
@@ -375,13 +381,13 @@ export const updateCourseInDb = async (
     quizzes?: Array<Partial<Omit<Quiz, 'id'|'courseId'|'createdAt'|'updatedAt'|'questions'>> & { id?: string, quizType: PrismaQuizTypeEnum, questions?: Array<Partial<Omit<Question, 'id'|'quizId'|'createdAt'|'updatedAt'|'options'|'correctOptionId'>> & { id?: string, options: Array<Partial<Omit<Option, 'id'|'questionId'|'createdAt'|'updatedAt'>> & {id?:string}>, correctOptionText?: string }> }>
   }
 ): Promise<Course> => {
-  console.log(`[dbUtils-Prisma] updateCourseInDb: Attempting to update course ID ${courseId}. Data (first 500 chars):`, JSON.stringify(courseData).substring(0,500)+"...");
+  console.log(`[dbUtils-Prisma] updateCourseInDb: Attempting to update course ID ${courseId}. Data (raw):`, JSON.stringify(courseData, null, 2));
   const validation = CourseInputSchema.partial().safeParse(courseData);
   if (!validation.success) {
     console.error("[dbUtils-Prisma] updateCourseInDb: Course Zod validation failed:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
     throw new Error(validation.error.flatten().fieldErrors._errors?.join(', ') || "Invalid course data for update.");
   }
-  console.log("[dbUtils-Prisma] updateCourseInDb: Zod validation successful. Validated data (first 500 chars):", JSON.stringify(validation.data).substring(0,500) + "...");
+  console.log("[dbUtils-Prisma] updateCourseInDb: Zod validation successful. Validated data:", JSON.stringify(validation.data, null, 2));
   const { categoryName, modules, quizzes, ...mainCourseData } = validation.data;
   
   try {
@@ -448,7 +454,7 @@ export const updateCourseInDb = async (
       };
     }
     
-    console.log(`[dbUtils-Prisma] updateCourseInDb: Prepared prismaCourseUpdateData for course ${courseId} (first 500 chars):`, JSON.stringify(prismaCourseUpdateData).substring(0,500)+"...");
+    console.log(`[dbUtils-Prisma] updateCourseInDb: Prepared prismaCourseUpdateData for course ${courseId}:`, JSON.stringify(prismaCourseUpdateData, null, 2));
     const updatedCourse = await prisma.course.update({
       where: { id: courseId },
       data: prismaCourseUpdateData,
@@ -488,7 +494,7 @@ export const updateCourseInDb = async (
     return finalCourse;
 
   } catch (error) {
-    console.error(`[dbUtils-Prisma] updateCourseInDb: CAUGHT ERROR updating course ID ${courseId} in DB:`, error);
+    console.error(`[dbUtils-Prisma] updateCourseInDb: CAUGHT ERROR updating course ID ${courseId} in DB.`);
      if (error instanceof Error) {
         console.error("[dbUtils-Prisma] updateCourseInDb: Error Name:", error.name);
         console.error("[dbUtils-Prisma] updateCourseInDb: Error Message:", error.message);
@@ -496,16 +502,20 @@ export const updateCourseInDb = async (
     }
     // @ts-ignore
     if (error.code) {  
+        // @ts-ignore
         console.error("[dbUtils-Prisma] updateCourseInDb: Prisma Error Code:", error.code);
         // @ts-ignore
-        if (error.code === 'P2002') { console.error("[dbUtils-Prisma] updateCourseInDb: Unique constraint violation. Target fields:", error.meta?.target); }
+        if (error.code === 'P2002') { console.error("[dbUtils-Prisma] updateCourseInDb: Prisma P2002 (Unique constraint violation). Target fields:", error.meta?.target); }
         // @ts-ignore
-        if (error.code === 'P2003') { console.error("[dbUtils-Prisma] updateCourseInDb: Foreign key constraint violation. Field name:", error.meta?.field_name); }
+        else if (error.code === 'P2003') { console.error("[dbUtils-Prisma] updateCourseInDb: Prisma P2003 (Foreign key constraint violation). Field name:", error.meta?.field_name); }
         // @ts-ignore
-        if (error.code === 'P2025') { console.error("[dbUtils-Prisma] updateCourseInDb: Required record not found for relation. Details:", error.meta?.cause || error.message); }
+        else if (error.code === 'P2025') { console.error("[dbUtils-Prisma] updateCourseInDb: Prisma P2025 (Required record not found for relation). Details:", error.meta?.cause || error.message); }
+         else { console.error("[dbUtils-Prisma] updateCourseInDb: Received other Prisma error code."); }
     }
     // @ts-ignore
-    if (error.meta) { console.error("[dbUtils-Prisma] updateCourseInDb: Prisma Error Meta:", JSON.stringify(error.meta, null, 1)); }
+    if (error.meta) { console.error("[dbUtils-Prisma] updateCourseInDb: Prisma Error Meta:", JSON.stringify(error.meta, null, 2)); }
+    // @ts-ignore
+    if (error.clientVersion) { console.error("[dbUtils-Prisma] updateCourseInDb: Prisma Client Version:", error.clientVersion); }
     throw error;
   }
 };

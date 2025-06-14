@@ -60,9 +60,7 @@ export async function serverAddCourse(
     quizzes?: Array<Partial<Omit<Quiz, 'id'|'courseId'|'createdAt'|'updatedAt'|'questions'>> & { quizType: PrismaQuizType, questions?: Array<Partial<Omit<Question, 'id'|'quizId'|'createdAt'|'updatedAt'|'options'|'correctOptionId'>> & { options: Array<Partial<Omit<Option, 'id'|'questionId'|'createdAt'|'updatedAt'>>>, correctOptionText?: string }> }>
   }
 ): Promise<Course> {
-  console.log("[ServerAction serverAddCourse] Action called. Received data (first 500 chars):", JSON.stringify(courseData).substring(0,500) + "...");
-  console.log("[ServerAction serverAddCourse] Full courseData.modules (if any):", JSON.stringify(courseData.modules, null, 2));
-  console.log("[ServerAction serverAddCourse] Full courseData.quizzes (if any):", JSON.stringify(courseData.quizzes, null, 2));
+  console.log("[ServerAction serverAddCourse] Action called. Received data:", JSON.stringify(courseData, null, 2));
   try {
     const newCourse = await addCourseToDb(courseData);
     console.log("[ServerAction serverAddCourse] addCourseToDb successful, returning course ID:", newCourse.id);
@@ -75,6 +73,14 @@ export async function serverAddCourse(
         console.error("[ServerAction serverAddCourse] Error Stack:", error.stack);
         // @ts-ignore
         if (error.digest) { console.error("[ServerAction serverAddCourse] Error Digest:", error.digest); }
+        // @ts-ignore
+        if (error.code) { console.error("[ServerAction serverAddCourse] Prisma Error Code:", error.code); }
+        // @ts-ignore
+        if (error.meta) { console.error("[ServerAction serverAddCourse] Prisma Error Meta:", JSON.stringify(error.meta, null, 2)); }
+        // @ts-ignore
+        if (error.clientVersion) { console.error("[ServerAction serverAddCourse] Prisma Client Version:", error.clientVersion); }
+
+
     } else {
         console.error("[ServerAction serverAddCourse] Non-Error object thrown:", error);
     }
@@ -89,9 +95,7 @@ export async function serverUpdateCourse(
     quizzes?: Array<Partial<Omit<Quiz, 'id'|'courseId'|'createdAt'|'updatedAt'|'questions'>> & { id?: string, quizType: PrismaQuizType, questions?: Array<Partial<Omit<Question, 'id'|'quizId'|'createdAt'|'updatedAt'|'options'|'correctOptionId'>> & { id?: string, options: Array<Partial<Omit<Option, 'id'|'questionId'|'createdAt'|'updatedAt'>> & {id?:string}>, correctOptionText?: string }> }>
   }
 ): Promise<Course> {
-  console.log(`[ServerAction serverUpdateCourse] Action called for course ID ${courseId}. Received data (first 500 chars):`, JSON.stringify(courseData).substring(0,500) + "...");
-  console.log("[ServerAction serverUpdateCourse] Full courseData.modules (if any):", JSON.stringify(courseData.modules, null, 2));
-  console.log("[ServerAction serverUpdateCourse] Full courseData.quizzes (if any):", JSON.stringify(courseData.quizzes, null, 2));
+  console.log(`[ServerAction serverUpdateCourse] Action called for course ID ${courseId}. Received data:`, JSON.stringify(courseData, null, 2));
   try {
     const updatedCourse = await updateCourseInDb(courseId, courseData);
     console.log(`[ServerAction serverUpdateCourse] updateCourseInDb successful for course ID ${courseId}, returning course ID:`, updatedCourse.id);
@@ -104,6 +108,12 @@ export async function serverUpdateCourse(
         console.error(`[ServerAction serverUpdateCourse] Error Stack:`, error.stack);
         // @ts-ignore
         if (error.digest) { console.error("[ServerAction serverUpdateCourse] Error Digest:", error.digest); }
+        // @ts-ignore
+        if (error.code) { console.error("[ServerAction serverUpdateCourse] Prisma Error Code:", error.code); }
+        // @ts-ignore
+        if (error.meta) { console.error("[ServerAction serverUpdateCourse] Prisma Error Meta:", JSON.stringify(error.meta, null, 2)); }
+        // @ts-ignore
+        if (error.clientVersion) { console.error("[ServerAction serverUpdateCourse] Prisma Client Version:", error.clientVersion); }
     } else {
          console.error(`[ServerAction serverUpdateCourse] Non-Error object thrown for course ID ${courseId}:`, error);
     }
