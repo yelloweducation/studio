@@ -77,17 +77,24 @@ export async function serverAddCourse(
     } else {
         console.error("[ServerAction serverAddCourse] Non-Error object thrown:", error);
     }
-    // Log Prisma-specific details if they are on the error object
-    if (error.code) { console.error("[ServerAction serverAddCourse] Prisma Error Code (from caught error):", error.code); }
-    if (error.meta) { console.error("[ServerAction serverAddCourse] Prisma Error Meta (from caught error):", JSON.stringify(error.meta, null, 2)); }
+    
+    let detailedErrorMessage = error instanceof Error ? error.message : String(error);
+    if (error.code) { 
+        console.error("[ServerAction serverAddCourse] Prisma Error Code (from caught error):", error.code); 
+        detailedErrorMessage += ` (Prisma Code: ${error.code}`;
+        if (error.meta) {
+            console.error("[ServerAction serverAddCourse] Prisma Error Meta (from caught error):", JSON.stringify(error.meta, null, 2)); 
+            detailedErrorMessage += `, Meta: ${JSON.stringify(error.meta)}`;
+        }
+        detailedErrorMessage += `)`;
+    }
     if (error.clientVersion) { console.error("[ServerAction serverAddCourse] Prisma Client Version (from caught error):", error.clientVersion); }
     if (error.digest) { console.error("[ServerAction serverAddCourse] Error Digest:", error.digest); }
     
     console.error("============================================================");
-    // Rethrow a new error to ensure a digest property is available for Next.js
-    const newError = new Error(`ServerAction serverAddCourse failed: ${error instanceof Error ? error.message : String(error)}`);
+    const newError = new Error(`ServerAction serverAddCourse failed: ${detailedErrorMessage}`);
     // @ts-ignore
-    newError.digest = error.digest || `serverAddCourse-error-${Date.now()}`;
+    newError.digest = error.digest || error.code || `serverAddCourse-error-${Date.now()}`;
     throw newError; 
   }
 }
@@ -116,15 +123,23 @@ export async function serverUpdateCourse(
     } else {
          console.error(`[ServerAction serverUpdateCourse] Non-Error object thrown for course ID ${courseId}:`, error);
     }
-    // Log Prisma-specific details
-    if (error.code) { console.error("[ServerAction serverUpdateCourse] Prisma Error Code (from caught error):", error.code); }
-    if (error.meta) { console.error("[ServerAction serverUpdateCourse] Prisma Error Meta (from caught error):", JSON.stringify(error.meta, null, 2)); }
+    
+    let detailedErrorMessage = error instanceof Error ? error.message : String(error);
+    if (error.code) { 
+        console.error("[ServerAction serverUpdateCourse] Prisma Error Code (from caught error):", error.code); 
+        detailedErrorMessage += ` (Prisma Code: ${error.code}`;
+        if (error.meta) {
+            console.error("[ServerAction serverUpdateCourse] Prisma Error Meta (from caught error):", JSON.stringify(error.meta, null, 2));
+            detailedErrorMessage += `, Meta: ${JSON.stringify(error.meta)}`;
+        }
+        detailedErrorMessage += `)`;
+    }
     if (error.clientVersion) { console.error("[ServerAction serverUpdateCourse] Prisma Client Version (from caught error):", error.clientVersion); }
     if (error.digest) { console.error("[ServerAction serverUpdateCourse] Error Digest:", error.digest); }
     console.error("============================================================");
-    const newError = new Error(`ServerAction serverUpdateCourse failed for ID ${courseId}: ${error instanceof Error ? error.message : String(error)}`);
+    const newError = new Error(`ServerAction serverUpdateCourse failed for ID ${courseId}: ${detailedErrorMessage}`);
     // @ts-ignore
-    newError.digest = error.digest || `serverUpdateCourse-error-${Date.now()}`;
+    newError.digest = error.digest || error.code || `serverUpdateCourse-error-${Date.now()}`;
     throw newError;
   }
 }
@@ -144,7 +159,17 @@ export async function serverSaveQuizWithQuestions(
             console.error(`[ServerAction serverSaveQuizWithQuestions] Error name:`, error.name);
             console.error(`[ServerAction serverSaveQuizWithQuestions] Error message:`, error.message);
         }
-        throw error;
+        // Enhance error re-throw for Server Components
+        let detailedErrorMessage = error instanceof Error ? error.message : String(error);
+        // @ts-ignore
+        if (error.code && error.meta) { 
+            // @ts-ignore
+            detailedErrorMessage += ` (Prisma Code: ${error.code}, Meta: ${JSON.stringify(error.meta)})`;
+        }
+        const newError = new Error(`ServerAction serverSaveQuizWithQuestions failed: ${detailedErrorMessage}`);
+        // @ts-ignore
+        newError.digest = error.digest || error.code || `serverSaveQuiz-error-${Date.now()}`;
+        throw newError;
     }
 }
 
@@ -195,7 +220,17 @@ export async function serverAddPaymentSubmission(
           console.error("[ServerAction serverAddPaymentSubmission] Error name:", error.name);
           console.error("[ServerAction serverAddPaymentSubmission] Error message:", error.message);
         }
-        throw error; 
+        // Enhance error re-throw for Server Components
+        let detailedErrorMessage = error instanceof Error ? error.message : String(error);
+        // @ts-ignore
+        if (error.code && error.meta) { 
+            // @ts-ignore
+            detailedErrorMessage += ` (Prisma Code: ${error.code}, Meta: ${JSON.stringify(error.meta)})`;
+        }
+        const newError = new Error(`ServerAction serverAddPaymentSubmission failed: ${detailedErrorMessage}`);
+        // @ts-ignore
+        newError.digest = error.digest || error.code || `serverAddPaymentSubmission-error-${Date.now()}`;
+        throw newError; 
     }
 }
 
@@ -221,7 +256,17 @@ export async function serverUpdatePaymentSubmissionStatus(
           console.error(`[ServerAction serverUpdatePaymentSubmissionStatus] Error name:`, error.name);
           console.error(`[ServerAction serverUpdatePaymentSubmissionStatus] Error message:`, error.message);
         }
-        throw error; 
+        // Enhance error re-throw
+        let detailedErrorMessage = error instanceof Error ? error.message : String(error);
+        // @ts-ignore
+        if (error.code && error.meta) { 
+            // @ts-ignore
+            detailedErrorMessage += ` (Prisma Code: ${error.code}, Meta: ${JSON.stringify(error.meta)})`;
+        }
+        const newError = new Error(`ServerAction serverUpdatePaymentSubmissionStatus failed: ${detailedErrorMessage}`);
+        // @ts-ignore
+        newError.digest = error.digest || error.code || `serverUpdatePaymentStatus-error-${Date.now()}`;
+        throw newError;
     }
 }
 
@@ -246,6 +291,8 @@ export async function serverUpsertSitePage(
 ): Promise<SitePage> {
   return upsertSitePageDbUtil(slug, title, content);
 }
+    
+
     
 
     
