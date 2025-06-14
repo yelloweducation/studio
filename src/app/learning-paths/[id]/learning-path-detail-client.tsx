@@ -4,8 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { type LearningPath, type Course } from '@/lib/dbUtils'; // Use Prisma types from dbUtils
-import { getLearningPathsFromDb, getCoursesFromDb } from '@/lib/dbUtils'; // Use Prisma-based functions
+import { type LearningPath, type Course } from '@/lib/dbUtils'; 
+// import { getLearningPathsFromDb, getCoursesFromDb } from '@/lib/dbUtils'; // Removed direct dbUtils import
+import { serverGetLearningPaths, serverGetCourses } from '@/actions/adminDataActions'; // Use Server Actions
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -36,14 +37,17 @@ export default function LearningPathDetailClient({ pathId }: LearningPathDetailC
       setIsLoading(true);
       
       try {
-        const allPaths = await getLearningPathsFromDb(); 
+        // Use Server Actions for data fetching
+        const allPaths = await serverGetLearningPaths(); 
         const currentPath = allPaths.find(p => p.id === pathId);
         setLearningPath(currentPath || null);
 
-        if (currentPath && currentPath.courses && currentPath.courses.length > 0) {
-          const courseIds = currentPath.courses.map(lpc => lpc.courseId);
-          const allCourses = await getCoursesFromDb(); 
-          const coursesForPath = allCourses.filter(course => courseIds.includes(course.id));
+        // The Prisma include should populate `learningPathCourses` directly in the LearningPath type.
+        // We just need to extract the courses from the `learningPathCourses` array.
+        if (currentPath && currentPath.learningPathCourses && currentPath.learningPathCourses.length > 0) {
+          const coursesForPath = currentPath.learningPathCourses
+            .map(lpc => lpc.course) // Get the full course object
+            .filter(Boolean) as Course[]; // Filter out any null/undefined courses and assert type
           setPathCourses(coursesForPath);
         } else {
           setPathCourses([]);
@@ -119,10 +123,10 @@ export default function LearningPathDetailClient({ pathId }: LearningPathDetailC
                 <Image
                 src={learningPath.imageUrl}
                 alt={learningPath.title}
-                fill // Changed from layout="fill"
+                fill 
                 objectFit="cover"
                 data-ai-hint={learningPath.dataAiHint || 'learning journey'}
-                priority // Added priority
+                priority 
                 />
             </div>
         )}
