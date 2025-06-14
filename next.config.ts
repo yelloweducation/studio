@@ -72,6 +72,19 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      // Add 'fs' to externals for server-side bundles.
+      // This helps resolve "Module not found: Can't resolve 'fs'" errors
+      // that can occur in serverless environments or specific bundling scenarios.
+      // 'fs' is a core Node.js module and should be available in the server runtime.
+      if (!config.externals) {
+        config.externals = [];
+      }
+      config.externals.push('fs');
+    }
+    return config;
+  },
 };
 
 export default nextConfig;
