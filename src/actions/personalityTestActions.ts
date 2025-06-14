@@ -30,7 +30,7 @@ export async function serverSubmitMbtiResult(data: SubmitMbtiResultData): Promis
         scoreTF_F: data.score_breakdown.F,
         scoreJP_J: data.score_breakdown.J,
         scoreJP_P: data.score_breakdown.P,
-        submittedAt: new Date(),
+        // submittedAt: new Date(), // Removed: Prisma schema handles this with @default(now())
       },
     });
     console.log('[ServerAction serverSubmitMbtiResult] Result saved to DB with ID:', newResult.id);
