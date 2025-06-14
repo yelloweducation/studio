@@ -44,7 +44,6 @@ export const getAuthState = (): AuthState => {
   if (storedState) {
     try {
       const parsedState = JSON.parse(storedState) as AuthState;
-      // Basic validation of stored state structure
       if (typeof parsedState.isAuthenticated === 'boolean' &&
           (parsedState.user === null || typeof parsedState.user === 'object')) {
         return parsedState;
@@ -78,7 +77,7 @@ export const getAllUsers = async (): Promise<Omit<PrismaUserType, 'passwordHash'
   try {
     const users = await prisma.user.findMany({
       orderBy: { name: 'asc' },
-      select: { id: true, name: true, email: true, role: true, createdAt: true, updatedAt: true } // Exclude passwordHash
+      select: { id: true, name: true, email: true, role: true, createdAt: true, updatedAt: true, isActive: true, bio: true, avatarUrl: true } // Exclude passwordHash, include new fields
     });
     return users;
   } catch (error) {
@@ -106,6 +105,7 @@ export const findUserByEmail = async (email: string): Promise<PrismaUserType | n
   }
 };
 
+// Used for both user registration and admin adding user (role is part of userData)
 export const addUser = async (userData: Omit<PrismaUserType, 'id' | 'passwordHash' | 'createdAt' | 'updatedAt'>, password_raw: string): Promise<PrismaUserType> => {
   console.log(`[AuthUtils-Prisma - addUser] Attempting to add user to DB: ${userData.email}`);
 
@@ -119,29 +119,25 @@ export const addUser = async (userData: Omit<PrismaUserType, 'id' | 'passwordHas
   try {
     const newUser = await prisma.user.create({
       data: {
-        ...userData,
+        ...userData, // Includes name, email, role, bio, avatarUrl, isActive etc.
+        name: userData.name!, // Ensure name is non-nullable as per schema
         passwordHash: hashedPassword,
       },
     });
     console.log(`[AuthUtils-Prisma - addUser] User ${newUser.email} added to DB with ID ${newUser.id}.`);
     return newUser;
-  } catch (error: any) { // Catch 'any'
+  } catch (error: any) {
     console.error(`[AuthUtils-Prisma - addUser] Prisma Error creating user ${userData.email} in DB. Full Error:`, error);
-    // Log Prisma specific error details if available
     if (error.code) { console.error(`[AuthUtils-Prisma - addUser] Prisma Error Code: ${error.code}`); }
     if (error.meta) { console.error(`[AuthUtils-Prisma - addUser] Prisma Error Meta: ${JSON.stringify(error.meta)}`); }
     if (error.message) { console.error(`[AuthUtils-Prisma - addUser] Error Message: ${error.message}`); }
-    if (error.stack) { console.error(`[AuthUtils-Prisma - addUser] Error Stack: ${error.stack}`); }
-
     if (error instanceof Error && error.message) {
-        // Re-throw the Prisma error message or a custom one
-        // Check for common Prisma error codes if needed
-        if (error.message.includes("Unique constraint failed")) { // Example for unique constraint
+        if (error.message.includes("Unique constraint failed")) {
              throw new Error("UserAlreadyExists");
         }
         throw new Error(error.message);
     }
-    throw new Error("DatabaseErrorDuringUserCreation"); // Generic fallback
+    throw new Error("DatabaseErrorDuringUserCreation");
   }
 };
 
@@ -157,7 +153,7 @@ export const updateUserRole = async (userId: string, newRole: PrismaRoleType): P
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: { role: newRole },
-      select: { id: true, name: true, email: true, role: true, createdAt: true, updatedAt: true } // Exclude passwordHash
+      select: { id: true, name: true, email: true, role: true, createdAt: true, updatedAt: true, isActive: true, bio: true, avatarUrl: true }
     });
     console.log(`[AuthUtils-Prisma - updateUserRole] Role updated for user ID ${userId}.`);
     return updatedUser;
@@ -167,7 +163,69 @@ export const updateUserRole = async (userId: string, newRole: PrismaRoleType): P
   }
 };
 
-// Seeds users to the actual database using Prisma.
+export const updateUserProfileDb = async (
+  userId: string,
+  data: { name?: string; bio?: string | null; avatarUrl?: string | null }
+): Promise<PrismaUserType> => {
+  console.log(`[AuthUtils-Prisma - updateUserProfileDb] Updating profile for user ID ${userId}. Data:`, data);
+  try {
+    const updateData: Partial<PrismaUserType> = {};
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.bio !== undefined) updateData.bio = data.bio;
+    if (data.avatarUrl !== undefined) updateData.avatarUrl = data.avatarUrl;
+
+    if (Object.keys(updateData).length === 0) {
+      const currentUser = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+      return currentUser; // No actual changes
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+    });
+    console.log(`[AuthUtils-Prisma - updateUserProfileDb] Profile updated for user ID ${userId}.`);
+    return updatedUser;
+  } catch (error) {
+    console.error(`[AuthUtils-Prisma - updateUserProfileDb] Error updating profile for user ${userId}:`, error);
+    throw error;
+  }
+};
+
+export const changeUserPasswordDb = async (userId: string, newPasswordHash: string): Promise<boolean> => {
+  console.log(`[AuthUtils-Prisma - changeUserPasswordDb] Changing password for user ID ${userId}.`);
+  try {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash: newPasswordHash },
+    });
+    console.log(`[AuthUtils-Prisma - changeUserPasswordDb] Password changed successfully for user ID ${userId}.`);
+    return true;
+  } catch (error) {
+    console.error(`[AuthUtils-Prisma - changeUserPasswordDb] Error changing password for user ${userId}:`, error);
+    return false;
+  }
+};
+
+export const updateUserActiveStatusDb = async (userId: string, isActive: boolean): Promise<PrismaUserType> => {
+  console.log(`[AuthUtils-Prisma - updateUserActiveStatusDb] Setting isActive to ${isActive} for user ID ${userId}.`);
+  try {
+    const userToUpdate = await prisma.user.findUnique({ where: { id: userId } });
+    if (userToUpdate && userToUpdate.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase() && !isActive) {
+      console.warn("[AuthUtils-Prisma - updateUserActiveStatusDb] Attempted to deactivate super admin. Denied.");
+      throw new Error("Cannot deactivate the super admin account.");
+    }
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: { isActive },
+    });
+    console.log(`[AuthUtils-Prisma - updateUserActiveStatusDb] isActive status updated for user ID ${userId}.`);
+    return updatedUser;
+  } catch (error) {
+    console.error(`[AuthUtils-Prisma - updateUserActiveStatusDb] Error updating isActive status for user ${userId}:`, error);
+    throw error;
+  }
+};
+
 export const seedInitialUsersToDatabase = async (): Promise<{ successCount: number; errorCount: number; skippedCount: number }> => {
   console.log("[AuthUtils-Prisma - seedInitialUsersToDatabase] Seeding initial users to database.");
   let successCount = 0;
@@ -191,11 +249,12 @@ export const seedInitialUsersToDatabase = async (): Promise<{ successCount: numb
 
       await prisma.user.create({
         data: {
-          id: mockUser.id, // Use mock ID if provided for consistency with other seeded data
-          name: mockUser.name,
+          id: mockUser.id,
+          name: mockUser.name, // Ensure name is non-nullable
           email: mockUser.email.toLowerCase(),
           role: mockUser.role as PrismaRoleType,
           passwordHash: hashedPassword,
+          isActive: true, // Default to active for seeded users
         },
       });
       successCount++;
