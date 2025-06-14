@@ -1,13 +1,13 @@
 
 "use client";
+import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home as HomeIcon, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Compass, Layers, Brain, Loader2, Menu as MenuIcon, VideoIcon as VideoReelsIcon, Settings as SettingsIcon, UserCircle } from 'lucide-react'; // Added SettingsIcon
+import { Home as HomeIcon, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Compass, Layers, Brain, Loader2, VideoIcon as VideoReelsIcon, Settings as SettingsIcon, UserCircle } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useIsMobile } from '@/hooks/use-mobile';
-import React, { useEffect, useState } from 'react';
 import { cn } from "@/lib/utils";
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
@@ -19,13 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import LuminaLogo from '@/components/LuminaLogo';
 
 const headerTranslations = {
   en: {
@@ -72,32 +66,37 @@ const Header = () => {
   const { isAuthenticated, user, role, logout, loading: authLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const { theme, toggleTheme } = useTheme();
+  const { theme, toggleTheme: contextToggleTheme } = useTheme();
   const isMobile = useIsMobile();
   const { language } = useLanguage();
   const t = headerTranslations[language];
 
-  const isOnHomepage = pathname === '/';
-  const isOnCoursesPage = pathname === '/courses/search';
-  const isOnFlashCardsPage = pathname === '/flash-cards';
-  const isOnPersonalityTestsPage = pathname === '/personality-tests';
+  const [dynamicHeaderBackgroundClasses, setDynamicHeaderBackgroundClasses] = useState(
+    'bg-transparent border-transparent'
+  );
+  const [headerVisible, setHeaderVisible] = useState(true);
 
+  const isOnHomepage = pathname === '/';
   const useScrollHidingHeader = isOnHomepage && !isMobile;
   const headerScrollThreshold = 100;
 
-  const [dynamicHeaderBackgroundClasses, setDynamicHeaderBackgroundClasses] = useState('bg-transparent border-transparent');
-  const [headerVisible, setHeaderVisible] = useState(true);
-  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+  const toggleTheme = useCallback(() => {
+    contextToggleTheme();
+  }, [contextToggleTheme]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const controlHeaderBackground = () => {
-      if (pathname === '/videos') {
+      if (pathname === '/videos') { 
         setDynamicHeaderBackgroundClasses('bg-transparent border-transparent');
-      } else if (isMobile) {
-        setDynamicHeaderBackgroundClasses('bg-card/80 backdrop-blur-md border-b'); // Always show bg on mobile for better readability if not homepage
-      } else {
-        setDynamicHeaderBackgroundClasses(window.scrollY < 50 ? 'bg-transparent border-transparent' : 'bg-background/80 backdrop-blur-md border-b');
+      } else if (isMobile) { 
+        setDynamicHeaderBackgroundClasses('bg-transparent border-transparent');
+      } else { 
+        setDynamicHeaderBackgroundClasses(
+          window.scrollY < 50
+            ? 'bg-transparent border-transparent'
+            : 'bg-background/80 backdrop-blur-md border-b'
+        );
       }
     };
     controlHeaderBackground();
@@ -127,22 +126,28 @@ const Header = () => {
 
   if (pathname === '/videos') return null;
 
-  const handleLogout = () => { logout(); setMobileSheetOpen(false); router.push('/'); };
-  const getDashboardPath = () => {
+  const handleLogout = useCallback(() => {
+    logout();
+    router.push('/');
+  }, [logout, router]);
+
+  const getDashboardPath = useCallback(() => {
     if (!isAuthenticated) return '/login';
     const userRoleLower = role?.toLowerCase();
     if (userRoleLower === 'admin') return '/dashboard/admin';
     if (userRoleLower === 'student') return '/dashboard/student';
     return '/';
-  };
+  }, [isAuthenticated, role]);
 
-  const navLinkClasses = (targetPath: string, isMobileSheetLink: boolean = false) => cn(
-    "font-medium transition-colors",
-    isMobileSheetLink ? "block w-full text-left px-3 py-2.5 rounded-md text-base" : "text-sm px-3 py-2 rounded-md",
-    pathname === targetPath
-      ? (isMobileSheetLink ? "bg-accent text-accent-foreground font-semibold" : "bg-accent text-accent-foreground font-semibold")
-      : (isMobileSheetLink ? "text-foreground hover:bg-muted" : "text-muted-foreground hover:text-foreground")
-  );
+  const UserAvatar = React.memo(({ user: usr }: { user: { name?: string | null, avatarUrl?: string | null } | null }) => (
+    <Avatar className="h-8 w-8">
+      <AvatarImage src={usr?.avatarUrl || undefined} alt={usr?.name || 'User'} />
+      <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+        {usr?.name ? usr.name.charAt(0).toUpperCase() : <UserCircle size={20}/>}
+      </AvatarFallback>
+    </Avatar>
+  ));
+  UserAvatar.displayName = 'UserAvatar';
 
   const commonNavItems = [
     { href: "/", label: t.home, Icon: HomeIcon },
@@ -152,47 +157,16 @@ const Header = () => {
     { href: "/personality-tests", label: t.personalityTest, Icon: Brain }
   ];
 
-  const UserAvatar = React.memo(() => (
-    <Avatar className="h-8 w-8">
-      <AvatarImage src={user?.avatarUrl || undefined} alt={user?.name || 'User'} />
-      <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-        {user?.name ? user.name.charAt(0).toUpperCase() : <UserCircle size={20}/>}
-      </AvatarFallback>
-    </Avatar>
-  ));
-  UserAvatar.displayName = 'UserAvatar';
-  
-  const DesktopUserMenu = () => (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0">
-          <UserAvatar />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56" align="end" forceMount>
-        <DropdownMenuLabel className="font-normal">
-          <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user?.name}</p>
-            <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
-          </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link href={getDashboardPath()}><LayoutDashboard className="mr-2 h-4 w-4" /> {t.dashboard}</Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/dashboard/settings"><SettingsIcon className="mr-2 h-4 w-4" /> {t.settings}</Link>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
-          <LogOut className="mr-2 h-4 w-4" /> {t.logout}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+  const navLinkClasses = (targetPath: string) => cn(
+    "font-medium transition-colors text-sm px-3 py-2 rounded-md",
+    pathname === targetPath
+      ? "bg-accent text-accent-foreground font-semibold"
+      : "text-muted-foreground hover:text-foreground"
   );
 
   const DesktopNav = () => (
     <>
+      <LuminaLogo /> 
       <div className="flex-1"></div>
       <nav className="mx-auto flex justify-center items-center space-x-1 lg:space-x-2">
         {commonNavItems.map(item => (
@@ -205,7 +179,32 @@ const Header = () => {
         {authLoading ? (
           <Button variant="ghost" size="sm" disabled className="ml-1 lg:ml-2"><Loader2 className="h-4 w-4 animate-spin mr-1" /> {t.loading}</Button>
         ) : isAuthenticated && user ? (
-          <DesktopUserMenu />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0">
+                <UserAvatar user={user} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end" forceMount>
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">{user.name}</p>
+                  <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href={getDashboardPath()}><LayoutDashboard className="mr-2 h-4 w-4" /> {t.dashboard}</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/dashboard/settings"><SettingsIcon className="mr-2 h-4 w-4" /> {t.settings}</Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+                <LogOut className="mr-2 h-4 w-4" /> {t.logout}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         ) : (
           <>
             <Button variant="ghost" size="sm" asChild className={cn(navLinkClasses('/login'), "ml-1 lg:ml-2")}>
@@ -231,90 +230,88 @@ const Header = () => {
     </>
   );
 
-   const MobileNav = () => (
-    <div className="flex items-center justify-between w-full">
-      <div className="flex-shrink-0">
-        <Link href="/" className={cn("font-headline text-lg font-semibold", isOnHomepage && "text-primary")} onClick={() => setMobileSheetOpen(false)}>
-          {t.home}
+  const MobileHeaderContents = () => {
+    const userRole = role?.toLowerCase();
+  
+    return (
+      <div className="flex items-center justify-between w-full">
+        <Link href="/" className="text-lg font-bold text-black dark:text-white relative group py-1">
+          {t.all}
+          <span className="absolute bottom-[-2px] left-0 w-full h-[3px] bg-primary transform scale-x-100 transition-transform duration-300 ease-out group-hover:scale-x-105"></span>
         </Link>
-      </div>
-      <div className="flex items-center gap-1">
-        <Button
+  
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {authLoading ? (
+            <Button variant="ghost" size="icon" disabled className="w-8 h-8">
+              <Loader2 className="h-5 w-5 animate-spin" />
+            </Button>
+          ) : isAuthenticated && user ? (
+            <>
+              {userRole === 'admin' && (
+                <Button variant="ghost" size="icon" asChild className="text-black dark:text-white hover:text-primary w-8 h-8">
+                  <Link href="/dashboard/admin" aria-label={t.adminDashboard}>
+                    <LayoutDashboard className="h-5 w-5" />
+                  </Link>
+                </Button>
+              )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full p-0"> 
+                    <UserAvatar user={user} />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{user.name}</p>
+                      <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href={getDashboardPath()}><LayoutDashboard className="mr-2 h-4 w-4" /> {t.dashboard}</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard/settings"><SettingsIcon className="mr-2 h-4 w-4" /> {t.settings}</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+                    <LogOut className="mr-2 h-4 w-4" /> {t.logout}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          ) : (
+            <Button variant="ghost" size="sm" asChild className="text-sm text-black dark:text-white hover:text-primary px-2 py-1 h-auto">
+              <Link href="/login">
+                <LogIn className="mr-1 h-4 w-4" /> {t.login}
+              </Link>
+            </Button>
+          )}
+          <Button
             variant="ghost"
             size="icon"
             onClick={toggleTheme}
             aria-label={t.toggleTheme}
-            className={cn("hover:bg-accent/20 text-foreground w-8 h-8")}
+            className="text-black dark:text-white hover:text-primary w-8 h-8"
           >
             {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
           </Button>
-        <Sheet open={mobileSheetOpen} onOpenChange={setMobileSheetOpen}>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="text-foreground hover:text-primary w-8 h-8" aria-label={t.menu}>
-              <MenuIcon className="h-5 w-5" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="right" className="w-[280px] p-4 flex flex-col bg-card">
-             <SheetHeader className="mb-4 border-b pb-3">
-               <SheetTitle className="text-lg font-semibold text-center">{t.menu}</SheetTitle>
-             </SheetHeader>
-            <nav className="flex-grow space-y-1.5">
-              {authLoading ? (
-                 <Button variant="ghost" disabled className={cn(navLinkClasses('', true), "opacity-50")}>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" /> {t.loading}
-                 </Button>
-              ) : isAuthenticated && user ? (
-                <>
-                  <div className="px-3 py-2.5">
-                    <p className="text-sm font-medium leading-none">{user.name}</p>
-                    <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
-                  </div>
-                  <DropdownMenuSeparator/>
-                  <Button variant="ghost" asChild className={navLinkClasses(getDashboardPath(), true)} onClick={() => setMobileSheetOpen(false)}>
-                    <Link href={getDashboardPath()}><LayoutDashboard className="mr-2 h-5 w-5" /> {t.dashboard}</Link>
-                  </Button>
-                  <Button variant="ghost" asChild className={navLinkClasses('/dashboard/settings', true)} onClick={() => setMobileSheetOpen(false)}>
-                    <Link href="/dashboard/settings"><SettingsIcon className="mr-2 h-5 w-5" /> {t.settings}</Link>
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button variant="ghost" asChild className={navLinkClasses('/login', true)} onClick={() => setMobileSheetOpen(false)}>
-                    <Link href="/login"><LogIn className="mr-2 h-5 w-5" /> {t.login}</Link>
-                  </Button>
-                  <Button variant="default" asChild className={cn(navLinkClasses('/register', true), "bg-primary text-primary-foreground hover:bg-primary/90")} onClick={() => setMobileSheetOpen(false)}>
-                    <Link href="/register"><UserPlus className="mr-2 h-5 w-5" /> {t.register}</Link>
-                  </Button>
-                </>
-              )}
-              <DropdownMenuSeparator/>
-              {commonNavItems.map(item => (
-                <Button key={item.label} variant="ghost" asChild className={navLinkClasses(item.href, true)} onClick={() => setMobileSheetOpen(false)}>
-                  <Link href={item.href}><item.Icon className="mr-2 h-5 w-5" />{item.label}</Link>
-                </Button>
-              ))}
-            </nav>
-            {isAuthenticated && user && (
-              <div className="mt-auto pt-4 border-t">
-                <Button variant="outline" onClick={handleLogout} className={cn(navLinkClasses('', true), "text-destructive hover:bg-destructive/10 hover:text-destructive w-full")}>
-                  <LogOut className="mr-2 h-5 w-5" /> {t.logout}
-                </Button>
-              </div>
-            )}
-          </SheetContent>
-        </Sheet>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
-    <header className={cn(
-        "sticky top-0 z-50 transition-all duration-300 ease-in-out",
-        isMobile && pathname !== '/' ? 'bg-card/90 backdrop-blur-sm border-b' : dynamicHeaderBackgroundClasses,
+    <header
+      className={cn(
+        "sticky top-0 z-50 w-full transition-all duration-300 ease-in-out",
+        dynamicHeaderBackgroundClasses,
         {'!-translate-y-full': !headerVisible && useScrollHidingHeader && !isMobile }
-      )}>
-      <div className="container mx-auto px-4 py-2.5 flex justify-between items-center min-h-[60px]">
-        {isMobile ? <MobileNav /> : <DesktopNav /> }
+      )}
+    >
+      <div className="container mx-auto px-4 flex items-center justify-between min-h-[56px] sm:min-h-[60px] py-2">
+        {isMobile ? <MobileHeaderContents /> : <DesktopNav />}
       </div>
     </header>
   );
