@@ -42,22 +42,76 @@ export const mbtiLikertChoices: MbtiChoice[] = [
   { labelKey: "likertStronglyAgree", value: 2 }
 ];
 
-// SAMPLE LIKERT QUESTIONS (User should expand to 60)
-// For simplicity, providing 2 questions per dichotomy (8 total for sample)
 export const mbtiQuizQuestionsLikert: MbtiQuestionLikert[] = [
-  // EI Dimension
-  { id: 1, textKey: "q_ei1_text", dimension: "EI", trait: "E", reverse_scored: false },
-  { id: 2, textKey: "q_ei2_text", dimension: "EI", trait: "I", reverse_scored: false }, // This scores towards 'I' if positive
-  // SN Dimension
-  { id: 3, textKey: "q_sn1_text", dimension: "SN", trait: "S", reverse_scored: false },
-  { id: 4, textKey: "q_sn2_text", dimension: "SN", trait: "N", reverse_scored: false },
-  // TF Dimension
-  { id: 5, textKey: "q_tf1_text", dimension: "TF", trait: "T", reverse_scored: false },
-  { id: 6, textKey: "q_tf2_text", dimension: "TF", trait: "F", reverse_scored: false },
-  // JP Dimension
-  { id: 7, textKey: "q_jp1_text", dimension: "JP", trait: "J", reverse_scored: false },
-  { id: 8, textKey: "q_jp2_text", dimension: "JP", trait: "P", reverse_scored: false },
+  // EI Dimension (15 questions)
+  { id: 1, textKey: "q_ei1_text", dimension: "EI", trait: "E", reverse_scored: false }, // Prefer large group activities
+  { id: 2, textKey: "q_ei2_text", dimension: "EI", trait: "I", reverse_scored: false }, // Solitude recharges
+  { id: 3, textKey: "q_ei3_text", dimension: "EI", trait: "E", reverse_scored: false }, // Enjoy being the center of attention
+  { id: 4, textKey: "q_ei4_text", dimension: "EI", trait: "I", reverse_scored: false }, // Prefer one-on-one conversations
+  { id: 5, textKey: "q_ei5_text", dimension: "EI", trait: "E", reverse_scored: false }, // Often initiate conversations with new people
+  { id: 6, textKey: "q_ei6_text", dimension: "EI", trait: "I", reverse_scored: false }, // Feel drained after a lot of social interaction
+  { id: 7, textKey: "q_ei7_text", dimension: "EI", trait: "E", reverse_scored: false }, // Like to talk things through to understand them
+  { id: 8, textKey: "q_ei8_text", dimension: "EI", trait: "I", reverse_scored: false }, // Prefer to reflect internally to understand things
+  { id: 9, textKey: "q_ei9_text", dimension: "EI", trait: "E", reverse_scored: false }, // Generally outgoing and expressive
+  { id: 10, textKey: "q_ei10_text", dimension: "EI", trait: "I", reverse_scored: false }, // More reserved and quiet in new situations
+  { id: 11, textKey: "q_ei11_text", dimension: "EI", trait: "E", reverse_scored: false }, // Find it easy to make new friends
+  { id: 12, textKey: "q_ei12_text", dimension: "EI", trait: "I", reverse_scored: false }, // Tend to listen more than I talk
+  { id: 13, textKey: "q_ei13_text", dimension: "EI", trait: "E", reverse_scored: false }, // Feel energized by brainstorming with a group
+  { id: 14, textKey: "q_ei14_text", dimension: "EI", trait: "I", reverse_scored: false }, // Prefer to work on projects alone or in a small, quiet group
+  { id: 15, textKey: "q_ei15_text", dimension: "EI", trait: "E", reverse_scored: true }, // (Reversed E) I am often uncomfortable in large social gatherings.
+
+  // SN Dimension (15 questions)
+  { id: 16, textKey: "q_sn1_text", dimension: "SN", trait: "S", reverse_scored: false }, // Rely on facts and past experiences
+  { id: 17, textKey: "q_sn2_text", dimension: "SN", trait: "N", reverse_scored: false }, // Trust intuition and future possibilities
+  { id: 18, textKey: "q_sn3_text", dimension: "SN", trait: "S", reverse_scored: false }, // Prefer practical, hands-on learning
+  { id: 19, textKey: "q_sn4_text", dimension: "SN", trait: "N", reverse_scored: false }, // Enjoy exploring abstract theories and concepts
+  { id: 20, textKey: "q_sn5_text", dimension: "SN", trait: "S", reverse_scored: false }, // Focus on what is real and actual
+  { id: 21, textKey: "q_sn6_text", dimension: "SN", trait: "N", reverse_scored: false }, // Often think about the meaning behind things
+  { id: 22, textKey: "q_sn7_text", dimension: "SN", trait: "S", reverse_scored: false }, // Value clear instructions and established methods
+  { id: 23, textKey: "q_sn8_text", dimension: "SN", trait: "N", reverse_scored: false }, // Like to come up with new ways of doing things
+  { id: 24, textKey: "q_sn9_text", dimension: "SN", trait: "S", reverse_scored: false }, // More interested in the details than the overall picture
+  { id: 25, textKey: "q_sn10_text", dimension: "SN", trait: "N", reverse_scored: false }, // See the big picture and connections easily
+  { id: 26, textKey: "q_sn11_text", dimension: "SN", trait: "S", reverse_scored: false }, // Trust what is certain and concrete
+  { id: 27, textKey: "q_sn12_text", dimension: "SN", trait: "N", reverse_scored: false }, // Often inspired by new ideas and possibilities
+  { id: 28, textKey: "q_sn13_text", dimension: "SN", trait: "S", reverse_scored: false }, // Prefer to live in the present moment
+  { id: 29, textKey: "q_sn14_text", dimension: "SN", trait: "N", reverse_scored: false }, // Tend to focus on future outcomes
+  { id: 30, textKey: "q_sn15_text", dimension: "SN", trait: "S", reverse_scored: true }, // (Reversed S) I often daydream and get lost in my thoughts.
+
+  // TF Dimension (15 questions)
+  { id: 31, textKey: "q_tf1_text", dimension: "TF", trait: "T", reverse_scored: false }, // Value fairness and logic over harmony
+  { id: 32, textKey: "q_tf2_text", dimension: "TF", trait: "F", reverse_scored: false }, // Prioritize empathy and feelings
+  { id: 33, textKey: "q_tf3_text", dimension: "TF", trait: "T", reverse_scored: false }, // Make decisions based on objective analysis
+  { id: 34, textKey: "q_tf4_text", dimension: "TF", trait: "F", reverse_scored: false }, // Consider how decisions will affect others' emotions
+  { id: 35, textKey: "q_tf5_text", dimension: "TF", trait: "T", reverse_scored: false }, // Can be seen as direct or critical
+  { id: 36, textKey: "q_tf6_text", dimension: "TF", trait: "F", reverse_scored: false }, // Strive to create a supportive environment
+  { id: 37, textKey: "q_tf7_text", dimension: "TF", trait: "T", reverse_scored: false }, // Value truth and principles, even if unpopular
+  { id: 38, textKey: "q_tf8_text", dimension: "TF", trait: "F", reverse_scored: false }, // Seek harmony and avoid conflict when possible
+  { id: 39, textKey: "q_tf9_text", dimension: "TF", trait: "T", reverse_scored: false }, // Believe it's important to be rational and impartial
+  { id: 40, textKey: "q_tf10_text", dimension: "TF", trait: "F", reverse_scored: false }, // Easily sense how others are feeling
+  { id: 41, textKey: "q_tf11_text", dimension: "TF", trait: "T", reverse_scored: false }, // Prefer to critique ideas to find flaws
+  { id: 42, textKey: "q_tf12_text", dimension: "TF", trait: "F", reverse_scored: false }, // Value cooperation and consensus
+  { id: 43, textKey: "q_tf13_text", dimension: "TF", trait: "T", reverse_scored: false }, // Find it easy to set aside emotions for decision-making
+  { id: 44, textKey: "q_tf14_text", dimension: "TF", trait: "F", reverse_scored: false }, // Driven by a desire to help and support others
+  { id: 45, textKey: "q_tf15_text", dimension: "TF", trait: "T", reverse_scored: true }, // (Reversed T) I often let my heart rule my head.
+
+  // JP Dimension (15 questions)
+  { id: 46, textKey: "q_jp1_text", dimension: "JP", trait: "J", reverse_scored: false }, // Like plans and structure
+  { id: 47, textKey: "q_jp2_text", dimension: "JP", trait: "P", reverse_scored: false }, // Enjoy spontaneity and flexibility
+  { id: 48, textKey: "q_jp3_text", dimension: "JP", trait: "J", reverse_scored: false }, // Prefer to make decisions quickly
+  { id: 49, textKey: "q_jp4_text", dimension: "JP", trait: "P", reverse_scored: false }, // Like to keep options open
+  { id: 50, textKey: "q_jp5_text", dimension: "JP", trait: "J", reverse_scored: false }, // Feel more comfortable when things are settled and organized
+  { id: 51, textKey: "q_jp6_text", dimension: "JP", trait: "P", reverse_scored: false }, // Enjoy adapting to new situations as they come
+  { id: 52, textKey: "q_jp7_text", dimension: "JP", trait: "J", reverse_scored: false }, // Work best with deadlines and clear schedules
+  { id: 53, textKey: "q_jp8_text", dimension: "JP", trait: "P", reverse_scored: false }, // Often work in bursts of energy, close to deadlines
+  { id: 54, textKey: "q_jp9_text", dimension: "JP", trait: "J", reverse_scored: false }, // Like to complete tasks before relaxing
+  { id: 55, textKey: "q_jp10_text", dimension: "JP", trait: "P", reverse_scored: false }, // See rules and procedures as flexible guidelines
+  { id: 56, textKey: "q_jp11_text", dimension: "JP", trait: "J", reverse_scored: false }, // Value order and predictability
+  { id: 57, textKey: "q_jp12_text", dimension: "JP", trait: "P", reverse_scored: false }, // Enjoy starting new projects more than finishing them
+  { id: 58, textKey: "q_jp13_text", dimension: "JP", trait: "J", reverse_scored: false }, // Dislike surprises and last-minute changes
+  { id: 59, textKey: "q_jp14_text", dimension: "JP", trait: "P", reverse_scored: false }, // Find routine and structure confining
+  { id: 60, textKey: "q_jp15_text", dimension: "JP", trait: "J", reverse_scored: true }  // (Reversed J) I often procrastinate and do things at the last minute.
 ];
+
 
 export const mbtiTypesInfo: MbtiTypeInfo[] = [
   // Analysts
@@ -154,11 +208,11 @@ export interface PersonalityTestsTranslations {
     istjCareers: string; isfjCareers: string; estjCareers: string; esfjCareers: string;
     istpCareers: string; isfpCareers: string; estpCareers: string; esfpCareers: string;
 
-    // Sample Question Keys (for mbtiQuizQuestionsLikert.textKey)
-    q_ei1_text: string; q_ei2_text: string;
-    q_sn1_text: string; q_sn2_text: string;
-    q_tf1_text: string; q_tf2_text: string;
-    q_jp1_text: string; q_jp2_text: string;
+    // Question Keys (for mbtiQuizQuestionsLikert.textKey)
+    q_ei1_text: string; q_ei2_text: string; q_ei3_text: string; q_ei4_text: string; q_ei5_text: string; q_ei6_text: string; q_ei7_text: string; q_ei8_text: string; q_ei9_text: string; q_ei10_text: string; q_ei11_text: string; q_ei12_text: string; q_ei13_text: string; q_ei14_text: string; q_ei15_text: string;
+    q_sn1_text: string; q_sn2_text: string; q_sn3_text: string; q_sn4_text: string; q_sn5_text: string; q_sn6_text: string; q_sn7_text: string; q_sn8_text: string; q_sn9_text: string; q_sn10_text: string; q_sn11_text: string; q_sn12_text: string; q_sn13_text: string; q_sn14_text: string; q_sn15_text: string;
+    q_tf1_text: string; q_tf2_text: string; q_tf3_text: string; q_tf4_text: string; q_tf5_text: string; q_tf6_text: string; q_tf7_text: string; q_tf8_text: string; q_tf9_text: string; q_tf10_text: string; q_tf11_text: string; q_tf12_text: string; q_tf13_text: string; q_tf14_text: string; q_tf15_text: string;
+    q_jp1_text: string; q_jp2_text: string; q_jp3_text: string; q_jp4_text: string; q_jp5_text: string; q_jp6_text: string; q_jp7_text: string; q_jp8_text: string; q_jp9_text: string; q_jp10_text: string; q_jp11_text: string; q_jp12_text: string; q_jp13_text: string; q_jp14_text: string; q_jp15_text: string;
 
     // Submission messages
     submittingResults: string;
@@ -219,10 +273,10 @@ export interface PersonalityTestsTranslations {
     istjCareers: string; isfjCareers: string; estjCareers: string; esfjCareers: string;
     istpCareers: string; isfpCareers: string; estpCareers: string; esfpCareers: string;
 
-    q_ei1_text: string; q_ei2_text: string;
-    q_sn1_text: string; q_sn2_text: string;
-    q_tf1_text: string; q_tf2_text: string;
-    q_jp1_text: string; q_jp2_text: string;
+    q_ei1_text: string; q_ei2_text: string; q_ei3_text: string; q_ei4_text: string; q_ei5_text: string; q_ei6_text: string; q_ei7_text: string; q_ei8_text: string; q_ei9_text: string; q_ei10_text: string; q_ei11_text: string; q_ei12_text: string; q_ei13_text: string; q_ei14_text: string; q_ei15_text: string;
+    q_sn1_text: string; q_sn2_text: string; q_sn3_text: string; q_sn4_text: string; q_sn5_text: string; q_sn6_text: string; q_sn7_text: string; q_sn8_text: string; q_sn9_text: string; q_sn10_text: string; q_sn11_text: string; q_sn12_text: string; q_sn13_text: string; q_sn14_text: string; q_sn15_text: string;
+    q_tf1_text: string; q_tf2_text: string; q_tf3_text: string; q_tf4_text: string; q_tf5_text: string; q_tf6_text: string; q_tf7_text: string; q_tf8_text: string; q_tf9_text: string; q_tf10_text: string; q_tf11_text: string; q_tf12_text: string; q_tf13_text: string; q_tf14_text: string; q_tf15_text: string;
+    q_jp1_text: string; q_jp2_text: string; q_jp3_text: string; q_jp4_text: string; q_jp5_text: string; q_jp6_text: string; q_jp7_text: string; q_jp8_text: string; q_jp9_text: string; q_jp10_text: string; q_jp11_text: string; q_jp12_text: string; q_jp13_text: string; q_jp14_text: string; q_jp15_text: string;
 
     submittingResults: string;
     submissionSuccess: string;
@@ -237,5 +291,3 @@ export interface PersonalityTestsTranslations {
     possibleTypesTitle: string;
   };
 }
-
-    
