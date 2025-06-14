@@ -1,104 +1,84 @@
-
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DATABASE_URL_UNPOOLED") // For migrations
+  directUrl = env("DATABASE_URL_UNPOOLED") // For Prisma Migrate, separate from connection pool
+  // Optionally, if using Prisma Accelerate or Pulse:
+  // relationMode = "prisma" 
 }
 
 generator client {
   provider = "prisma-client-js"
 }
 
-model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  passwordHash  String?
-  role          Role      @default(STUDENT)
-  bio           String?   @db.Text
-  avatarUrl     String?
-  preferences   Json?
-  lastLogin     DateTime? @updatedAt
-  isActive      Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  coursesAsInstructor Course[]            @relation("InstructorCourses")
-  enrollments         Enrollment[]
-  paymentSubmissions  PaymentSubmission[]
-  quizResults         MbtiQuizResult[]    @relation("UserQuizResults")
-}
-
-enum Role {
-  STUDENT
-  ADMIN
-}
-
 model Category {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  imageUrl    String?
-  dataAiHint  String?  // For Unsplash search hints
-  iconName    String?  // Lucide icon name
-  courses     Course[] @relation("CategoryCourses")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(cuid())
+  name       String   @unique
+  imageUrl   String?
+  dataAiHint String?
+  iconName   String? // For Lucide icon name
+  courses    Course[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Course {
-  id            String   @id @default(cuid())
-  title         String
-  description   String   @db.Text
-  instructorId  String? // Optional: if you want to link to a User model as instructor
-  instructor    User?    @relation("InstructorCourses", fields: [instructorId], references: [id])
-  imageUrl      String?
-  dataAiHint    String?
-  price         Float?
-  currency      String?  @default("USD")
-  isFeatured    Boolean? @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id         String   @id @default(cuid())
+  title      String
+  description String @db.Text
+  imageUrl   String?
+  dataAiHint String?
+  price      Float?
+  currency   String?  @default("USD")
+  isFeatured Boolean? @default(false)
 
-  learningObjectives Json?    // Store as array of strings: ["Objective 1", "Objective 2"]
-  targetAudience   String?
-  prerequisites    Json?    // Store as array of strings: ["Prereq 1", "Prereq 2"]
+  learningObjectives Json? 
+  targetAudience     String?
+  prerequisites      Json? 
   estimatedTimeToComplete String?
 
-  categoryId        String?
-  categoryNameCache String? // Denormalized for easier display
-  category          Category? @relation("CategoryCourses", fields: [categoryId], references: [id])
+  categoryId        String
+  categoryNameCache String? 
+  category          Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
-  modules   Module[]
-  quizzes   Quiz[]
+  // Changed instructor to be a simple string field
+  instructor              String  // Stores the instructor's name as a string
+
+  modules    Module[]
+  quizzes    Quiz[]
   enrollments Enrollment[]
   paymentSubmissions PaymentSubmission[]
   learningPathCourses LearningPathCourse[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Module {
   id        String   @id @default(cuid())
   title     String
   order     Int      @default(0)
-  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
   courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
   lessons   Lesson[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Lesson {
-  id          String   @id @default(cuid())
+  id          String  @id @default(cuid())
   title       String
   duration    String?
-  description String?  @db.Text
+  description String? @db.Text
   embedUrl    String?
   imageUrl    String?
-  order       Int      @default(0)
-  module      Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  order       Int     @default(0)
   moduleId    String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  module      Module  @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum QuizType {
@@ -107,15 +87,16 @@ enum QuizType {
 }
 
 model Quiz {
-  id           String     @id @default(cuid())
+  id           String   @id @default(cuid())
   title        String
-  quizType     QuizType   @default(PRACTICE)
-  passingScore Int?       // Percentage, e.g., 70 for 70%
-  course       Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  quizType     QuizType
+  passingScore Int?
   courseId     String
+  course       Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
   questions    Question[]
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Question {
@@ -123,61 +104,83 @@ model Question {
   text            String
   order           Int      @default(0)
   points          Int?
-  quiz            Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
   quizId          String
-  options         Option[]
-  correctOptionId String? // ID of the correct Option
+  quiz            Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  options         Option[] @relation("QuestionOptions")
+  correctOptionId String?  // ID of the correct Option
   correctOption   Option?  @relation("CorrectOption", fields: [correctOptionId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Option {
   id          String     @id @default(cuid())
   text        String
-  question    Question?  @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  questionId  String?
-  quizQuestionsAsCorrectOption Question[] @relation("CorrectOption")
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  questionId  String
+  question    Question   @relation("QuestionOptions", fields: [questionId], references: [id], onDelete: Cascade)
+  isCorrectIn Question[] @relation("CorrectOption") // Inverse relation for correctOption
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model LearningPath {
   id                  String               @id @default(cuid())
   title               String
   description         String               @db.Text
-  icon                String?              // Lucide icon name
+  icon                String?
   imageUrl            String?
   dataAiHint          String?
   learningPathCourses LearningPathCourse[]
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model LearningPathCourse {
-  id             String       @id @default(cuid())
-  learningPath   LearningPath @relation(fields: [learningPathId], references: [id], onDelete: Cascade)
   learningPathId String
-  course         Course       @relation(fields: [courseId], references: [id], onDelete: Cascade) // Or Restrict if a course shouldn't be deleted if part of a path
+  learningPath   LearningPath @relation(fields: [learningPathId], references: [id], onDelete: Cascade)
   courseId       String
-  order          Int          // Order of the course within the path
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  course         Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  order          Int          @default(0)
 
-  @@unique([learningPathId, courseId])
-  @@index([learningPathId, order])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([learningPathId, courseId])
 }
 
-model Video {
-  id            String   @id @default(cuid())
-  title         String
-  description   String   @db.Text
-  thumbnailUrl  String?
-  embedUrl      String   // YouTube, TikTok, Google Drive embeddable URL
-  dataAiHint    String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+enum Role {
+  STUDENT
+  ADMIN
 }
+
+model User {
+  id           String   @id @default(cuid())
+  name         String?
+  email        String   @unique
+  passwordHash String?
+  role         Role     @default(STUDENT)
+  
+  bio          String? @db.Text
+  avatarUrl    String?
+  preferences  Json?
+
+  lastLogin    DateTime?
+  isActive     Boolean?   @default(true)
+
+  enrollments  Enrollment[]
+  paymentSubmissions PaymentSubmission[]
+  mbtiQuizResults MbtiQuizResult[] // User can have multiple MBTI results
+
+  // Removed relation to Course for instructor
+  // coursesAsInstructor Course[] @relation("CoursesAsInstructor") 
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
 
 model Enrollment {
   id           String   @id @default(cuid())
@@ -188,8 +191,9 @@ model Enrollment {
   progress     Int      @default(0) // Percentage completion
   enrolledDate DateTime @default(now())
   completedAt  DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([userId, courseId])
 }
@@ -201,56 +205,66 @@ enum PaymentSubmissionStatus {
 }
 
 model PaymentSubmission {
-  id            String                  @id @default(cuid())
-  userId        String
-  user          User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  courseId      String
-  course        Course                  @relation(fields: [courseId], references: [id], onDelete: Cascade) // Or Restrict based on business logic
-  amount        Float
-  currency      String
-  screenshotUrl String                  // URL to the uploaded screenshot (e.g., Cloud Storage)
-  status        PaymentSubmissionStatus @default(PENDING)
-  submittedAt   DateTime                @default(now())
-  reviewedAt    DateTime?
-  adminNotes    String?                 @db.Text
-  createdAt     DateTime                @default(now())
-  updatedAt     DateTime                @updatedAt
+  id              String                  @id @default(cuid())
+  userId          String
+  user            User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId        String
+  course          Course                  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  amount          Float
+  currency        String
+  screenshotUrl   String
+  status          PaymentSubmissionStatus @default(PENDING)
+  submittedAt     DateTime                @default(now())
+  reviewedAt      DateTime?
+  adminNotes      String?                 @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model PaymentSettings {
-  id                     String    @id @default("global") // Singleton record
-  bankName               String?
-  accountNumber          String?
-  accountHolderName      String?
-  additionalInstructions String?   @db.Text
-  updatedAt              DateTime  @updatedAt
+  id                      String  @id @default("global") // Singleton record
+  bankName                String?
+  accountNumber           String?
+  accountHolderName       String?
+  additionalInstructions  String? @db.Text
+  updatedAt               DateTime @updatedAt
 }
 
-// For MBTI Quiz Results
+model Video {
+  id           String   @id @default(cuid())
+  title        String
+  description  String   @db.Text
+  thumbnailUrl String?
+  embedUrl     String   // YouTube or TikTok video URL/Embed URL
+  dataAiHint   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model MbtiQuizResult {
-  id            String   @id @default(cuid())
-  userId        String?  // Optional: if user is logged in
-  user          User?    @relation("UserQuizResults", fields: [userId], references: [id], onDelete: SetNull) // SetNull if user is deleted
-  mbtiType      String   // e.g., "INTJ"
-  scoreEI_E     Int      @default(0) @map("score_e")
-  scoreEI_I     Int      @default(0) @map("score_i")
-  scoreSN_S     Int      @default(0) @map("score_s")
-  scoreSN_N     Int      @default(0) @map("score_n")
-  scoreTF_T     Int      @default(0) @map("score_t")
-  scoreTF_F     Int      @default(0) @map("score_f")
-  scoreJP_J     Int      @default(0) @map("score_j")
-  scoreJP_P     Int      @default(0) @map("score_p")
-  submittedAt   DateTime @default(now())
+  id          String   @id @default(cuid())
+  userId      String?  // Optional: if the user is logged in
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  mbtiType    String   // e.g., "INTJ"
+  scoreEI_E   Int      // Score for Extroversion
+  scoreEI_I   Int      // Score for Introversion
+  scoreSN_S   Int      // Score for Sensing
+  scoreSN_N   Int      // Score for Intuition
+  scoreTF_T   Int      // Score for Thinking
+  scoreTF_F   Int      // Score for Feeling
+  scoreJP_J   Int      // Score for Judging
+  scoreJP_P   Int      // Score for Perceiving
+  submittedAt DateTime @default(now())
+
+  @@index([userId])
 }
 
-// Model for storing dynamic site page content (About, Privacy, ToS)
 model SitePage {
-  id        String    @id @default(cuid())
-  slug      String    @unique // e.g., "about-us", "privacy-policy"
+  slug      String    @id @unique // e.g., "about-us", "privacy-policy"
   title     String
-  content   Json      // Store HTML string or structured content as JSON
+  content   Json      // Can store structured content (like an AST) or HTML string
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 }
-
-    
