@@ -45,7 +45,7 @@ export const getAuthState = (): AuthState => {
     try {
       const parsedState = JSON.parse(storedState) as AuthState;
       // Basic validation of stored state structure
-      if (typeof parsedState.isAuthenticated === 'boolean' && 
+      if (typeof parsedState.isAuthenticated === 'boolean' &&
           (parsedState.user === null || typeof parsedState.user === 'object')) {
         return parsedState;
       } else {
@@ -108,10 +108,10 @@ export const findUserByEmail = async (email: string): Promise<PrismaUserType | n
 
 export const addUser = async (userData: Omit<PrismaUserType, 'id' | 'passwordHash' | 'createdAt' | 'updatedAt'>, password_raw: string): Promise<PrismaUserType> => {
   console.log(`[AuthUtils-Prisma - addUser] Attempting to add user to DB: ${userData.email}`);
-  
+
   const existingUser = await findUserByEmail(userData.email);
   if (existingUser) {
-    console.error(`[AuthUtils-Prisma - addUser] User already exists in DB with email: ${userData.email}.`);
+    console.warn(`[AuthUtils-Prisma - addUser] User already exists in DB with email: ${userData.email}.`);
     throw new Error("UserAlreadyExists");
   }
 
@@ -125,9 +125,23 @@ export const addUser = async (userData: Omit<PrismaUserType, 'id' | 'passwordHas
     });
     console.log(`[AuthUtils-Prisma - addUser] User ${newUser.email} added to DB with ID ${newUser.id}.`);
     return newUser;
-  } catch (error) {
-    console.error(`[AuthUtils-Prisma - addUser] Error creating user ${userData.email} in DB:`, error);
-    throw error;
+  } catch (error: any) { // Catch 'any'
+    console.error(`[AuthUtils-Prisma - addUser] Prisma Error creating user ${userData.email} in DB. Full Error:`, error);
+    // Log Prisma specific error details if available
+    if (error.code) { console.error(`[AuthUtils-Prisma - addUser] Prisma Error Code: ${error.code}`); }
+    if (error.meta) { console.error(`[AuthUtils-Prisma - addUser] Prisma Error Meta: ${JSON.stringify(error.meta)}`); }
+    if (error.message) { console.error(`[AuthUtils-Prisma - addUser] Error Message: ${error.message}`); }
+    if (error.stack) { console.error(`[AuthUtils-Prisma - addUser] Error Stack: ${error.stack}`); }
+
+    if (error instanceof Error && error.message) {
+        // Re-throw the Prisma error message or a custom one
+        // Check for common Prisma error codes if needed
+        if (error.message.includes("Unique constraint failed")) { // Example for unique constraint
+             throw new Error("UserAlreadyExists");
+        }
+        throw new Error(error.message);
+    }
+    throw new Error("DatabaseErrorDuringUserCreation"); // Generic fallback
   }
 };
 
@@ -171,10 +185,10 @@ export const seedInitialUsersToDatabase = async (): Promise<{ successCount: numb
         console.log(`[AuthUtils-Prisma - seedInitialUsersToDatabase] User ${mockUser.email} already exists. Skipped.`);
         continue;
       }
-      
+
       const plainPassword = mockUser.passwordHash.replace('_PLAINTEXT', '');
       const hashedPassword = await hashPassword(plainPassword);
-      
+
       await prisma.user.create({
         data: {
           id: mockUser.id, // Use mock ID if provided for consistency with other seeded data
@@ -198,5 +212,3 @@ export const seedInitialUsersToDatabase = async (): Promise<{ successCount: numb
 export const logoutUser = () => {
   clearAuthState();
 };
-
-    
