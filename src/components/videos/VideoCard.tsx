@@ -9,20 +9,19 @@ interface VideoCardProps {
 }
 
 const VideoCard = ({ video }: VideoCardProps) => {
-  // Ensure video.embedUrl is always a string, which it should be based on Prisma schema (String, not String?)
   const embeddableUrl = getEmbedUrl(video.embedUrl);
-  const title = video.title; // Non-nullable String
-  const description = video.description || ""; // Nullable String, fallback to empty
-  const thumbnailUrl = video.thumbnailUrl; // Nullable String
+  const title = video.title; 
+  const description = video.description || ""; 
+  const thumbnailUrl = video.thumbnailUrl; 
 
-  const containerClasses = "bg-black rounded-lg shadow-xl overflow-hidden w-full max-w-full sm:max-w-md mx-auto aspect-[9/16] max-h-[calc(100vh-theme(spacing.28)-env(safe-area-inset-bottom,0px))] h-auto flex flex-col items-center justify-center relative";
+  const containerClasses = "bg-black rounded-lg shadow-xl overflow-hidden w-full max-w-full sm:max-w-md mx-auto aspect-[9/16] max-h-[calc(100vh-theme(spacing.14)-env(safe-area-inset-bottom,0px))] h-auto flex flex-col items-center justify-center relative";
 
 
   if (embeddableUrl) {
     return (
       <div className={containerClasses}>
         <iframe
-          src={embeddableUrl} // This is safe as embeddableUrl is confirmed to be a string here
+          src={embeddableUrl} 
           title={title}
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
           allowFullScreen
@@ -32,20 +31,18 @@ const VideoCard = ({ video }: VideoCardProps) => {
     );
   }
 
-  // Fallback display if no embeddable URL (e.g. getEmbedUrl returned null)
   return (
     <div className={`${containerClasses} text-white`}>
-      {thumbnailUrl && ( // Only attempt to render Image if thumbnailUrl is a non-empty string
+      {thumbnailUrl && ( 
         <Image
             src={thumbnailUrl}
-            alt={title} // title is non-nullable
+            alt={title} 
             layout="fill"
             objectFit="cover"
             className="opacity-70"
             data-ai-hint={video.dataAiHint || 'video placeholder'}
-            onError={(e) => { // Basic error handling for next/image
+            onError={(e) => { 
               console.warn(`Failed to load image for video "${title}": ${thumbnailUrl}`, e);
-              // Optionally, you could set a state here to hide the broken image or show a more specific fallback.
             }}
         />
       )}
@@ -65,3 +62,5 @@ const VideoCard = ({ video }: VideoCardProps) => {
 };
 
 export default VideoCard;
+
+    
