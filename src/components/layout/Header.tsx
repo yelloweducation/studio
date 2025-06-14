@@ -147,7 +147,7 @@ const Header = () => {
       : "text-sm px-3 py-2 rounded-md",
     pathname === targetPath
       ? (isMobileSheetLink ? "bg-accent text-accent-foreground font-semibold" : "bg-accent text-accent-foreground font-semibold")
-      : (isMobileSheetLink ? "text-foreground hover:bg-muted" : "text-foreground hover:text-primary")
+      : (isMobileSheetLink ? "text-foreground hover:bg-muted" : "text-foreground hover:text-accent-foreground")
   );
 
   const commonNavItems = [
@@ -200,8 +200,7 @@ const Header = () => {
     if (authLoading) {
         return <div className="w-8 h-8 flex items-center justify-center shrink-0"><Loader2 className="h-4 w-4 animate-spin" /></div>;
     }
-
-    if (isOnHomepage) {
+     if (isOnHomepage) {
       if (isAuthenticated && role?.toLowerCase() === 'admin') {
         return (
           <Link
@@ -375,4 +374,3 @@ const Header = () => {
 
 export default Header;
 
-    
