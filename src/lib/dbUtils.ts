@@ -74,7 +74,7 @@ const CourseInputSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().min(1, "Description is required"),
   categoryName: z.string().min(1, "Category name is required"), 
-  instructor: z.string().min(1, "Instructor name is required"),
+  instructor: z.string().min(1, "Instructor name is required"), // Kept as string for simplicity matching form
   imageUrl: z.string().url("Invalid image URL").optional().nullable(),
   dataAiHint: z.string().max(100, "AI hint too long").optional().nullable(),
   price: z.number().min(0).optional().nullable(),
@@ -201,11 +201,14 @@ export const getCoursesFromDb = async (): Promise<Course[]> => {
     });
     console.log("[dbUtils-Prisma] getCoursesFromDb: Found courses:", courses.length);
     return courses;
-  } catch (error) {
+  } catch (error: any) {
     console.error("[dbUtils-Prisma] getCoursesFromDb: Error fetching courses:", error);
+    if (error.code) { console.error("[dbUtils-Prisma] getCoursesFromDb: Prisma Error Code:", error.code); }
+    if (error.meta) { console.error("[dbUtils-Prisma] getCoursesFromDb: Prisma Error Meta:", JSON.stringify(error.meta, null, 2)); }
     throw error;
   }
 };
+
 export const getCourseByIdFromDb = async (courseId: string): Promise<Course | null> => {
   console.log(`[dbUtils-Prisma] getCourseByIdFromDb: Fetching course ID ${courseId}.`);
   try {
@@ -219,14 +222,20 @@ export const getCourseByIdFromDb = async (courseId: string): Promise<Course | nu
     });
     console.log(`[dbUtils-Prisma] getCourseByIdFromDb: Course ${courseId} ${course ? 'found' : 'not found'}.`);
     return course;
-  } catch (error) {
-    console.error(`[dbUtils-Prisma] getCourseByIdFromDb: Error fetching course ID ${courseId}:`, error);
+  } catch (error: any) {
+    console.error(`[dbUtils-Prisma] getCourseByIdFromDb: Error fetching course ID ${courseId}.`);
+    console.error("[dbUtils-Prisma] getCourseByIdFromDb: Full Error Object:", error);
+    if (error.code) { console.error("[dbUtils-Prisma] getCourseByIdFromDb: Prisma Error Code:", error.code); }
+    if (error.meta) { console.error("[dbUtils-Prisma] getCourseByIdFromDb: Prisma Error Meta:", JSON.stringify(error.meta, null, 2)); }
+    if (error.message) { console.error("[dbUtils-Prisma] getCourseByIdFromDb: Error Message:", error.message); }
     throw error;
   }
 };
+
 export const addCourseToDb = async (
   courseData: Omit<Course, 'id'|'createdAt'|'updatedAt'|'categoryId'|'categoryNameCache'|'modules'|'quizzes'|'learningPathCourses'|'category'|'enrollments'|'paymentSubmissions'> & { 
     categoryName: string, 
+    instructor: string, // Ensure this is here
     modules?: Array<Partial<Omit<Module, 'id'|'courseId'|'createdAt'|'updatedAt'|'lessons'>> & { lessons?: Array<Partial<Omit<Lesson, 'id'|'moduleId'|'createdAt'|'updatedAt'>>> }>,
     quizzes?: Array<Partial<Omit<Quiz, 'id'|'courseId'|'createdAt'|'updatedAt'|'questions'>> & { quizType: PrismaQuizTypeEnum, questions?: Array<Partial<Omit<Question, 'id'|'quizId'|'createdAt'|'updatedAt'|'options'|'correctOptionId'>> & { options: Array<Partial<Omit<Option, 'id'|'questionId'|'createdAt'|'updatedAt'>>>, correctOptionText?: string }> }>
   }
@@ -241,7 +250,7 @@ export const addCourseToDb = async (
     throw new Error(validation.error.flatten().fieldErrors._errors?.join(', ') || "Invalid course data. Zod validation failed.");
   }
   console.log("[dbUtils-Prisma] addCourseToDb: Zod validation successful. Validated data (after Zod parse):", JSON.stringify(validation.data, null, 2));
-  const { categoryName, modules, quizzes, ...mainCourseData } = validation.data;
+  const { categoryName, instructor: instructorName, modules, quizzes, ...mainCourseData } = validation.data;
 
   try {
     console.log(`[dbUtils-Prisma] addCourseToDb: Resolving category by name: "${categoryName}"`);
@@ -254,9 +263,10 @@ export const addCourseToDb = async (
       console.log(`[dbUtils-Prisma] addCourseToDb: Found existing category "${categoryName}" with ID: ${category.id}`);
     }
 
-    const prismaCourseData: any = {
+    const prismaCourseData: Prisma.CourseCreateInput = {
       ...mainCourseData,
-      categoryId: category.id,
+      instructor: instructorName, // Directly assign the string
+      category: { connect: { id: category.id } },
       categoryNameCache: category.name, 
       learningObjectives: mainCourseData.learningObjectives || [],
       prerequisites: mainCourseData.prerequisites || [],
@@ -375,7 +385,6 @@ export const addCourseToDb = async (
         console.error("[dbUtils-Prisma] addCourseToDb: Caught non-Error object:", error);
     }
     
-    // Log Prisma-specific error details if available on the error object
     if (error.code) {  
         console.error("[dbUtils-Prisma] addCourseToDb: Prisma Error Code (from caught error):", error.code); 
         if (error.code === 'P2002') { console.error("[dbUtils-Prisma] addCourseToDb: Prisma P2002 (Unique constraint violation). Target fields:", error.meta?.target); }
@@ -394,6 +403,7 @@ export const updateCourseInDb = async (
   courseId: string, 
   courseData: Partial<Omit<Course, 'id'|'createdAt'|'updatedAt'|'categoryId'|'categoryNameCache'|'modules'|'quizzes'|'learningPathCourses'|'category'|'enrollments'|'paymentSubmissions'>> & { 
     categoryName?: string, 
+    instructor?: string, // Ensure this is here
     modules?: Array<Partial<Omit<Module, 'id'|'courseId'|'createdAt'|'updatedAt'|'lessons'>> & { id?: string, lessons?: Array<Partial<Omit<Lesson, 'id'|'moduleId'|'createdAt'|'updatedAt'>> & {id?: string}> }>,
     quizzes?: Array<Partial<Omit<Quiz, 'id'|'courseId'|'createdAt'|'updatedAt'|'questions'>> & { id?: string, quizType: PrismaQuizTypeEnum, questions?: Array<Partial<Omit<Question, 'id'|'quizId'|'createdAt'|'updatedAt'|'options'|'correctOptionId'>> & { id?: string, options: Array<Partial<Omit<Option, 'id'|'questionId'|'createdAt'|'updatedAt'>> & {id?:string}>, correctOptionText?: string }> }>
   }
@@ -408,7 +418,7 @@ export const updateCourseInDb = async (
     throw new Error(validation.error.flatten().fieldErrors._errors?.join(', ') || "Invalid course data for update.");
   }
   console.log("[dbUtils-Prisma] updateCourseInDb: Zod validation successful. Validated data (after Zod parse):", JSON.stringify(validation.data, null, 2));
-  const { categoryName, modules, quizzes, ...mainCourseData } = validation.data;
+  const { categoryName, instructor: instructorName, modules, quizzes, ...mainCourseData } = validation.data;
   
   try {
     let categoryIdToLink: string | undefined = undefined;
@@ -433,13 +443,14 @@ export const updateCourseInDb = async (
     await prisma.quiz.deleteMany({where: {courseId: courseId }}); 
     console.log(`[dbUtils-Prisma] updateCourseInDb: Existing modules and quizzes for course ID ${courseId} DELETED.`);
 
-    const prismaCourseUpdateData: any = {
+    const prismaCourseUpdateData: Prisma.CourseUpdateInput = {
       ...mainCourseData,
+      instructor: instructorName, // Assign string directly
       learningObjectives: mainCourseData.learningObjectives || [],
       prerequisites: mainCourseData.prerequisites || [],
     };
     if (categoryIdToLink && categoryNameToCache) {
-      prismaCourseUpdateData.categoryId = categoryIdToLink;
+      prismaCourseUpdateData.category = { connect: { id: categoryIdToLink } };
       prismaCourseUpdateData.categoryNameCache = categoryNameToCache;
     }
 
@@ -1096,11 +1107,11 @@ export const seedCoursesToDb = async (): Promise<{ successCount: number; errorCo
         };
       });
 
-      const courseCreateData: any = {
+      const courseCreateData: Prisma.CourseCreateInput = { // Type assertion for instructor
         id: cd.id,
         title: cd.title,
         description: cd.description,
-        instructor: cd.instructor,
+        instructor: cd.instructor, // Prisma expects string here as per updated schema
         imageUrl: cd.imageUrl,
         dataAiHint: cd.dataAiHint,
         price: cd.price,
@@ -1110,7 +1121,7 @@ export const seedCoursesToDb = async (): Promise<{ successCount: number; errorCo
         targetAudience: cd.targetAudience,
         prerequisites: cd.prerequisites,
         estimatedTimeToComplete: cd.estimatedTimeToComplete,
-        categoryId: cat.id,
+        category: { connect: { id: cat.id } },
         categoryNameCache: cat.name,
         modules: cd.modules ? { create: cd.modules.map(m => ({...m, lessons: m.lessons ? { create: m.lessons } : undefined })) } : undefined,
         quizzes: quizzesToCreate ? { create: quizzesToCreate } : undefined

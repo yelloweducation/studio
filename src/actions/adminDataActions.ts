@@ -52,7 +52,45 @@ export async function serverDeleteCategory(categoryId: string): Promise<void> { 
 
 // --- Course Actions ---
 export async function serverGetCourses(): Promise<Course[]> { return getCoursesFromDb(); }
-export async function serverGetCourseById(courseId: string): Promise<Course | null> { return getCourseByIdFromDb(courseId); }
+
+export async function serverGetCourseById(courseId: string): Promise<Course | null> {
+  console.log(`[ServerAction serverGetCourseById] ACTION CALLED for course ID: ${courseId}`);
+  try {
+    const course = await getCourseByIdFromDb(courseId);
+    console.log(`[ServerAction serverGetCourseById] getCourseByIdFromDb successful for course ID ${courseId}. Course found: ${!!course}`);
+    return course;
+  } catch (error: any) {
+    console.error("============================================================");
+    console.error(`[ServerAction serverGetCourseById] Error calling getCourseByIdFromDb for course ID ${courseId}. Full error details below.`);
+    if (error instanceof Error) {
+        console.error(`[ServerAction serverGetCourseById] Error Name:`, error.name);
+        console.error(`[ServerAction serverGetCourseById] Error Message:`, error.message);
+        console.error(`[ServerAction serverGetCourseById] Error Stack:`, error.stack);
+    } else {
+        console.error(`[ServerAction serverGetCourseById] Non-Error object thrown for course ID ${courseId}:`, error);
+    }
+    
+    let detailedErrorMessage = error instanceof Error ? error.message : String(error);
+    if (error.code) { 
+        console.error("[ServerAction serverGetCourseById] Prisma Error Code (from caught error):", error.code); 
+        detailedErrorMessage += ` (Prisma Code: ${error.code}`;
+        if (error.meta) {
+            console.error("[ServerAction serverGetCourseById] Prisma Error Meta (from caught error):", JSON.stringify(error.meta, null, 2)); 
+            detailedErrorMessage += `, Meta: ${JSON.stringify(error.meta)}`;
+        }
+        detailedErrorMessage += `)`;
+    }
+    if (error.clientVersion) { console.error("[ServerAction serverGetCourseById] Prisma Client Version (from caught error):", error.clientVersion); }
+    if (error.digest) { console.error("[ServerAction serverGetCourseById] Error Digest:", error.digest); }
+    
+    console.error("============================================================");
+    const newError = new Error(`ServerAction serverGetCourseById failed for ID ${courseId}: ${detailedErrorMessage}`);
+    // @ts-ignore
+    newError.digest = error.digest || error.code || `serverGetCourseById-error-${Date.now()}`;
+    throw newError; 
+  }
+}
+
 export async function serverAddCourse(
   courseData: Omit<Course, 'id'|'createdAt'|'updatedAt'|'categoryId'|'categoryNameCache'|'modules'|'quizzes'|'learningPathCourses'|'category'|'enrollments'|'paymentSubmissions'> & { 
     categoryName: string, 
