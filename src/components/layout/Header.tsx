@@ -19,7 +19,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-// import LuminaLogo from '@/components/LuminaLogo'; // Logo removed
 
 const headerTranslations = {
   en: {
@@ -87,11 +86,11 @@ const Header = () => {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const controlHeaderBackground = () => {
-      if (pathname === '/videos') { 
+      if (pathname === '/videos') {
         setDynamicHeaderBackgroundClasses('bg-transparent border-transparent');
-      } else if (isMobile) { 
+      } else if (isMobile) {
         setDynamicHeaderBackgroundClasses('bg-transparent border-transparent');
-      } else { 
+      } else {
         setDynamicHeaderBackgroundClasses(
           window.scrollY < 50
             ? 'bg-transparent border-transparent'
@@ -166,23 +165,22 @@ const Header = () => {
 
   const DesktopNav = () => (
     <>
-      {/* <LuminaLogo /> Removed Logo */}
-      <div className="flex-1"> 
-        {/* Empty div to push nav to center and auth to right if no logo */}
-        {/* If you want "ALL" or similar text here, add it */}
-         <Link href="/" className="flex items-center space-x-2 text-xl font-bold font-headline text-foreground hover:text-foreground/70 transition-colors">
-            {/* You can add an icon here if desired, e.g., <Circle size={24} className="text-primary" /> */}
-            <span>Yellow Institute</span> {/* Or just keep it empty if no text/logo desired */}
+      <div className="flex items-center"> {/* Container for left "ALL" link */}
+        <Link href="/" className="text-xl font-bold font-headline text-foreground hover:text-primary/80 transition-colors group mr-6">
+          <span className="relative py-1">
+            ALL
+            <span className="absolute bottom-[-2px] left-0 w-full h-[3px] bg-primary transition-transform duration-300 ease-out group-hover:scale-x-105"></span>
+          </span>
         </Link>
       </div>
-      <nav className="mx-auto flex justify-center items-center space-x-1 lg:space-x-2">
+      <nav className="flex-1 flex justify-center items-center space-x-1 lg:space-x-2"> {/* Nav items in the center */}
         {commonNavItems.map(item => (
           <Button key={item.label} variant="ghost" size="sm" asChild className={navLinkClasses(item.href)}>
             <Link href={item.href}><item.Icon className="mr-1.5 h-4 w-4" />{item.label}</Link>
           </Button>
         ))}
       </nav>
-      <div className="flex items-center space-x-2 lg:space-x-3 flex-1 justify-end">
+      <div className="flex items-center space-x-2 lg:space-x-3"> {/* Auth controls on the right */}
         {authLoading ? (
           <Button variant="ghost" size="sm" disabled className="ml-1 lg:ml-2"><Loader2 className="h-4 w-4 animate-spin mr-1" /> {t.loading}</Button>
         ) : isAuthenticated && user ? (
@@ -239,14 +237,14 @@ const Header = () => {
 
   const MobileHeaderContents = () => {
     const userRole = role?.toLowerCase();
-  
+
     return (
       <div className="flex items-center justify-between w-full">
         <Link href="/" className="text-lg font-bold text-foreground hover:text-primary/80 transition-colors relative group py-1">
-          {t.all}
+          ALL {/* Hardcoding "ALL" as per request */}
           <span className="absolute bottom-[-2px] left-0 w-full h-[3px] bg-primary transform scale-x-100 transition-transform duration-300 ease-out group-hover:scale-x-105"></span>
         </Link>
-  
+
         <div className="flex items-center gap-1.5 sm:gap-2">
           {authLoading ? (
             <Button variant="ghost" size="icon" disabled className="w-8 h-8">
@@ -263,7 +261,7 @@ const Header = () => {
               )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full p-0"> 
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full p-0">
                     <UserAvatar user={user} />
                   </Button>
                 </DropdownMenuTrigger>
