@@ -89,8 +89,10 @@ const Header = () => {
       if (pathname === '/videos') {
         setDynamicHeaderBackgroundClasses('bg-transparent border-transparent');
       } else if (isMobile) {
+        // Mobile header is always transparent as per recent request
         setDynamicHeaderBackgroundClasses('bg-transparent border-transparent');
       } else {
+        // Desktop header behavior
         setDynamicHeaderBackgroundClasses(
           window.scrollY < 50
             ? 'bg-transparent border-transparent'
@@ -98,10 +100,10 @@ const Header = () => {
         );
       }
     };
-    controlHeaderBackground();
+    controlHeaderBackground(); // Initial check
     window.addEventListener('scroll', controlHeaderBackground, { passive: true });
     return () => window.removeEventListener('scroll', controlHeaderBackground);
-  }, [pathname, isMobile]);
+  }, [pathname, isMobile]); // isMobile dependency ensures this re-evaluates if screen size changes past breakpoint
 
   useEffect(() => {
     if (typeof window === 'undefined' || !useScrollHidingHeader || isMobile) {
@@ -139,10 +141,10 @@ const Header = () => {
   }, [isAuthenticated, role]);
 
   const UserAvatar = React.memo(({ user: usr }: { user: { name?: string | null, avatarUrl?: string | null } | null }) => (
-    <Avatar className="h-8 w-8">
+    <Avatar className="h-8 w-8"> {/* Consistent size for avatar */}
       <AvatarImage src={usr?.avatarUrl || undefined} alt={usr?.name || 'User'} />
       <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-        {usr?.name ? usr.name.charAt(0).toUpperCase() : <UserCircle size={20}/>}
+        {usr?.name ? usr.name.charAt(0).toUpperCase() : <UserCircle size={18}/>} {/* Slightly smaller fallback icon */}
       </AvatarFallback>
     </Avatar>
   ));
@@ -165,7 +167,7 @@ const Header = () => {
 
   const DesktopNav = () => (
     <>
-      <div className="flex items-center"> {/* Container for left "ALL" link */}
+      <div className="flex items-center">
         <Link href="/" className="text-xl font-bold font-headline text-foreground hover:text-primary/80 transition-colors group mr-6">
           <span className="relative py-1">
             ALL
@@ -173,20 +175,20 @@ const Header = () => {
           </span>
         </Link>
       </div>
-      <nav className="flex-1 flex justify-center items-center space-x-1 lg:space-x-2"> {/* Nav items in the center */}
+      <nav className="flex-1 flex justify-center items-center space-x-1 lg:space-x-2">
         {commonNavItems.map(item => (
           <Button key={item.label} variant="ghost" size="sm" asChild className={navLinkClasses(item.href)}>
             <Link href={item.href}><item.Icon className="mr-1.5 h-4 w-4" />{item.label}</Link>
           </Button>
         ))}
       </nav>
-      <div className="flex items-center space-x-2 lg:space-x-3"> {/* Auth controls on the right */}
+      <div className="flex items-center space-x-2 lg:space-x-3">
         {authLoading ? (
           <Button variant="ghost" size="sm" disabled className="ml-1 lg:ml-2"><Loader2 className="h-4 w-4 animate-spin mr-1" /> {t.loading}</Button>
         ) : isAuthenticated && user ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0">
+              <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0"> {/* h-9 w-9 for desktop avatar button */}
                 <UserAvatar user={user} />
               </Button>
             </DropdownMenuTrigger>
@@ -227,7 +229,7 @@ const Header = () => {
             size="icon"
             onClick={toggleTheme}
             aria-label={t.toggleTheme}
-            className={cn("hover:bg-accent/20 text-foreground w-8 h-8")}
+            className={cn("hover:bg-accent/20 text-foreground w-8 h-8")} 
           >
             {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
           </Button>
@@ -240,15 +242,17 @@ const Header = () => {
 
     return (
       <div className="flex items-center justify-between w-full">
-        <Link href="/" className="text-lg font-bold text-foreground hover:text-primary/80 transition-colors relative group py-1">
-          ALL {/* Hardcoding "ALL" as per request */}
+        {/* "ALL" Link on the left, responsive font size */}
+        <Link href="/" className="text-base sm:text-lg font-bold text-foreground hover:text-primary/80 transition-colors relative group py-1">
+          ALL
           <span className="absolute bottom-[-2px] left-0 w-full h-[3px] bg-primary transform scale-x-100 transition-transform duration-300 ease-out group-hover:scale-x-105"></span>
         </Link>
 
-        <div className="flex items-center gap-1.5 sm:gap-2">
+        {/* Icons on the right, using gap-1 for very small screens, gap-1.5 for sm and up */}
+        <div className="flex items-center gap-1 sm:gap-1.5"> 
           {authLoading ? (
-            <Button variant="ghost" size="icon" disabled className="w-8 h-8">
-              <Loader2 className="h-5 w-5 animate-spin text-foreground" />
+            <Button variant="ghost" size="icon" disabled className="w-8 h-8 text-foreground"> {/* Ensure consistent size */}
+              <Loader2 className="h-5 w-5 animate-spin" />
             </Button>
           ) : isAuthenticated && user ? (
             <>
@@ -298,7 +302,7 @@ const Header = () => {
             size="icon"
             onClick={toggleTheme}
             aria-label={t.toggleTheme}
-            className="text-foreground hover:text-primary w-8 h-8"
+            className="text-foreground hover:text-primary w-8 h-8" // Consistent size
           >
             {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
           </Button>
