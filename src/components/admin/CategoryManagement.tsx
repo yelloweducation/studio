@@ -2,7 +2,7 @@
 "use client";
 import { useState, useEffect, type FormEvent } from 'react';
 import Image from 'next/image';
-import type { Category } from '@prisma/client'; // Use Prisma type
+import type { Category } from '@prisma/client'; 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,16 +20,13 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import * as LucideIcons from 'lucide-react';
+import { isValidLucideIcon } from '@/lib/utils'; 
 import { 
   serverGetCategories, 
   serverAddCategory, 
   serverUpdateCategory, 
   serverDeleteCategory 
-} from '@/actions/adminDataActions'; // Use Server Actions
-
-const isValidLucideIcon = (iconName: string | undefined | null): iconName is keyof typeof LucideIcons => {
-  return typeof iconName === 'string' && iconName in LucideIcons;
-};
+} from '@/actions/adminDataActions'; 
 
 const CategoryForm = ({
   category,
@@ -127,7 +124,7 @@ export default function CategoryManagement() {
       setIsLoadingData(true);
       console.log("[CategoryManagement Client] Fetching categories...");
       try {
-        const dbCategories = await serverGetCategories(); // Use server action
+        const dbCategories = await serverGetCategories(); 
         console.log("[CategoryManagement Client] Fetched categories:", dbCategories.length);
         setCategories(dbCategories);
       } catch (error) {
@@ -143,7 +140,7 @@ export default function CategoryManagement() {
     setIsSubmittingForm(true);
     console.log("[CategoryManagement Client] handleAddCategory called with data:", JSON.stringify(data, null, 2));
     try {
-      const newCategory = await serverAddCategory(data); // Use server action
+      const newCategory = await serverAddCategory(data); 
       console.log("[CategoryManagement Client] Category added, response:", JSON.stringify(newCategory, null, 2));
       setCategories(prev => [newCategory, ...prev].sort((a, b) => a.name.localeCompare(b.name)));
       closeForm();
@@ -161,7 +158,7 @@ export default function CategoryManagement() {
     setIsSubmittingForm(true);
     console.log(`[CategoryManagement Client] handleEditCategory called for ID ${editingCategory.id} with data:`, JSON.stringify(data, null, 2));
     try {
-      const updatedCategory = await serverUpdateCategory(editingCategory.id, data); // Use server action
+      const updatedCategory = await serverUpdateCategory(editingCategory.id, data); 
       console.log("[CategoryManagement Client] Category updated, response:", JSON.stringify(updatedCategory, null, 2));
       setCategories(prev => prev.map(c => c.id === updatedCategory.id ? updatedCategory : c).sort((a,b) => a.name.localeCompare(b.name)));
       closeForm();
@@ -178,7 +175,7 @@ export default function CategoryManagement() {
     const categoryToDelete = categories.find(c => c.id === categoryId);
     console.log(`[CategoryManagement Client] handleDeleteCategory called for ID ${categoryId}`);
     try {
-      await serverDeleteCategory(categoryId); // Use server action
+      await serverDeleteCategory(categoryId); 
       console.log(`[CategoryManagement Client] Category ID ${categoryId} deleted.`);
       setCategories(prev => prev.filter(c => c.id !== categoryId));
       toast({ title: "Category Deleted", description: `${categoryToDelete?.name} has been deleted.`, variant: "destructive" });

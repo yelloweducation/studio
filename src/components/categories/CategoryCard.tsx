@@ -2,25 +2,22 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import type { Category } from '@/lib/dbUtils'; // Changed import from mockData to dbUtils (Prisma type)
+import type { Category } from '@/lib/dbUtils'; 
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import * as LucideIcons from 'lucide-react';
+import { isValidLucideIcon } from '@/lib/utils'; 
 
 interface CategoryCardProps {
   category: Category;
 }
 
-const isValidLucideIcon = (iconName: string | null | undefined): iconName is keyof typeof LucideIcons => {
-  return typeof iconName === 'string' && iconName in LucideIcons;
-};
-
 const CategoryCard = React.memo(({ category }: CategoryCardProps) => {
   const IconComponent = category.iconName && isValidLucideIcon(category.iconName) 
     ? LucideIcons[category.iconName] as React.ElementType 
-    : LucideIcons.Shapes; // Default icon if iconName is null, undefined, or invalid
+    : LucideIcons.Shapes; 
 
   return (
-    <Link href={`/courses/search?category=${encodeURIComponent(category.name)}`} passHref> {/* Updated link to filter by category name */}
+    <Link href={`/courses/search?category=${encodeURIComponent(category.name)}`} passHref> 
       <Card className="group flex flex-col items-center justify-start text-center p-0 rounded-lg shadow-lg hover:shadow-xl active:shadow-md transform hover:-translate-y-1 active:translate-y-px transition-all duration-150 h-full overflow-hidden cursor-pointer">
         {category.imageUrl && (
           <div className="w-full h-24 sm:h-32 relative">

@@ -1,6 +1,7 @@
 
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import * as LucideIcons from 'lucide-react';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -12,7 +13,7 @@ export function getEmbedUrl(url: string | undefined | null): string | null {
   }
 
   try {
-    const urlObj = new URL(url); // This line can throw an error if URL is invalid
+    const urlObj = new URL(url); 
 
     // Handle YouTube URLs
     if (urlObj.hostname === 'www.youtube.com' && urlObj.pathname === '/watch') {
@@ -64,8 +65,12 @@ export function getEmbedUrl(url: string | undefined | null): string | null {
     }
 
   } catch (error) {
-    console.warn("Error parsing or transforming embed URL:", url, error); // Changed to console.warn
+    console.warn("Error parsing or transforming embed URL:", url, error); 
     return null;
   }
   return null;
 }
+
+export const isValidLucideIcon = (iconName: string | undefined | null): iconName is keyof typeof LucideIcons => {
+  return typeof iconName === 'string' && iconName in LucideIcons;
+};

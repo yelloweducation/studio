@@ -23,7 +23,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import * as LucideIcons from 'lucide-react';
-// Use Server Actions
+import { isValidLucideIcon } from '@/lib/utils'; 
 import { 
   serverGetLearningPaths, 
   serverAddLearningPath, 
@@ -32,10 +32,6 @@ import {
   serverGetCourses 
 } from '@/actions/adminDataActions';
 
-const isValidLucideIcon = (iconName: string | undefined | null): iconName is keyof typeof LucideIcons => {
-  return typeof iconName === 'string' && iconName in LucideIcons;
-};
-
 const LearningPathForm = ({
   path,
   allCourses,
@@ -43,7 +39,7 @@ const LearningPathForm = ({
   onCancel,
   isSubmitting,
 }: {
-  path?: LearningPath & { learningPathCourses?: { course: Course, courseId: string }[] }; // Adjusted type
+  path?: LearningPath & { learningPathCourses?: { course: Course, courseId: string }[] }; 
   allCourses: Course[];
   onSubmit: (data: Omit<LearningPath, 'id' | 'createdAt' | 'updatedAt' | 'learningPathCourses'> & { courseIdsToConnect?: string[] }) => Promise<void>;
   onCancel: () => void;
@@ -167,10 +163,10 @@ export default function LearningPathManagement() {
       setIsLoadingData(true);
       try {
         const [pathsFromDb, coursesFromDb] = await Promise.all([
-          serverGetLearningPaths(), // Use server action
-          serverGetCourses()       // Use server action
+          serverGetLearningPaths(), 
+          serverGetCourses()       
         ]);
-        setLearningPaths(pathsFromDb as any); // Cast as any if Prisma's include structure differs slightly from form expectation
+        setLearningPaths(pathsFromDb as any); 
         setAllCourses(coursesFromDb);
       } catch (error) {
         console.error("Error loading learning paths or courses:", error);
@@ -184,7 +180,7 @@ export default function LearningPathManagement() {
   const handleAddPath = async (data: Omit<LearningPath, 'id' | 'createdAt' | 'updatedAt' | 'learningPathCourses'> & { courseIdsToConnect?: string[] }) => {
     setIsSubmittingForm(true);
     try {
-      const newPath = await serverAddLearningPath(data); // Use server action
+      const newPath = await serverAddLearningPath(data); 
       setLearningPaths(prev => [newPath as any, ...prev].sort((a, b) => a.title.localeCompare(b.title)));
       closeForm();
       toast({ title: "Learning Path Added", description: `"${data.title}" created.` });
@@ -199,7 +195,7 @@ export default function LearningPathManagement() {
     if (!editingPath || !editingPath.id) return;
     setIsSubmittingForm(true);
     try {
-      const updatedPath = await serverUpdateLearningPath(editingPath.id, data); // Use server action
+      const updatedPath = await serverUpdateLearningPath(editingPath.id, data); 
       setLearningPaths(prev => prev.map(p => (p.id === editingPath.id ? updatedPath as any : p)).sort((a,b) => a.title.localeCompare(b.title)));
       closeForm();
       toast({ title: "Learning Path Updated", description: `"${data.title}" updated.` });
@@ -213,7 +209,7 @@ export default function LearningPathManagement() {
   const handleDeletePath = async (pathId: string) => {
     const pathToDelete = learningPaths.find(p => p.id === pathId);
     try {
-      await serverDeleteLearningPath(pathId); // Use server action
+      await serverDeleteLearningPath(pathId); 
       setLearningPaths(prev => prev.filter(p => p.id !== pathId));
       toast({ title: "Learning Path Deleted", description: `"${pathToDelete?.title}" deleted.`, variant: "destructive" });
     } catch (error) {

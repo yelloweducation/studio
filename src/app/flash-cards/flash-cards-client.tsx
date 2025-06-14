@@ -9,9 +9,10 @@ import { Progress } from '@/components/ui/progress';
 import { useLanguage } from '@/contexts/LanguageContext';
 import * as LucideIcons from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { isValidLucideIcon } from '@/lib/utils'; 
 
 // Import the new JSON data
-import type { Flashcard, FlashcardCategory } from '@/data/mockData'; // Types still useful
+import type { Flashcard, FlashcardCategory } from '@/data/mockData'; 
 import flashcardCategoriesData from '@/data/flashcards/categories.json';
 import englishFlashcards from '@/data/flashcards/english.json';
 import itFlashcards from '@/data/flashcards/it.json';
@@ -53,9 +54,6 @@ const flashCardsPageTranslations = {
   }
 };
 
-const isValidLucideIcon = (iconName: string | undefined): iconName is keyof typeof LucideIcons => {
-  return typeof iconName === 'string' && iconName in LucideIcons;
-};
 
 // Helper to map category IDs to their respective flashcard data arrays
 const flashcardDataMap: Record<string, Flashcard[]> = {
