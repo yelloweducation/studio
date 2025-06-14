@@ -32,31 +32,6 @@ const UpdateRoleInputSchema = z.object({
 export const serverLoginUser = async (email_from_form_raw: string, password_from_form: string): Promise<PrismaUserType | null> => {
   const email_from_form = email_from_form_raw.toLowerCase();
   console.log(`[AuthActions-Prisma - serverLoginUser] Attempting login for email: ${email_from_form}`);
-
-  // Temporary hardcoded admin bypass
-  const MOCK_ADMIN_EMAIL = 'nanghtike@gmail.com';
-  const MOCK_ADMIN_PASSWORD = 'nopass1234';
-
-  if (email_from_form === MOCK_ADMIN_EMAIL && password_from_form === MOCK_ADMIN_PASSWORD) {
-    console.warn(`[AuthActions-Prisma - serverLoginUser] SECURITY BYPASS: Hardcoded login for ${MOCK_ADMIN_EMAIL}.`);
-    const mockAdminUser: Omit<PrismaUserType, 'passwordHash'> & { passwordHash?: string | null } = { // Ensure structure matches PrismaUserType but passwordHash is optional
-      id: 'mock-nanghtike-admin',
-      name: 'Mocked Nang Htike (Admin)',
-      email: MOCK_ADMIN_EMAIL,
-      role: 'ADMIN',
-      // passwordHash is not needed for client, will be stripped
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      bio: null,
-      avatarUrl: null,
-      preferences: null,
-      lastLogin: new Date(),
-      isActive: true,
-    };
-    // PrismaUserType expects passwordHash, but we strip it for client.
-    // For the purpose of returning to client, we can cast.
-    return mockAdminUser as PrismaUserType;
-  }
   
   const validation = LoginInputSchema.safeParse({ email: email_from_form, password: password_from_form });
   if (!validation.success) {
