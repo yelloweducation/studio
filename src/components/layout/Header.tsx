@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home as HomeIcon, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Compass, Layers, Brain, Loader2, Menu as MenuIcon } from 'lucide-react';
+import { Home as HomeIcon, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Compass, Layers, Brain, Loader2, Menu as MenuIcon, VideoIcon as VideoReelsIcon } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import React, { useEffect, useState } from 'react';
@@ -35,7 +35,7 @@ const headerTranslations = {
     toggleTheme: "Toggle Theme",
     loading: "Loading...",
     menu: "Menu",
-    adminDashboard: "Admin Panel" // Added for admin specific link
+    adminDashboard: "Admin Panel"
   },
   my: {
     home: "ပင်မ",
@@ -132,11 +132,13 @@ const Header = () => {
 
   const getDashboardPath = () => {
     if (!isAuthenticated) return '/login';
-    if (role === 'admin') return '/dashboard/admin';
-    if (role === 'student') return '/dashboard/student';
+    const userRoleLower = role?.toLowerCase();
+    if (userRoleLower === 'admin') return '/dashboard/admin';
+    if (userRoleLower === 'student') return '/dashboard/student';
     console.warn(`[Header] Dashboard link: User is authenticated, but role is '${role}'. Defaulting dashboard path to home ('/').`);
     return '/';
   };
+  
 
   const navLinkClasses = (targetPath: string, isMobileSheetLink: boolean = false) => cn(
     "font-medium transition-colors",
@@ -151,7 +153,7 @@ const Header = () => {
   const commonNavItems = [
     { href: "/", label: t.home, Icon: HomeIcon },
     { href: "/courses/search", label: t.explore, Icon: Compass },
-    { href: "/videos", label: t.videos, Icon: HomeIcon }, // VideoIcon was used, HomeIcon for consistency with mobile potentially
+    { href: "/videos", label: t.videos, Icon: VideoReelsIcon },
     { href: "/flash-cards", label: t.flashCards, Icon: Layers },
     { href: "/personality-tests", label: t.personalityTest, Icon: Brain }
   ];
@@ -200,14 +202,14 @@ const Header = () => {
     }
 
     if (isOnHomepage) {
-      if (isAuthenticated && role === 'admin') {
+      if (isAuthenticated && role?.toLowerCase() === 'admin') {
         return (
           <Link
             href="/dashboard/admin"
             className={cn(
-              "group font-headline transition-all py-1 flex items-center gap-1.5", // Increased gap
+              "group font-headline transition-all py-1 flex items-center gap-1.5",
               "text-foreground",
-              "text-sm font-medium", // Make it stand out slightly more
+              "text-sm font-medium", 
               "hover:text-primary"
             )}
             onClick={() => setMobileSheetOpen(false)}
@@ -222,7 +224,7 @@ const Header = () => {
     } else if (isOnFlashCardsPage || isOnPersonalityTestsPage || isOnCoursesPage) {
       return <MobileHomepageAllLink />;
     }
-    return <div className="flex-1"></div>; // Empty for pages that will show hamburger
+    return <div className="flex-1"></div>; 
   };
   
   const shouldShowHamburgerMenu = !isOnHomepage && !isOnFlashCardsPage && !isOnPersonalityTestsPage && !isOnCoursesPage;
@@ -231,7 +233,6 @@ const Header = () => {
   const DesktopNav = () => (
     <>
       <div className="flex-1">
-         {/* Potentially a logo or brand name here if desired */}
       </div>
       <nav className="mx-auto flex justify-center items-center space-x-1 lg:space-x-2">
         {commonNavItems.map(item => (
@@ -279,7 +280,7 @@ const Header = () => {
 
   const MobileNav = () => (
     <div className="flex items-center justify-between w-full">
-      <div className="flex-shrink-0 min-w-[60px]"> {/* Ensure left content has some space */}
+      <div className="flex-shrink-0 min-w-[60px]"> 
         <MobileLeftContent />
       </div>
 
@@ -317,8 +318,8 @@ const Header = () => {
             </SheetTrigger>
             <SheetContent side="right" className="w-[280px] p-4 flex flex-col">
                <SheetHeader className="mb-4">
-                <SheetTitle className="sr-only">{t.menu}</SheetTitle>
-              </SheetHeader>
+                 <SheetTitle className="sr-only">{t.menu}</SheetTitle>
+               </SheetHeader>
               <nav className="flex-grow space-y-1.5">
                 {commonNavItems.map(item => (
                   <Button key={item.label} variant="ghost" asChild className={navLinkClasses(item.href, true)} onClick={() => setMobileSheetOpen(false)}>
@@ -373,3 +374,5 @@ const Header = () => {
 };
 
 export default Header;
+
+    

@@ -8,20 +8,21 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 type ProtectedRouteProps = {
   children: ReactNode;
-  allowedRoles?: Array<'student' | 'admin'>;
+  allowedRoles?: Array<'student' | 'admin'>; // Keep allowedRoles definition as lowercase for clarity
 };
 
 const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
-  const { isAuthenticated, role, loading } = useAuth();
+  const { isAuthenticated, user, role, loading } = useAuth();
   const router = useRouter();
   const currentPath = usePathname();
 
   useEffect(() => {
-    console.log(`[ProtectedRoute DEBUG - PATH: ${currentPath}] START. Auth Loading: ${loading}, IsAuth: ${isAuthenticated}, User Role: '${role}'`);
+    const currentRoleLower = role?.toLowerCase(); // Convert context role to lowercase
+    console.log(`[ProtectedRoute DEBUG - PATH: ${currentPath}] START. Auth Loading: ${loading}, IsAuth: ${isAuthenticated}, User Role from Context: '${role}', Lowercase Role: '${currentRoleLower}'`);
 
     if (loading) {
       console.log(`[ProtectedRoute DEBUG - PATH: ${currentPath}] Auth state is loading. Waiting...`);
-      return; // Wait for auth to load
+      return; 
     }
     console.log(`[ProtectedRoute DEBUG - PATH: ${currentPath}] Auth loaded. IsAuth: ${isAuthenticated}`);
 
@@ -31,27 +32,22 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
       return;
     }
     
-    // User is authenticated, now check role
-    console.log(`[ProtectedRoute DEBUG - PATH: ${currentPath}] User IS authenticated. Current Role from context: '${role}', Allowed roles for this route: [${allowedRoles?.join(', ')}]`);
-
     if (allowedRoles && allowedRoles.length > 0) {
       if (!role) { 
-        // This case means auth is loaded, user is authenticated, but role is still null/undefined.
-        // This could be a very brief transient state. Let's log and wait for next effect run.
-        console.warn(`[ProtectedRoute DEBUG - PATH: ${currentPath}] User IS authenticated, but role is still '${role}'. Waiting for role to populate from AuthContext.`);
-        // Returning here (without rendering children) means the effect will run again when 'role' updates.
-        // We don't redirect yet, to give the role a chance to be set.
-        return; 
+        console.warn(`[ProtectedRoute DEBUG - PATH: ${currentPath}] User IS authenticated, but role from context is '${role}'. This might be a brief delay. Waiting for role to populate or re-render.`);
+        // If role is crucial and not yet set, we might want to show a loading state or wait for next effect.
+        // For now, if this leads to a redirect, the next log will indicate it.
+        // The component will re-render when role updates, and this useEffect will run again.
+        return;
       }
       
-      // Role is now set (not null/undefined)
-      const isRoleAllowed = allowedRoles.includes(role as 'student' | 'admin');
-      console.log(`[ProtectedRoute DEBUG - PATH: ${currentPath}] Checking role. User role: '${role}', Is role allowed: ${isRoleAllowed}`);
+      // Role from context is now set (not null/undefined)
+      const isRoleAllowed = allowedRoles.includes(currentRoleLower as 'student' | 'admin');
+      console.log(`[ProtectedRoute DEBUG - PATH: ${currentPath}] Checking role. User Role from Context: '${role}', Lowercase Role: '${currentRoleLower}', Allowed roles for this route: [${allowedRoles?.join(', ')}], Is role allowed: ${isRoleAllowed}`);
 
       if (!isRoleAllowed) {
-        console.warn(`[ProtectedRoute DEBUG - PATH: ${currentPath}] Role '${role}' is NOT in allowedRoles [${allowedRoles.join(', ')}]. Determining redirect...`);
-        if (role === 'admin') {
-          // If current path is not admin dashboard, redirect to it. If it IS admin dashboard, this is a misconfiguration.
+        console.warn(`[ProtectedRoute DEBUG - PATH: ${currentPath}] Role '${currentRoleLower}' (from context role '${role}') is NOT in allowedRoles [${allowedRoles.join(', ')}]. Determining redirect...`);
+        if (currentRoleLower === 'admin') {
           if (currentPath !== '/dashboard/admin') {
              console.log(`[ProtectedRoute DEBUG - PATH: ${currentPath}] Role is ADMIN, but not allowed for this page. Redirecting to /dashboard/admin.`);
              router.push('/dashboard/admin');
@@ -59,7 +55,7 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
              console.error(`[ProtectedRoute DEBUG - PATH: ${currentPath}] Role is ADMIN, but current path is /dashboard/admin and it's somehow not allowed. This is a config error. Fallback to home.`);
              router.push('/');
           }
-        } else if (role === 'student') {
+        } else if (currentRoleLower === 'student') {
            if (currentPath !== '/dashboard/student') {
             console.log(`[ProtectedRoute DEBUG - PATH: ${currentPath}] Role is STUDENT. Redirecting to /dashboard/student.`);
             router.push('/dashboard/student');
@@ -68,14 +64,13 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
              router.push('/');
            }
         } else {
-          console.warn(`[ProtectedRoute DEBUG - PATH: ${currentPath}] Unknown role '${role}' despite being authenticated. Redirecting to home ('/').`);
+          console.warn(`[ProtectedRoute DEBUG - PATH: ${currentPath}] Unknown role '${currentRoleLower}' (from context role '${role}') despite being authenticated. Redirecting to home ('/').`);
           router.push('/');
         }
-        return; // Important: return after pushing to router
+        return; 
       }
     }
-    // If no allowedRoles are specified, or if role is allowed
-    console.log(`[ProtectedRoute DEBUG - PATH: ${currentPath}] User is authenticated AND authorized. Rendering children.`);
+    console.log(`[ProtectedRoute DEBUG - PATH: ${currentPath}] User is authenticated AND authorized (Role: '${currentRoleLower}'). Rendering children.`);
 
   }, [isAuthenticated, role, loading, router, allowedRoles, currentPath]);
 
@@ -92,29 +87,27 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
     );
   }
 
-  // If not loading, determine if we should render children or null (while waiting for redirect or role)
   if (!isAuthenticated) {
-    // Should be handled by redirect in useEffect, but as a fallback for render phase:
     console.log(`[ProtectedRoute RENDER - PATH: ${currentPath}] Not authenticated. Returning null (useEffect should redirect).`);
     return null; 
   }
 
   if (allowedRoles && allowedRoles.length > 0) {
+    const currentRoleLower = role?.toLowerCase();
     if (!role) {
-      // Authenticated, auth not loading, but role is not yet set.
-      console.warn(`[ProtectedRoute RENDER - PATH: ${currentPath}] Authenticated, but role is '${role}'. Returning null (useEffect should re-trigger or handle).`);
-      return null; // Wait for role to be populated
+      console.warn(`[ProtectedRoute RENDER - PATH: ${currentPath}] Authenticated, but role from context is '${role}' (authLoading is false). Returning null (useEffect should re-trigger or handle).`);
+      return null; 
     }
-    if (!allowedRoles.includes(role as 'student' | 'admin')) {
-      // Authenticated, role is set, but not allowed for this route.
-      console.warn(`[ProtectedRoute RENDER - PATH: ${currentPath}] Role '${role}' not allowed. Returning null (useEffect should redirect).`);
-      return null; // useEffect will redirect
+    if (!allowedRoles.includes(currentRoleLower as 'student' | 'admin')) {
+      console.warn(`[ProtectedRoute RENDER - PATH: ${currentPath}] Role '${currentRoleLower}' (from context role '${role}') not allowed. Returning null (useEffect should redirect).`);
+      return null; 
     }
   }
   
-  // If all checks pass:
-  console.log(`[ProtectedRoute RENDER - PATH: ${currentPath}] All checks passed. Rendering children.`);
+  console.log(`[ProtectedRoute RENDER - PATH: ${currentPath}] All checks passed. Rendering children (Role: '${role?.toLowerCase()}').`);
   return <>{children}</>;
 };
 
 export default ProtectedRoute;
+
+    
