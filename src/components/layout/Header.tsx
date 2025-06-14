@@ -235,7 +235,7 @@ const Header = () => {
   
     return (
       <div className="flex items-center justify-between w-full">
-        <Link href="/" className="text-lg font-bold text-black dark:text-white relative group py-1">
+        <Link href="/" className="text-lg font-bold text-foreground relative group py-1">
           {t.all}
           <span className="absolute bottom-[-2px] left-0 w-full h-[3px] bg-primary transform scale-x-100 transition-transform duration-300 ease-out group-hover:scale-x-105"></span>
         </Link>
@@ -248,7 +248,7 @@ const Header = () => {
           ) : isAuthenticated && user ? (
             <>
               {userRole === 'admin' && (
-                <Button variant="ghost" size="icon" asChild className="text-black dark:text-white hover:text-primary w-8 h-8">
+                <Button variant="ghost" size="icon" asChild className="text-foreground hover:text-primary w-8 h-8">
                   <Link href="/dashboard/admin" aria-label={t.adminDashboard}>
                     <LayoutDashboard className="h-5 w-5" />
                   </Link>
@@ -282,7 +282,7 @@ const Header = () => {
               </DropdownMenu>
             </>
           ) : (
-            <Button variant="ghost" size="sm" asChild className="text-sm text-black dark:text-white hover:text-primary px-2 py-1 h-auto">
+            <Button variant="ghost" size="sm" asChild className="text-sm text-foreground hover:text-primary px-2 py-1 h-auto">
               <Link href="/login">
                 <LogIn className="mr-1 h-4 w-4" /> {t.login}
               </Link>
@@ -293,7 +293,7 @@ const Header = () => {
             size="icon"
             onClick={toggleTheme}
             aria-label={t.toggleTheme}
-            className="text-black dark:text-white hover:text-primary w-8 h-8"
+            className="text-foreground hover:text-primary w-8 h-8"
           >
             {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
           </Button>
