@@ -18,9 +18,26 @@ export async function serverSubmitMbtiResult(data: SubmitMbtiResultData): Promis
   console.log('============================================================');
   console.log('[ServerAction serverSubmitMbtiResult] ACTION CALLED. Received data:', JSON.stringify(data, null, 2));
   try {
+    let finalUserId: string | null = data.userId || null;
+
+    if (data.userId) {
+      const userExists = await prisma.user.findUnique({
+        where: { id: data.userId },
+        select: { id: true } // Select only id for efficiency, we just need to check existence
+      });
+      if (!userExists) {
+        console.warn(`[ServerAction serverSubmitMbtiResult] Provided userId "${data.userId}" does not exist in User table. Saving MBTI result as unlinked.`);
+        finalUserId = null; // User does not exist, so save result without linking
+      } else {
+        console.log(`[ServerAction serverSubmitMbtiResult] User with ID "${data.userId}" verified. Proceeding to link MBTI result.`);
+      }
+    } else {
+      console.log("[ServerAction serverSubmitMbtiResult] No userId provided. Saving MBTI result as unlinked.");
+    }
+
     const newResult = await prisma.mbtiQuizResult.create({
       data: {
-        userId: data.userId || null, // Store null if userId is not provided
+        userId: finalUserId, // Use the verified or nulled-out userId
         mbtiType: data.mbti_type,
         scoreEI_E: data.score_breakdown.E,
         scoreEI_I: data.score_breakdown.I,
@@ -33,21 +50,22 @@ export async function serverSubmitMbtiResult(data: SubmitMbtiResultData): Promis
         // submittedAt is handled by @default(now()) in Prisma schema
       },
     });
-    console.log('[ServerAction serverSubmitMbtiResult] Result saved to DB with ID:', newResult.id);
+    console.log('[ServerAction serverSubmitMbtiResult] Result saved to DB with ID:', newResult.id, "Linked to userId:", newResult.userId);
     console.log('============================================================');
     return newResult;
   } catch (error: any) {
     console.error('============================================================');
     console.error('[ServerAction serverSubmitMbtiResult] Error calling prisma.mbtiQuizResult.create. Full error details below.');
+    let detailedErrorMessage = "Failed to submit MBTI results.";
     if (error instanceof Error) {
         console.error('[ServerAction serverSubmitMbtiResult] Error Name:', error.name);
         console.error('[ServerAction serverSubmitMbtiResult] Error Message:', error.message);
         console.error('[ServerAction serverSubmitMbtiResult] Error Stack:', error.stack);
+        detailedErrorMessage = error.message;
     } else {
         console.error('[ServerAction serverSubmitMbtiResult] Non-Error object thrown:', error);
     }
 
-    let detailedErrorMessage = error instanceof Error ? error.message : String(error);
     if (error.code) {
         console.error("[ServerAction serverSubmitMbtiResult] Prisma Error Code (from caught error):", error.code);
         detailedErrorMessage += ` (Prisma Code: ${error.code}`;

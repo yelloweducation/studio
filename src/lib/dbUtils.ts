@@ -265,7 +265,7 @@ export const addCourseToDb = async (
 
     const prismaCourseData: Prisma.CourseCreateInput = {
       ...mainCourseData,
-      instructor: instructorName,
+      instructor: instructorName, // Changed to simple string based on recent schema update
       category: { connect: { id: category.id } },
       categoryNameCache: category.name,
       learningObjectives: mainCourseData.learningObjectives || [],
@@ -310,7 +310,7 @@ export const addCourseToDb = async (
     try {
       createdCourse = await prisma.course.create({
         data: prismaCourseData,
-        include: { category: true, modules: { include: { lessons: true } }, quizzes: { include: { questions: { include: { options: true } } } } }
+        include: { category: true, modules: { include: { lessons: true } }, quizzes: { include: { questions: { include: { options: true, correctOption: true } } } } }
       });
     } catch (prismaCreateError: any) {
       console.error("[dbUtils-Prisma] addCourseToDb: PRISMA CREATE OPERATION FAILED.");
@@ -445,7 +445,7 @@ export const updateCourseInDb = async (
 
     const prismaCourseUpdateData: Prisma.CourseUpdateInput = {
       ...mainCourseData,
-      instructor: instructorName,
+      instructor: instructorName, // Changed to simple string
       learningObjectives: mainCourseData.learningObjectives || [],
       prerequisites: mainCourseData.prerequisites || [],
     };
@@ -499,7 +499,7 @@ export const updateCourseInDb = async (
       updatedCourse = await prisma.course.update({
         where: { id: courseId },
         data: prismaCourseUpdateData,
-        include: { category: true, modules: { include: { lessons: true } }, quizzes: { include: { questions: { include: { options: true } } } } }
+        include: { category: true, modules: { include: { lessons: true } }, quizzes: { include: { questions: { include: { options: true, correctOption: true } } } } }
       });
     } catch (prismaUpdateError: any) {
       console.error(`[dbUtils-Prisma] updateCourseInDb: PRISMA UPDATE OPERATION FAILED for course ID ${courseId}.`);
@@ -915,6 +915,29 @@ export const addPaymentSubmissionToDb = async (
     throw new Error(validation.error.flatten().fieldErrors._errors?.join(', ') || "Invalid payment submission data. Zod validation failed.");
   }
   console.log("[dbUtils-Prisma] addPaymentSubmissionToDb: Zod validation successful. Data for Prisma:", JSON.stringify(validation.data, null, 2));
+
+  // Verify user and course existence
+  try {
+    const userExists = await prisma.user.findUnique({ where: { id: validation.data.userId }, select: {id: true} });
+    if (!userExists) {
+      console.error(`[dbUtils-Prisma] addPaymentSubmissionToDb: User with ID ${validation.data.userId} not found.`);
+      throw new Error(`User with ID ${validation.data.userId} not found. Cannot create payment submission.`);
+    }
+    console.log(`[dbUtils-Prisma] addPaymentSubmissionToDb: User ${validation.data.userId} verified.`);
+
+    const courseExists = await prisma.course.findUnique({ where: { id: validation.data.courseId }, select: {id: true} });
+    if (!courseExists) {
+      console.error(`[dbUtils-Prisma] addPaymentSubmissionToDb: Course with ID ${validation.data.courseId} not found.`);
+      throw new Error(`Course with ID ${validation.data.courseId} not found. Cannot create payment submission.`);
+    }
+    console.log(`[dbUtils-Prisma] addPaymentSubmissionToDb: Course ${validation.data.courseId} verified.`);
+
+  } catch (existenceError: any) {
+      console.error("[dbUtils-Prisma] addPaymentSubmissionToDb: Error during existence check:", existenceError);
+      throw existenceError; // Re-throw the specific "User not found" or "Course not found" error
+  }
+
+
   try {
     const newSubmission = await prisma.paymentSubmission.create({
       data: {
@@ -924,7 +947,7 @@ export const addPaymentSubmissionToDb = async (
         currency: validation.data.currency,
         screenshotUrl: validation.data.screenshotUrl,
         status: 'PENDING', // Default status
-        submittedAt: new Date(), // Prisma schema has @default(now()), but can be explicit
+        submittedAt: new Date(),
       },
       include: { user: {select: {id:true, name:true, email:true}}, course: {select: {id:true, title: true}} }
     });
@@ -1120,7 +1143,7 @@ export const seedCoursesToDb = async (): Promise<{ successCount: number; errorCo
         id: cd.id,
         title: cd.title,
         description: cd.description,
-        instructor: cd.instructor,
+        instructor: cd.instructor, // Instructor as string
         imageUrl: cd.imageUrl,
         dataAiHint: cd.dataAiHint,
         price: cd.price,
@@ -1212,3 +1235,4 @@ export const seedPaymentSettingsToDb = async (): Promise<{ successCount: number;
       return{successCount:0,errorCount:1,skippedCount:0};
     }
 };
+
