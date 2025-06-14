@@ -2,7 +2,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { type PaymentSubmission, type User, type Course, type PaymentSubmissionStatus } from '@/lib/dbUtils'; // Using Prisma types from dbUtils
+import { type PaymentSubmission, type User, type Course, type PaymentSubmissionStatus } from '@/lib/dbUtils'; 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
@@ -20,8 +20,8 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { getPaymentSubmissionsFromDb, updatePaymentSubmissionInDb } from '@/lib/dbUtils'; // Updated to use Prisma dbUtils
-// Note: getAllUsersFromDb is now part of authUtils, no need to import directly if submissions include user details
+// Import Server Actions instead of direct dbUtils
+import { serverGetAllPaymentSubmissions, serverUpdatePaymentSubmissionStatus } from '@/actions/adminDataActions';
 
 export default function PaymentSubmissions() {
   const [submissions, setSubmissions] = useState<PaymentSubmission[]>([]);
@@ -36,7 +36,8 @@ export default function PaymentSubmissions() {
     const loadData = async () => {
       setIsLoading(true);
       try {
-        const submissionsFromDb = await getPaymentSubmissionsFromDb();
+        // Use Server Action to fetch submissions
+        const submissionsFromDb = await serverGetAllPaymentSubmissions();
         setSubmissions(submissionsFromDb);
       } catch (error) {
         console.error("Failed to load data for payment submissions:", error);
@@ -50,20 +51,21 @@ export default function PaymentSubmissions() {
   const getUserName = (submission: PaymentSubmission) => submission.user?.name || 'Unknown User';
   const getCourseTitle = (submission: PaymentSubmission) => submission.course?.title || 'Unknown Course';
 
-  const handleUpdateStatus = async (submissionId: string, newStatus: PaymentSubmissionStatus, notes?: string) => {
+  const handleUpdateStatus = async (submissionId: string, newStatus: PaymentSubmissionStatus, notes?: string | null) => {
     setIsUpdating(true);
     try {
-      await updatePaymentSubmissionInDb(submissionId, { status: newStatus, adminNotes: notes, reviewedAt: new Date() });
+      // Use Server Action to update status
+      const updatedSubmission = await serverUpdatePaymentSubmissionStatus(submissionId, newStatus, notes);
       setSubmissions(prev => prev.map(sub => 
         sub.id === submissionId 
-          ? { ...sub, status: newStatus, reviewedAt: new Date(), adminNotes: notes || sub.adminNotes } 
+          ? updatedSubmission
           : sub
       ));
       toast({ title: "Submission Updated", description: `Status changed to ${newStatus}.` });
       setEditingSubmission(null);
       setAdminNotes('');
     } catch (error) {
-      toast({ variant: "destructive", title: "Update Failed", description: "Could not update submission status." });
+      toast({ variant: "destructive", title: "Update Failed", description: (error as Error).message || "Could not update submission status." });
     } finally {
       setIsUpdating(false);
     }
@@ -214,7 +216,7 @@ export default function PaymentSubmissions() {
                     disabled={editingSubmission.status === 'REJECTED' || isUpdating}
                     className="shadow-md hover:shadow-sm active:translate-y-px transition-all duration-150"
                 >
-                    {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <XCircle className="mr-2 h-4 w-4" />} Reject
+                    {isUpdating && editingSubmission.status !== 'REJECTED' ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <XCircle className="mr-2 h-4 w-4" />} Reject
                 </Button>
                 <Button 
                     variant="default" 
@@ -222,7 +224,7 @@ export default function PaymentSubmissions() {
                     onClick={() => handleUpdateStatus(editingSubmission.id, 'APPROVED', adminNotes)}
                     disabled={editingSubmission.status === 'APPROVED' || isUpdating}
                 >
-                     {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CheckCircle className="mr-2 h-4 w-4" />} Approve
+                     {isUpdating && editingSubmission.status !== 'APPROVED' ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CheckCircle className="mr-2 h-4 w-4" />} Approve
                 </Button>
               </div>
                <DialogClose asChild>
@@ -237,3 +239,4 @@ export default function PaymentSubmissions() {
     </Card>
   );
 }
+
