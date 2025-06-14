@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
-import { Circle, Home } from 'lucide-react'; // Circle is not used here anymore, Home is.
+import { Home, Circle } from 'lucide-react'; // Added Circle
 import { Button } from '@/components/ui/button';
 
 const videoPageHeaderTranslations = {
@@ -18,7 +18,7 @@ const videoPageHeaderTranslations = {
 };
 
 interface VideoPageHeaderProps {
-  // isScrolled prop removed as background is always transparent
+  // isScrolled prop was removed, header is always transparent
 }
 
 const VideoPageHeader = (/*{ isScrolled }: VideoPageHeaderProps*/) => {
@@ -29,18 +29,19 @@ const VideoPageHeader = (/*{ isScrolled }: VideoPageHeaderProps*/) => {
     <header
       className={cn(
         "fixed top-0 left-0 right-0 z-40 flex h-14 items-center justify-between px-4 text-white transition-colors duration-300",
-        "bg-transparent" // Made header fully transparent
+        "bg-transparent" 
       )}
     >
       <div className="flex items-center gap-2">
-        {/* Optional: Add a small brand icon or "Reels" text if needed */}
-        {/* <VideoIcon size={20} className="text-primary" /> */}
-        <h1 className="text-lg font-semibold text-white">{t.forYou}</h1> {/* Text color to white for visibility on dark video backgrounds */}
+        <h1 className="text-lg font-semibold text-white flex items-center">
+          {t.forYou}
+          <Circle className="ml-1.5 h-2.5 w-2.5 fill-primary text-primary" />
+        </h1>
       </div>
 
-      <Button variant="ghost" size="icon" asChild aria-label={t.home} className="hover:bg-white/10">
+      <Button variant="ghost" size="icon" asChild aria-label={t.home} className="hover:bg-black/10">
         <Link href="/">
-          <Home className="h-6 w-6 text-white hover:text-primary" />
+          <Home className="h-6 w-6 text-black hover:text-gray-700" />
         </Link>
       </Button>
     </header>
@@ -48,5 +49,4 @@ const VideoPageHeader = (/*{ isScrolled }: VideoPageHeaderProps*/) => {
 };
 
 export default VideoPageHeader;
-
     
