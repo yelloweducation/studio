@@ -1,22 +1,27 @@
 
 import type {NextConfig} from 'next';
 
+// IMPORTANT: Content Security Policy (CSP)
+// This is a stricter default CSP. You MUST customize this policy thoroughly for your specific application.
+// Incorrect CSP can break functionality (scripts, styles, images, iframes, etc.).
+// - Add specific domains for any third-party services you use (analytics, payment gateways, media embeds, fonts, CDNs).
+// - Test thoroughly after enabling and modifying.
+// - Consider using a nonce or hash-based approach for inline scripts if 'unsafe-inline' for scripts is too permissive.
 const ContentSecurityPolicy = `
   default-src 'self';
-  script-src 'self' 'unsafe-eval' 'unsafe-inline' *.youtube.com *.googletagmanager.com;
-  child-src *.youtube.com *.google.com;
+  script-src 'self' 'unsafe-eval' 'unsafe-inline' *.youtube.com *.googletagmanager.com *.vercel-insights.com your-deployed-domain.com;
+  child-src 'self' *.youtube.com *.google.com;
   style-src 'self' 'unsafe-inline' *.googleapis.com;
-  img-src * blob: data:;
-  media-src 'self' *.youtube.com; 
-  connect-src *;
+  img-src 'self' blob: data: https:;
+  media-src 'self' *.youtube.com data:; 
+  connect-src 'self' *.vercel-insights.com your-api-domain.com;
   font-src 'self' data: *.gstatic.com;
   object-src 'none';
   base-uri 'self';
   form-action 'self';
   frame-ancestors 'none';
-  block-all-mixed-content;
   upgrade-insecure-requests;
-`;
+`.replace(/\s{2,}/g, ' ').trim(); // Minify the policy string
 
 const securityHeaders = [
   {
@@ -39,10 +44,10 @@ const securityHeaders = [
     key: 'Referrer-Policy',
     value: 'strict-origin-when-cross-origin'
   },
-  // { // CSP is complex and needs to be tailored. Disabled by default. Enable and configure carefully.
-  //   key: 'Content-Security-Policy',
-  //   value: ContentSecurityPolicy.replace(/\n/g, '').trim(),
-  // }
+  { 
+    key: 'Content-Security-Policy',
+    value: ContentSecurityPolicy, // CSP is now enabled
+  }
 ];
 
 

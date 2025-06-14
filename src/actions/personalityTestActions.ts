@@ -18,43 +18,38 @@ export async function serverSubmitMbtiResult(data: SubmitMbtiResultData): Promis
   console.log('============================================================');
   console.log('[ServerAction serverSubmitMbtiResult] ACTION CALLED. Received data:', JSON.stringify(data, null, 2));
   try {
-    let finalUserId: string | null = data.userId || null;
+    let finalUserIdForDb: string | null = null;
 
     if (data.userId) {
-      console.log(`[ServerAction serverSubmitMbtiResult] Checking existence for userId: "${data.userId}"`);
-      let userExistsPrismaResult = null;
+      console.log(`[ServerAction serverSubmitMbtiResult] Attempting to verify userId: "${data.userId}"`);
       try {
-        userExistsPrismaResult = await prisma.user.findUnique({
+        const userRecord = await prisma.user.findUnique({
           where: { id: data.userId },
-          select: { id: true } 
+          select: { id: true } // Only select id, no need for other fields
         });
-        console.log(`[ServerAction serverSubmitMbtiResult] prisma.user.findUnique result for ID "${data.userId}":`, JSON.stringify(userExistsPrismaResult));
-      } catch (userFindError: any) {
-        console.error(`[ServerAction serverSubmitMbtiResult] Error during prisma.user.findUnique for ID "${data.userId}":`, userFindError.message);
-        // If findUnique itself fails, we treat the user as not found for this submission.
-        finalUserId = null; 
-        console.warn(`[ServerAction serverSubmitMbtiResult] Due to error checking user, treating userId "${data.userId}" as not found. Saving MBTI result as unlinked.`);
-      }
 
-      // This condition ensures finalUserId is nulled if userExistsPrismaResult is null 
-      // AND finalUserId hasn't already been nulled by the catch block above.
-      if (userExistsPrismaResult === null && finalUserId !== null) { 
-        console.warn(`[ServerAction serverSubmitMbtiResult] Provided userId "${data.userId}" does not exist in User table (userExistsPrismaResult is null). Saving MBTI result as unlinked.`);
-        finalUserId = null;
-      } else if (userExistsPrismaResult !== null) {
-        console.log(`[ServerAction serverSubmitMbtiResult] User with ID "${data.userId}" verified. Proceeding to link MBTI result.`);
-        // finalUserId remains data.userId here
+        if (userRecord) {
+          console.log(`[ServerAction serverSubmitMbtiResult] User ID "${data.userId}" VERIFIED.`);
+          finalUserIdForDb = data.userId;
+        } else {
+          console.warn(`[ServerAction serverSubmitMbtiResult] User ID "${data.userId}" NOT FOUND. Saving MBTI result as unlinked.`);
+          finalUserIdForDb = null; // Explicitly set to null if user not found
+        }
+      } catch (err: any) {
+        // Handle errors during the user lookup itself (e.g., database connectivity issue)
+        console.error(`[ServerAction serverSubmitMbtiResult] Error during user verification for ID "${data.userId}": ${err.message}. Saving MBTI result as unlinked.`);
+        finalUserIdForDb = null; // Defensively set to null on error
       }
-      // If finalUserId was nulled by the catch block or the condition above, it's correctly null.
     } else {
-      console.log("[ServerAction serverSubmitMbtiResult] No userId provided. Saving MBTI result as unlinked.");
+      console.log("[ServerAction serverSubmitMbtiResult] No userId provided in input. Saving MBTI result as unlinked.");
+      finalUserIdForDb = null;
     }
 
-    console.log(`[ServerAction serverSubmitMbtiResult] finalUserId before creating MbtiQuizResult: "${finalUserId}"`);
+    console.log(`[ServerAction serverSubmitMbtiResult] finalUserIdForDb before creating MbtiQuizResult: "${finalUserIdForDb}"`);
 
     const newResult = await prisma.mbtiQuizResult.create({
       data: {
-        userId: finalUserId, 
+        userId: finalUserIdForDb, // Use the carefully determined finalUserIdForDb
         mbtiType: data.mbti_type,
         scoreEI_E: data.score_breakdown.E,
         scoreEI_I: data.score_breakdown.I,
@@ -64,7 +59,7 @@ export async function serverSubmitMbtiResult(data: SubmitMbtiResultData): Promis
         scoreTF_F: data.score_breakdown.F,
         scoreJP_J: data.score_breakdown.J,
         scoreJP_P: data.score_breakdown.P,
-        // submittedAt is handled by @default(now())
+        // submittedAt is handled by @default(now()) in schema, no need to set it here
       },
     });
     console.log('[ServerAction serverSubmitMbtiResult] Result saved to DB with ID:', newResult.id, "Linked to userId:", newResult.userId);
@@ -72,7 +67,7 @@ export async function serverSubmitMbtiResult(data: SubmitMbtiResultData): Promis
     return newResult;
   } catch (error: any) {
     console.error('============================================================');
-    console.error('[ServerAction serverSubmitMbtiResult] Error in serverSubmitMbtiResult. Full error details below.');
+    console.error('[ServerAction serverSubmitMbtiResult] Error calling prisma.mbtiQuizResult.create. Full error details below.');
     let detailedErrorMessage = "Failed to submit MBTI results.";
     if (error instanceof Error) {
         console.error('[ServerAction serverSubmitMbtiResult] Error Name:', error.name);

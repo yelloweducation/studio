@@ -1,15 +1,15 @@
 
-import type { Metadata, Viewport } from 'next'; // Added Viewport
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
-import { LanguageProvider } from '@/contexts/LanguageContext'; // Added
+import { LanguageProvider } from '@/contexts/LanguageContext';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Poppins, PT_Sans } from 'next/font/google';
-import { headers } from 'next/headers'; // Import headers
-import { siteConfig } from '@/config/site'; // Assuming you'll create this
+import { headers } from 'next/headers';
+import { siteConfig } from '@/config/site';
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -46,17 +46,17 @@ export const metadata: Metadata = {
       'max-snippet': -1,
     },
   },
-  manifest: '/manifest.json',
+  manifest: '/manifest.json', // Ensure manifest.json exists in /public and icons listed within are correct.
   openGraph: {
     type: "website",
-    locale: "en_US",
+    locale: "en_US", // Consider adding other locales if supported
     url: siteConfig.url,
     title: siteConfig.name,
     description: siteConfig.description,
     siteName: siteConfig.name,
     images: siteConfig.ogImage ? [
       {
-        url: siteConfig.ogImage,
+        url: siteConfig.ogImage, // Ensure this image (e.g., /public/og-image.png) exists
         width: 1200,
         height: 630,
         alt: `${siteConfig.name} - Online Learning Platform`,
@@ -71,19 +71,24 @@ export const metadata: Metadata = {
     creator: siteConfig.links?.twitter ? `@${siteConfig.links.twitter.split('/').pop()}` : undefined,
   },
   icons: {
-    icon: "/favicon.ico",
-    shortcut: "/favicon-16x16.png",
-    apple: "/apple-touch-icon.png",
+    icon: "/favicon.ico", // Ensure /public/favicon.ico exists
+    shortcut: "/favicon-16x16.png", // Ensure /public/favicon-16x16.png exists
+    apple: "/apple-touch-icon.png", // Ensure /public/apple-touch-icon.png exists
+    // Add other icon sizes if needed, e.g., for PWA manifest
+    // other: [
+    //   { rel: 'icon', url: '/icons/icon-32x32.png', sizes: '32x32' },
+    //   { rel: 'icon', url: '/icons/icon-192x192.png', sizes: '192x192' }, // This one was mentioned in an error log
+    // ],
   }
 };
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
+  maximumScale: 1, // Consider if user scaling is desired for accessibility
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#FACC15' }, 
-    { media: '(prefers-color-scheme: dark)', color: '#423A0E' },  
+    { media: '(prefers-color-scheme: light)', color: '#FACC15' }, // Yellow for light mode
+    { media: '(prefers-color-scheme: dark)', color: '#423A0E' },  // Dark Yellow/Brown for dark mode
   ],
 };
 
@@ -94,11 +99,12 @@ export default async function RootLayout({
 }>) {
   const requestHeaders = headers();
   const nextUrl = requestHeaders.get('next-url');
-  const pathname = nextUrl ? nextUrl : ''; // Refactored line
+  const pathname = nextUrl ? nextUrl : '';
 
   return (
     <html lang="en" suppressHydrationWarning className={`${poppins.variable} ${ptSans.variable}`}>
       <head>
+        {/* Any critical head tags can go here, but most are handled by Next.js Metadata API */}
       </head>
       <body className="font-body antialiased flex flex-col min-h-screen">
         <ThemeProvider>
@@ -106,7 +112,7 @@ export default async function RootLayout({
             <LanguageProvider>
               <Header />
               {pathname === '/videos' ? (
-                children
+                children // Video page takes full screen
               ) : (
                 <main className="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                   {children}
@@ -121,3 +127,4 @@ export default async function RootLayout({
     </html>
   );
 }
+
