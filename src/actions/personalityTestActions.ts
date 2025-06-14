@@ -21,23 +21,40 @@ export async function serverSubmitMbtiResult(data: SubmitMbtiResultData): Promis
     let finalUserId: string | null = data.userId || null;
 
     if (data.userId) {
-      const userExists = await prisma.user.findUnique({
-        where: { id: data.userId },
-        select: { id: true } // Select only id for efficiency, we just need to check existence
-      });
-      if (!userExists) {
-        console.warn(`[ServerAction serverSubmitMbtiResult] Provided userId "${data.userId}" does not exist in User table. Saving MBTI result as unlinked.`);
-        finalUserId = null; // User does not exist, so save result without linking
-      } else {
-        console.log(`[ServerAction serverSubmitMbtiResult] User with ID "${data.userId}" verified. Proceeding to link MBTI result.`);
+      console.log(`[ServerAction serverSubmitMbtiResult] Checking existence for userId: "${data.userId}"`);
+      let userExistsPrismaResult = null;
+      try {
+        userExistsPrismaResult = await prisma.user.findUnique({
+          where: { id: data.userId },
+          select: { id: true } 
+        });
+        console.log(`[ServerAction serverSubmitMbtiResult] prisma.user.findUnique result for ID "${data.userId}":`, JSON.stringify(userExistsPrismaResult));
+      } catch (userFindError: any) {
+        console.error(`[ServerAction serverSubmitMbtiResult] Error during prisma.user.findUnique for ID "${data.userId}":`, userFindError.message);
+        // If findUnique itself fails, we treat the user as not found for this submission.
+        finalUserId = null; 
+        console.warn(`[ServerAction serverSubmitMbtiResult] Due to error checking user, treating userId "${data.userId}" as not found. Saving MBTI result as unlinked.`);
       }
+
+      // This condition ensures finalUserId is nulled if userExistsPrismaResult is null 
+      // AND finalUserId hasn't already been nulled by the catch block above.
+      if (userExistsPrismaResult === null && finalUserId !== null) { 
+        console.warn(`[ServerAction serverSubmitMbtiResult] Provided userId "${data.userId}" does not exist in User table (userExistsPrismaResult is null). Saving MBTI result as unlinked.`);
+        finalUserId = null;
+      } else if (userExistsPrismaResult !== null) {
+        console.log(`[ServerAction serverSubmitMbtiResult] User with ID "${data.userId}" verified. Proceeding to link MBTI result.`);
+        // finalUserId remains data.userId here
+      }
+      // If finalUserId was nulled by the catch block or the condition above, it's correctly null.
     } else {
       console.log("[ServerAction serverSubmitMbtiResult] No userId provided. Saving MBTI result as unlinked.");
     }
 
+    console.log(`[ServerAction serverSubmitMbtiResult] finalUserId before creating MbtiQuizResult: "${finalUserId}"`);
+
     const newResult = await prisma.mbtiQuizResult.create({
       data: {
-        userId: finalUserId, // Use the verified or nulled-out userId
+        userId: finalUserId, 
         mbtiType: data.mbti_type,
         scoreEI_E: data.score_breakdown.E,
         scoreEI_I: data.score_breakdown.I,
@@ -47,7 +64,7 @@ export async function serverSubmitMbtiResult(data: SubmitMbtiResultData): Promis
         scoreTF_F: data.score_breakdown.F,
         scoreJP_J: data.score_breakdown.J,
         scoreJP_P: data.score_breakdown.P,
-        // submittedAt is handled by @default(now()) in Prisma schema
+        // submittedAt is handled by @default(now())
       },
     });
     console.log('[ServerAction serverSubmitMbtiResult] Result saved to DB with ID:', newResult.id, "Linked to userId:", newResult.userId);
@@ -55,7 +72,7 @@ export async function serverSubmitMbtiResult(data: SubmitMbtiResultData): Promis
     return newResult;
   } catch (error: any) {
     console.error('============================================================');
-    console.error('[ServerAction serverSubmitMbtiResult] Error calling prisma.mbtiQuizResult.create. Full error details below.');
+    console.error('[ServerAction serverSubmitMbtiResult] Error in serverSubmitMbtiResult. Full error details below.');
     let detailedErrorMessage = "Failed to submit MBTI results.";
     if (error instanceof Error) {
         console.error('[ServerAction serverSubmitMbtiResult] Error Name:', error.name);
