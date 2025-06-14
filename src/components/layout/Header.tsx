@@ -76,8 +76,9 @@ const Header = () => {
   const [headerVisible, setHeaderVisible] = useState(true);
 
   const isOnHomepage = pathname === '/';
-  const useScrollHidingHeader = isOnHomepage && !isMobile;
-  const headerScrollThreshold = 100;
+  // Allow scroll hiding/showing for mobile on homepage as well
+  const useScrollHidingHeader = isOnHomepage; 
+  const headerScrollThreshold = 50; // Reduced threshold for quicker effect
 
   const toggleTheme = useCallback(() => {
     contextToggleTheme();
@@ -85,34 +86,32 @@ const Header = () => {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+
     const controlHeaderBackground = () => {
       if (pathname === '/videos') {
         setDynamicHeaderBackgroundClasses('bg-transparent border-transparent');
-      } else if (isMobile) {
-        // Mobile header is always transparent as per recent request
+      } else if (window.scrollY < headerScrollThreshold) {
         setDynamicHeaderBackgroundClasses('bg-transparent border-transparent');
       } else {
-        // Desktop header behavior
-        setDynamicHeaderBackgroundClasses(
-          window.scrollY < 50
-            ? 'bg-transparent border-transparent'
-            : 'bg-background/80 backdrop-blur-md border-b'
-        );
+        setDynamicHeaderBackgroundClasses('bg-background/80 backdrop-blur-md border-b');
       }
     };
+
     controlHeaderBackground(); // Initial check
     window.addEventListener('scroll', controlHeaderBackground, { passive: true });
     return () => window.removeEventListener('scroll', controlHeaderBackground);
-  }, [pathname, isMobile]); // isMobile dependency ensures this re-evaluates if screen size changes past breakpoint
+  }, [pathname, headerScrollThreshold]);
+
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !useScrollHidingHeader || isMobile) {
+    if (typeof window === 'undefined' || !useScrollHidingHeader) {
       setHeaderVisible(true);
       return;
     }
     let lastScrollYLocal = window.scrollY;
     const controlHeaderVisibility = () => {
       const currentScrollY = window.scrollY;
+      // Hide if scrolling down past threshold, show if scrolling up or near top
       if (currentScrollY > headerScrollThreshold && currentScrollY > lastScrollYLocal) {
         setHeaderVisible(false);
       } else {
@@ -123,7 +122,7 @@ const Header = () => {
     controlHeaderVisibility();
     window.addEventListener('scroll', controlHeaderVisibility, { passive: true });
     return () => window.removeEventListener('scroll', controlHeaderVisibility);
-  }, [pathname, useScrollHidingHeader, headerScrollThreshold, isMobile]);
+  }, [pathname, useScrollHidingHeader, headerScrollThreshold]);
 
   if (pathname === '/videos') return null;
 
@@ -133,18 +132,18 @@ const Header = () => {
   }, [logout, router]);
 
   const getDashboardPath = useCallback(() => {
-    if (!isAuthenticated) return '/login';
+    if (!isAuthenticated) return '/login'; // If not auth, dashboard icon goes to login
     const userRoleLower = role?.toLowerCase();
     if (userRoleLower === 'admin') return '/dashboard/admin';
     if (userRoleLower === 'student') return '/dashboard/student';
-    return '/';
+    return '/login'; // Fallback
   }, [isAuthenticated, role]);
 
   const UserAvatar = React.memo(({ user: usr }: { user: { name?: string | null, avatarUrl?: string | null } | null }) => (
-    <Avatar className="h-8 w-8"> {/* Consistent size for avatar */}
+    <Avatar className="h-8 w-8">
       <AvatarImage src={usr?.avatarUrl || undefined} alt={usr?.name || 'User'} />
       <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-        {usr?.name ? usr.name.charAt(0).toUpperCase() : <UserCircle size={18}/>} {/* Slightly smaller fallback icon */}
+        {usr?.name ? usr.name.charAt(0).toUpperCase() : <UserCircle size={18}/>}
       </AvatarFallback>
     </Avatar>
   ));
@@ -188,7 +187,7 @@ const Header = () => {
         ) : isAuthenticated && user ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0"> {/* h-9 w-9 for desktop avatar button */}
+              <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0">
                 <UserAvatar user={user} />
               </Button>
             </DropdownMenuTrigger>
@@ -242,58 +241,51 @@ const Header = () => {
 
     return (
       <div className="flex items-center justify-between w-full">
-        {/* "ALL" Link on the left, responsive font size */}
-        <Link href="/" className="text-base sm:text-lg font-bold text-foreground hover:text-primary/80 transition-colors relative group py-1">
-          ALL
-          <span className="absolute bottom-[-2px] left-0 w-full h-[3px] bg-primary transform scale-x-100 transition-transform duration-300 ease-out group-hover:scale-x-105"></span>
+        <Link href="/" className="text-sm sm:text-base font-bold text-foreground hover:text-primary/80 transition-colors relative group py-1">
+          ALL 
+          <span className="absolute bottom-[-2px] left-0 w-full h-[2.5px] sm:h-[3px] bg-primary transform scale-x-100 transition-transform duration-300 ease-out group-hover:scale-x-105"></span>
         </Link>
 
-        {/* Icons on the right, using gap-1 for very small screens, gap-1.5 for sm and up */}
-        <div className="flex items-center gap-1 sm:gap-1.5"> 
+        <div className="flex items-center gap-0.5 sm:gap-1">
+          <Button variant="ghost" size="icon" asChild className="text-foreground hover:text-primary w-8 h-8 sm:w-9 sm:h-9">
+            <Link href={getDashboardPath()} aria-label={t.dashboard}>
+              <LayoutDashboard className="h-5 w-5 sm:h-[22px] sm:w-[22px]" />
+            </Link>
+          </Button>
+
           {authLoading ? (
-            <Button variant="ghost" size="icon" disabled className="w-8 h-8 text-foreground"> {/* Ensure consistent size */}
-              <Loader2 className="h-5 w-5 animate-spin" />
+            <Button variant="ghost" size="icon" disabled className="text-foreground w-8 h-8 sm:w-9 sm:h-9">
+              <Loader2 className="h-5 w-5 sm:h-[22px] sm:w-[22px] animate-spin" />
             </Button>
           ) : isAuthenticated && user ? (
-            <>
-              {userRole === 'admin' && (
-                <Button variant="ghost" size="icon" asChild className="text-foreground hover:text-primary w-8 h-8">
-                  <Link href="/dashboard/admin" aria-label={t.adminDashboard}>
-                    <LayoutDashboard className="h-5 w-5" />
-                  </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 sm:h-9 sm:w-9 rounded-full p-0">
+                  <UserAvatar user={user} />
                 </Button>
-              )}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full p-0">
-                    <UserAvatar user={user} />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="end" forceMount>
-                  <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">{user.name}</p>
-                      <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href={getDashboardPath()}><LayoutDashboard className="mr-2 h-4 w-4" /> {t.dashboard}</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/dashboard/settings"><SettingsIcon className="mr-2 h-4 w-4" /> {t.settings}</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
-                    <LogOut className="mr-2 h-4 w-4" /> {t.logout}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">{user.name}</p>
+                    <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                 {/* Dashboard link inside dropdown is removed for mobile since there's a direct icon */}
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard/settings"><SettingsIcon className="mr-2 h-4 w-4" /> {t.settings}</Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+                  <LogOut className="mr-2 h-4 w-4" /> {t.logout}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
-            <Button variant="ghost" size="sm" asChild className="text-sm text-foreground hover:text-primary px-2 py-1 h-auto">
-              <Link href="/login">
-                <LogIn className="mr-1 h-4 w-4" /> {t.login}
+            <Button variant="ghost" size="icon" asChild className="text-foreground hover:text-primary w-8 h-8 sm:w-9 sm:h-9">
+              <Link href="/login" aria-label={t.login}>
+                <LogIn className="h-5 w-5 sm:h-[22px] sm:w-[22px]" />
               </Link>
             </Button>
           )}
@@ -302,9 +294,9 @@ const Header = () => {
             size="icon"
             onClick={toggleTheme}
             aria-label={t.toggleTheme}
-            className="text-foreground hover:text-primary w-8 h-8" // Consistent size
+            className="text-foreground hover:text-primary w-8 h-8 sm:w-9 sm:h-9"
           >
-            {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+            {theme === 'light' ? <Moon className="h-5 w-5 sm:h-[22px] sm:w-[22px]" /> : <Sun className="h-5 w-5 sm:h-[22px] sm:w-[22px]" />}
           </Button>
         </div>
       </div>
@@ -316,7 +308,9 @@ const Header = () => {
       className={cn(
         "sticky top-0 z-50 w-full transition-all duration-300 ease-in-out",
         dynamicHeaderBackgroundClasses,
-        {'!-translate-y-full': !headerVisible && useScrollHidingHeader && !isMobile }
+        // Apply hide/show logic based on headerVisible and useScrollHidingHeader
+        // No need to check isMobile here as useScrollHidingHeader now considers mobile for homepage
+        {'!-translate-y-full': !headerVisible && useScrollHidingHeader } 
       )}
     >
       <div className="container mx-auto px-4 flex items-center justify-between min-h-[56px] sm:min-h-[60px] py-2">
@@ -327,3 +321,5 @@ const Header = () => {
 };
 
 export default Header;
+
+    
