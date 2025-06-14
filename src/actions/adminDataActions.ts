@@ -60,31 +60,35 @@ export async function serverAddCourse(
     quizzes?: Array<Partial<Omit<Quiz, 'id'|'courseId'|'createdAt'|'updatedAt'|'questions'>> & { quizType: PrismaQuizType, questions?: Array<Partial<Omit<Question, 'id'|'quizId'|'createdAt'|'updatedAt'|'options'|'correctOptionId'>> & { options: Array<Partial<Omit<Option, 'id'|'questionId'|'createdAt'|'updatedAt'>>>, correctOptionText?: string }> }>
   }
 ): Promise<Course> {
-  console.log("[ServerAction serverAddCourse] Action called. Received data:", JSON.stringify(courseData, null, 2));
+  console.log("============================================================");
+  console.log("[ServerAction serverAddCourse] ACTION CALLED. Received data:", JSON.stringify(courseData, null, 2));
   try {
     const newCourse = await addCourseToDb(courseData);
     console.log("[ServerAction serverAddCourse] addCourseToDb successful, returning course ID:", newCourse.id);
+    console.log("============================================================");
     return newCourse;
-  } catch (error) {
+  } catch (error: any) {
+    console.error("============================================================");
     console.error("[ServerAction serverAddCourse] Error calling addCourseToDb. Full error details below.");
     if (error instanceof Error) {
         console.error("[ServerAction serverAddCourse] Error Name:", error.name);
         console.error("[ServerAction serverAddCourse] Error Message:", error.message);
         console.error("[ServerAction serverAddCourse] Error Stack:", error.stack);
-        // @ts-ignore
-        if (error.digest) { console.error("[ServerAction serverAddCourse] Error Digest:", error.digest); }
-        // @ts-ignore
-        if (error.code) { console.error("[ServerAction serverAddCourse] Prisma Error Code:", error.code); }
-        // @ts-ignore
-        if (error.meta) { console.error("[ServerAction serverAddCourse] Prisma Error Meta:", JSON.stringify(error.meta, null, 2)); }
-        // @ts-ignore
-        if (error.clientVersion) { console.error("[ServerAction serverAddCourse] Prisma Client Version:", error.clientVersion); }
-
-
     } else {
         console.error("[ServerAction serverAddCourse] Non-Error object thrown:", error);
     }
-    throw error; 
+    // Log Prisma-specific details if they are on the error object
+    if (error.code) { console.error("[ServerAction serverAddCourse] Prisma Error Code (from caught error):", error.code); }
+    if (error.meta) { console.error("[ServerAction serverAddCourse] Prisma Error Meta (from caught error):", JSON.stringify(error.meta, null, 2)); }
+    if (error.clientVersion) { console.error("[ServerAction serverAddCourse] Prisma Client Version (from caught error):", error.clientVersion); }
+    if (error.digest) { console.error("[ServerAction serverAddCourse] Error Digest:", error.digest); }
+    
+    console.error("============================================================");
+    // Rethrow a new error to ensure a digest property is available for Next.js
+    const newError = new Error(`ServerAction serverAddCourse failed: ${error instanceof Error ? error.message : String(error)}`);
+    // @ts-ignore
+    newError.digest = error.digest || `serverAddCourse-error-${Date.now()}`;
+    throw newError; 
   }
 }
 export async function serverUpdateCourse(
@@ -95,29 +99,33 @@ export async function serverUpdateCourse(
     quizzes?: Array<Partial<Omit<Quiz, 'id'|'courseId'|'createdAt'|'updatedAt'|'questions'>> & { id?: string, quizType: PrismaQuizType, questions?: Array<Partial<Omit<Question, 'id'|'quizId'|'createdAt'|'updatedAt'|'options'|'correctOptionId'>> & { id?: string, options: Array<Partial<Omit<Option, 'id'|'questionId'|'createdAt'|'updatedAt'>> & {id?:string}>, correctOptionText?: string }> }>
   }
 ): Promise<Course> {
-  console.log(`[ServerAction serverUpdateCourse] Action called for course ID ${courseId}. Received data:`, JSON.stringify(courseData, null, 2));
+  console.log("============================================================");
+  console.log(`[ServerAction serverUpdateCourse] ACTION CALLED for course ID ${courseId}. Received data:`, JSON.stringify(courseData, null, 2));
   try {
     const updatedCourse = await updateCourseInDb(courseId, courseData);
     console.log(`[ServerAction serverUpdateCourse] updateCourseInDb successful for course ID ${courseId}, returning course ID:`, updatedCourse.id);
+    console.log("============================================================");
     return updatedCourse;
-  } catch (error) {
+  } catch (error: any) {
+    console.error("============================================================");
     console.error(`[ServerAction serverUpdateCourse] Error calling updateCourseInDb for course ID ${courseId}. Full error details below.`);
     if (error instanceof Error) {
         console.error(`[ServerAction serverUpdateCourse] Error name:`, error.name);
         console.error(`[ServerAction serverUpdateCourse] Error message:`, error.message);
         console.error(`[ServerAction serverUpdateCourse] Error Stack:`, error.stack);
-        // @ts-ignore
-        if (error.digest) { console.error("[ServerAction serverUpdateCourse] Error Digest:", error.digest); }
-        // @ts-ignore
-        if (error.code) { console.error("[ServerAction serverUpdateCourse] Prisma Error Code:", error.code); }
-        // @ts-ignore
-        if (error.meta) { console.error("[ServerAction serverUpdateCourse] Prisma Error Meta:", JSON.stringify(error.meta, null, 2)); }
-        // @ts-ignore
-        if (error.clientVersion) { console.error("[ServerAction serverUpdateCourse] Prisma Client Version:", error.clientVersion); }
     } else {
          console.error(`[ServerAction serverUpdateCourse] Non-Error object thrown for course ID ${courseId}:`, error);
     }
-    throw error;
+    // Log Prisma-specific details
+    if (error.code) { console.error("[ServerAction serverUpdateCourse] Prisma Error Code (from caught error):", error.code); }
+    if (error.meta) { console.error("[ServerAction serverUpdateCourse] Prisma Error Meta (from caught error):", JSON.stringify(error.meta, null, 2)); }
+    if (error.clientVersion) { console.error("[ServerAction serverUpdateCourse] Prisma Client Version (from caught error):", error.clientVersion); }
+    if (error.digest) { console.error("[ServerAction serverUpdateCourse] Error Digest:", error.digest); }
+    console.error("============================================================");
+    const newError = new Error(`ServerAction serverUpdateCourse failed for ID ${courseId}: ${error instanceof Error ? error.message : String(error)}`);
+    // @ts-ignore
+    newError.digest = error.digest || `serverUpdateCourse-error-${Date.now()}`;
+    throw newError;
   }
 }
 export async function serverDeleteCourse(courseId: string): Promise<void> { return deleteCourseFromDb(courseId); }
@@ -238,4 +246,6 @@ export async function serverUpsertSitePage(
 ): Promise<SitePage> {
   return upsertSitePageDbUtil(slug, title, content);
 }
+    
+
     
