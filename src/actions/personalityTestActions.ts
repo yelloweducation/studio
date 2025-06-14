@@ -30,7 +30,7 @@ export async function serverSubmitMbtiResult(data: SubmitMbtiResultData): Promis
         scoreTF_F: data.score_breakdown.F,
         scoreJP_J: data.score_breakdown.J,
         scoreJP_P: data.score_breakdown.P,
-        // submittedAt: new Date(), // Removed: Prisma schema handles this with @default(now())
+        // submittedAt is handled by @default(now()) in Prisma schema
       },
     });
     console.log('[ServerAction serverSubmitMbtiResult] Result saved to DB with ID:', newResult.id);
@@ -46,27 +46,25 @@ export async function serverSubmitMbtiResult(data: SubmitMbtiResultData): Promis
     } else {
         console.error('[ServerAction serverSubmitMbtiResult] Non-Error object thrown:', error);
     }
-    
+
     let detailedErrorMessage = error instanceof Error ? error.message : String(error);
-    if (error.code) { 
-        console.error("[ServerAction serverSubmitMbtiResult] Prisma Error Code (from caught error):", error.code); 
+    if (error.code) {
+        console.error("[ServerAction serverSubmitMbtiResult] Prisma Error Code (from caught error):", error.code);
         detailedErrorMessage += ` (Prisma Code: ${error.code}`;
         if (error.meta) {
-            console.error("[ServerAction serverSubmitMbtiResult] Prisma Error Meta (from caught error):", JSON.stringify(error.meta, null, 2)); 
+            console.error("[ServerAction serverSubmitMbtiResult] Prisma Error Meta (from caught error):", JSON.stringify(error.meta, null, 2));
             detailedErrorMessage += `, Meta: ${JSON.stringify(error.meta)}`;
         }
         detailedErrorMessage += `)`;
     }
     if (error.clientVersion) { console.error("[ServerAction serverSubmitMbtiResult] Prisma Client Version (from caught error):", error.clientVersion); }
     if (error.digest) { console.error("[ServerAction serverSubmitMbtiResult] Error Digest:", error.digest); }
-    
+
     console.error('============================================================');
-    // Re-throw a new error with potentially more details to aid client-side debugging if possible
     const newError = new Error(`ServerAction serverSubmitMbtiResult failed: ${detailedErrorMessage}`);
     // @ts-ignore
     newError.digest = error.digest || error.code || `serverSubmitMbtiResult-error-${Date.now()}`;
     throw newError;
   }
 }
-
     

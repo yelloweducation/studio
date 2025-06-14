@@ -1,7 +1,7 @@
 
-import prisma from './prisma'; 
-import type { Prisma } from '@prisma/client'; 
-import { 
+import prisma from './prisma';
+import type { Prisma } from '@prisma/client';
+import {
   mockCoursesForSeeding,
   mockCategoriesForSeeding,
   mockVideosForSeeding as mockVideosForSeedingData,
@@ -16,11 +16,11 @@ if (process.env.DATABASE_URL) {
   console.log("[dbUtils-Prisma] DATABASE_URL (first 30 chars for initial check):", process.env.DATABASE_URL.substring(0, 30) + "...");
 }
 
-export type { 
+export type {
     Category, Course, Module, Lesson, Quiz, Question, Option, SitePage,
     LearningPath, User, Video, PaymentSettings, PaymentSubmission, Enrollment,
-    PrismaPaymentStatus as PaymentSubmissionStatus, 
-    PrismaQuizTypeTypeAlias as QuizType 
+    PrismaPaymentStatus as PaymentSubmissionStatus,
+    PrismaQuizTypeTypeAlias as QuizType
 };
 
 const CategoryInputSchema = z.object({
@@ -40,17 +40,17 @@ const QuestionInputSchema = z.object({
   text: z.string().min(1, "Question text is required"),
   order: z.number().int().default(0),
   points: z.number().int().optional().nullable(),
-  options: z.array(OptionInputSchema).min(1, "At least one option is required"), 
-  correctOptionId: z.string().optional().nullable(), 
-  correctOptionText: z.string().optional().nullable(), 
+  options: z.array(OptionInputSchema).min(1, "At least one option is required"),
+  correctOptionId: z.string().optional().nullable(),
+  correctOptionText: z.string().optional().nullable(),
 });
 
 const QuizInputSchema = z.object({
   id: z.string().optional(),
   title: z.string().min(1, "Quiz title is required"),
-  quizType: z.string().transform(val => val.toUpperCase()).pipe(z.nativeEnum(PrismaQuizTypeEnum)), 
+  quizType: z.string().transform(val => val.toUpperCase()).pipe(z.nativeEnum(PrismaQuizTypeEnum)),
   passingScore: z.number().int().min(0).max(100).optional().nullable(),
-  questions: z.array(QuestionInputSchema).optional(), 
+  questions: z.array(QuestionInputSchema).optional(),
 });
 
 const LessonInputSchema = z.object({
@@ -67,14 +67,14 @@ const ModuleInputSchema = z.object({
   id: z.string().optional(),
   title: z.string().min(1, "Module title is required"),
   order: z.number().int().default(0),
-  lessons: z.array(LessonInputSchema).optional(), 
+  lessons: z.array(LessonInputSchema).optional(),
 });
 
 const CourseInputSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().min(1, "Description is required"),
-  categoryName: z.string().min(1, "Category name is required"), 
-  instructor: z.string().min(1, "Instructor name is required"), // Kept as string for simplicity matching form
+  categoryName: z.string().min(1, "Category name is required"),
+  instructor: z.string().min(1, "Instructor name is required"),
   imageUrl: z.string().url("Invalid image URL").optional().nullable(),
   dataAiHint: z.string().max(100, "AI hint too long").optional().nullable(),
   price: z.number().min(0).optional().nullable(),
@@ -84,11 +84,11 @@ const CourseInputSchema = z.object({
   targetAudience: z.string().optional().nullable(),
   prerequisites: z.array(z.string()).optional(),
   estimatedTimeToComplete: z.string().optional().nullable(),
-  modules: z.array(ModuleInputSchema).optional(), 
-  quizzes: z.array(QuizInputSchema).optional(),   
+  modules: z.array(ModuleInputSchema).optional(),
+  quizzes: z.array(QuizInputSchema).optional(),
 });
 
-const VideoInputSchema = z.object({ 
+const VideoInputSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().min(1, "Description is required"),
   thumbnailUrl: z.string().url("Invalid thumbnail URL").optional().nullable(),
@@ -112,7 +112,7 @@ const PaymentSubmissionInputSchema = z.object({
   courseId: z.string().min(1, "Course ID is required"),
   amount: z.number().positive("Amount must be positive"),
   currency: z.string().min(1, "Currency is required"),
-  screenshotUrl: z.string().url("Screenshot URL must be a valid URL.").refine(val => val.startsWith('data:image/') || val.startsWith('http') || val.startsWith('https'), { 
+  screenshotUrl: z.string().url("Screenshot URL must be a valid URL.").refine(val => val.startsWith('data:image/') || val.startsWith('http') || val.startsWith('https'), {
     message: "Screenshot must be a valid data URI image or an HTTP(S) URL.",
   }),
 });
@@ -126,7 +126,7 @@ const PaymentSettingsInputSchema = z.object({
 
 const SitePageInputSchema = z.object({
   title: z.string().min(1, "Title is required"),
-  content: z.any(), 
+  content: z.any(),
 });
 
 
@@ -192,8 +192,8 @@ export const getCoursesFromDb = async (): Promise<Course[]> => {
   console.log("[dbUtils-Prisma] getCoursesFromDb: Fetching courses...");
   try {
     const courses = await prisma.course.findMany({
-      include: { 
-        category: true, 
+      include: {
+        category: true,
         modules: { include: { lessons: true }, orderBy: { order: 'asc' } },
         quizzes: { include: { questions: { include: { options: true, correctOption: true }, orderBy: {order: 'asc'} } } }
       },
@@ -233,9 +233,9 @@ export const getCourseByIdFromDb = async (courseId: string): Promise<Course | nu
 };
 
 export const addCourseToDb = async (
-  courseData: Omit<Course, 'id'|'createdAt'|'updatedAt'|'categoryId'|'categoryNameCache'|'modules'|'quizzes'|'learningPathCourses'|'category'|'enrollments'|'paymentSubmissions'> & { 
-    categoryName: string, 
-    instructor: string, // Ensure this is here
+  courseData: Omit<Course, 'id'|'createdAt'|'updatedAt'|'categoryId'|'categoryNameCache'|'modules'|'quizzes'|'learningPathCourses'|'category'|'enrollments'|'paymentSubmissions'> & {
+    categoryName: string,
+    instructor: string,
     modules?: Array<Partial<Omit<Module, 'id'|'courseId'|'createdAt'|'updatedAt'|'lessons'>> & { lessons?: Array<Partial<Omit<Lesson, 'id'|'moduleId'|'createdAt'|'updatedAt'>>> }>,
     quizzes?: Array<Partial<Omit<Quiz, 'id'|'courseId'|'createdAt'|'updatedAt'|'questions'>> & { quizType: PrismaQuizTypeEnum, questions?: Array<Partial<Omit<Question, 'id'|'quizId'|'createdAt'|'updatedAt'|'options'|'correctOptionId'>> & { options: Array<Partial<Omit<Option, 'id'|'questionId'|'createdAt'|'updatedAt'>>>, correctOptionText?: string }> }>
   }
@@ -243,7 +243,7 @@ export const addCourseToDb = async (
   console.log("============================================================");
   console.log("[dbUtils-Prisma] addCourseToDb: STARTING COURSE ADDITION PROCESS.");
   console.log("[dbUtils-Prisma] addCourseToDb: Input courseData (raw from server action):", JSON.stringify(courseData, null, 2));
-  
+
   const validation = CourseInputSchema.safeParse(courseData);
   if (!validation.success) {
     console.error("[dbUtils-Prisma] addCourseToDb: ZOD VALIDATION FAILED. Errors:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
@@ -265,9 +265,9 @@ export const addCourseToDb = async (
 
     const prismaCourseData: Prisma.CourseCreateInput = {
       ...mainCourseData,
-      instructor: instructorName, // Directly assign the string
+      instructor: instructorName,
       category: { connect: { id: category.id } },
-      categoryNameCache: category.name, 
+      categoryNameCache: category.name,
       learningObjectives: mainCourseData.learningObjectives || [],
       prerequisites: mainCourseData.prerequisites || [],
       modules: modules ? {
@@ -289,7 +289,7 @@ export const addCourseToDb = async (
       quizzes: quizzes ? {
         create: quizzes.map((quizData) => ({
           title: quizData.title!,
-          quizType: quizData.quizType!, // Zod already transformed this to enum
+          quizType: quizData.quizType!,
           passingScore: quizData.passingScore,
           questions: quizData.questions ? {
             create: quizData.questions.map(q => ({
@@ -302,10 +302,10 @@ export const addCourseToDb = async (
         })),
       } : undefined,
     };
-    
+
     console.log("[dbUtils-Prisma] addCourseToDb: FINAL prismaCourseData structure to be sent to prisma.course.create:", JSON.stringify(prismaCourseData, null, 2));
     console.log("[dbUtils-Prisma] addCourseToDb: Attempting prisma.course.create...");
-    
+
     let createdCourse;
     try {
       createdCourse = await prisma.course.create({
@@ -318,15 +318,15 @@ export const addCourseToDb = async (
       if (prismaCreateError.code) console.error("[dbUtils-Prisma] addCourseToDb: Prisma Create Error Code:", prismaCreateError.code);
       if (prismaCreateError.meta) console.error("[dbUtils-Prisma] addCourseToDb: Prisma Create Error Meta:", JSON.stringify(prismaCreateError.meta, null, 2));
       if (prismaCreateError.message) console.error("[dbUtils-Prisma] addCourseToDb: Prisma Create Error Message:", prismaCreateError.message);
-      throw prismaCreateError; 
+      throw prismaCreateError;
     }
     console.log("[dbUtils-Prisma] addCourseToDb: Course record created successfully with ID:", createdCourse.id);
 
-    if (createdCourse.quizzes && quizzes) { 
+    if (createdCourse.quizzes && quizzes) {
       console.log("[dbUtils-Prisma] addCourseToDb: Starting correctOptionId update loop for new quizzes.");
       for (let i = 0; i < createdCourse.quizzes.length; i++) {
           const dbQuiz = createdCourse.quizzes[i];
-          const formQuiz = quizzes[i]; 
+          const formQuiz = quizzes[i];
           console.log(`[dbUtils-Prisma] addCourseToDb: Processing quiz index ${i}, DB Quiz ID: ${dbQuiz.id}, Form Quiz Title: ${formQuiz?.title}`);
           if (dbQuiz.questions && formQuiz?.questions) {
               for (let j = 0; j < dbQuiz.questions.length; j++) {
@@ -362,7 +362,7 @@ export const addCourseToDb = async (
     } else {
         console.log("[dbUtils-Prisma] addCourseToDb: No quizzes found in createdCourse or form data to process for correctOptionId updates.");
     }
-    
+
     console.log("[dbUtils-Prisma] addCourseToDb: Fetching final, fully populated course details for ID:", createdCourse.id);
     const finalCourse = await getCourseByIdFromDb(createdCourse.id);
     if (!finalCourse) {
@@ -384,9 +384,9 @@ export const addCourseToDb = async (
     } else {
         console.error("[dbUtils-Prisma] addCourseToDb: Caught non-Error object:", error);
     }
-    
-    if (error.code) {  
-        console.error("[dbUtils-Prisma] addCourseToDb: Prisma Error Code (from caught error):", error.code); 
+
+    if (error.code) {
+        console.error("[dbUtils-Prisma] addCourseToDb: Prisma Error Code (from caught error):", error.code);
         if (error.code === 'P2002') { console.error("[dbUtils-Prisma] addCourseToDb: Prisma P2002 (Unique constraint violation). Target fields:", error.meta?.target); }
         else if (error.code === 'P2003') { console.error("[dbUtils-Prisma] addCourseToDb: Prisma P2003 (Foreign key constraint violation). Field name:", error.meta?.field_name); }
         else if (error.code === 'P2025') { console.error("[dbUtils-Prisma] addCourseToDb: Prisma P2025 (Required record not found for relation). Details:", error.meta?.cause || error.message); }
@@ -395,15 +395,15 @@ export const addCourseToDb = async (
     if (error.meta) { console.error("[dbUtils-Prisma] addCourseToDb: Prisma Error Meta (from caught error):", JSON.stringify(error.meta, null, 2)); }
     if (error.clientVersion) { console.error("[dbUtils-Prisma] addCourseToDb: Prisma Client Version (from caught error):", error.clientVersion); }
     console.error("============================================================");
-    throw error; 
+    throw error;
   }
 };
 
 export const updateCourseInDb = async (
-  courseId: string, 
-  courseData: Partial<Omit<Course, 'id'|'createdAt'|'updatedAt'|'categoryId'|'categoryNameCache'|'modules'|'quizzes'|'learningPathCourses'|'category'|'enrollments'|'paymentSubmissions'>> & { 
-    categoryName?: string, 
-    instructor?: string, // Ensure this is here
+  courseId: string,
+  courseData: Partial<Omit<Course, 'id'|'createdAt'|'updatedAt'|'categoryId'|'categoryNameCache'|'modules'|'quizzes'|'learningPathCourses'|'category'|'enrollments'|'paymentSubmissions'>> & {
+    categoryName?: string,
+    instructor?: string,
     modules?: Array<Partial<Omit<Module, 'id'|'courseId'|'createdAt'|'updatedAt'|'lessons'>> & { id?: string, lessons?: Array<Partial<Omit<Lesson, 'id'|'moduleId'|'createdAt'|'updatedAt'>> & {id?: string}> }>,
     quizzes?: Array<Partial<Omit<Quiz, 'id'|'courseId'|'createdAt'|'updatedAt'|'questions'>> & { id?: string, quizType: PrismaQuizTypeEnum, questions?: Array<Partial<Omit<Question, 'id'|'quizId'|'createdAt'|'updatedAt'|'options'|'correctOptionId'>> & { id?: string, options: Array<Partial<Omit<Option, 'id'|'questionId'|'createdAt'|'updatedAt'>> & {id?:string}>, correctOptionText?: string }> }>
   }
@@ -411,7 +411,7 @@ export const updateCourseInDb = async (
   console.log("============================================================");
   console.log(`[dbUtils-Prisma] updateCourseInDb: STARTING COURSE UPDATE for ID ${courseId}.`);
   console.log("[dbUtils-Prisma] updateCourseInDb: Input courseData (raw from server action):", JSON.stringify(courseData, null, 2));
-  
+
   const validation = CourseInputSchema.partial().safeParse(courseData);
   if (!validation.success) {
     console.error("[dbUtils-Prisma] updateCourseInDb: ZOD VALIDATION FAILED. Errors:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
@@ -419,7 +419,7 @@ export const updateCourseInDb = async (
   }
   console.log("[dbUtils-Prisma] updateCourseInDb: Zod validation successful. Validated data (after Zod parse):", JSON.stringify(validation.data, null, 2));
   const { categoryName, instructor: instructorName, modules, quizzes, ...mainCourseData } = validation.data;
-  
+
   try {
     let categoryIdToLink: string | undefined = undefined;
     let categoryNameToCache: string | undefined = undefined;
@@ -437,15 +437,15 @@ export const updateCourseInDb = async (
       categoryIdToLink = category.id;
       categoryNameToCache = category.name;
     }
-    
+
     console.log(`[dbUtils-Prisma] updateCourseInDb: DELETING existing modules and quizzes for course ID ${courseId} before update.`);
-    await prisma.module.deleteMany({ where: { courseId: courseId } }); 
-    await prisma.quiz.deleteMany({where: {courseId: courseId }}); 
+    await prisma.module.deleteMany({ where: { courseId: courseId } });
+    await prisma.quiz.deleteMany({where: {courseId: courseId }});
     console.log(`[dbUtils-Prisma] updateCourseInDb: Existing modules and quizzes for course ID ${courseId} DELETED.`);
 
     const prismaCourseUpdateData: Prisma.CourseUpdateInput = {
       ...mainCourseData,
-      instructor: instructorName, // Assign string directly
+      instructor: instructorName,
       learningObjectives: mainCourseData.learningObjectives || [],
       prerequisites: mainCourseData.prerequisites || [],
     };
@@ -477,7 +477,7 @@ export const updateCourseInDb = async (
       prismaCourseUpdateData.quizzes = {
         create: quizzes.map((quizData) => ({
             title: quizData.title!,
-            quizType: quizData.quizType!, // Zod transformed
+            quizType: quizData.quizType!,
             passingScore: quizData.passingScore,
             questions: quizData.questions ? {
               create: quizData.questions.map(q => ({
@@ -490,7 +490,7 @@ export const updateCourseInDb = async (
           })),
       };
     }
-    
+
     console.log(`[dbUtils-Prisma] updateCourseInDb: FINAL prismaCourseUpdateData structure for course ${courseId}:`, JSON.stringify(prismaCourseUpdateData, null, 2));
     console.log(`[dbUtils-Prisma] updateCourseInDb: Attempting prisma.course.update for ID ${courseId}...`);
 
@@ -510,12 +510,12 @@ export const updateCourseInDb = async (
       throw prismaUpdateError;
     }
     console.log(`[dbUtils-Prisma] updateCourseInDb: Course record ${courseId} updated successfully. Starting correctOptionId update loop.`);
-    
-    if (updatedCourse.quizzes && quizzes) { 
+
+    if (updatedCourse.quizzes && quizzes) {
         console.log("[dbUtils-Prisma] updateCourseInDb: Starting correctOptionId update loop for updated quizzes.");
         for (let i = 0; i < updatedCourse.quizzes.length; i++) {
             const dbQuiz = updatedCourse.quizzes[i];
-            const formQuiz = quizzes[i]; 
+            const formQuiz = quizzes[i];
             console.log(`[dbUtils-Prisma] updateCourseInDb: Processing quiz index ${i}, DB Quiz ID: ${dbQuiz.id}, Form Quiz Title: ${formQuiz?.title}`);
             if (dbQuiz.questions && formQuiz?.questions) {
                 for (let j = 0; j < dbQuiz.questions.length; j++) {
@@ -573,8 +573,8 @@ export const updateCourseInDb = async (
     } else {
         console.error("[dbUtils-Prisma] updateCourseInDb: Caught non-Error object:", error);
     }
-    
-    if (error.code) {  
+
+    if (error.code) {
         console.error("[dbUtils-Prisma] updateCourseInDb: Prisma Error Code (from caught error):", error.code);
         if (error.code === 'P2002') { console.error("[dbUtils-Prisma] updateCourseInDb: Prisma P2002 (Unique constraint violation). Target fields:", error.meta?.target); }
         else if (error.code === 'P2003') { console.error("[dbUtils-Prisma] updateCourseInDb: Prisma P2003 (Foreign key constraint violation). Field name:", error.meta?.field_name); }
@@ -606,7 +606,7 @@ export const getLearningPathsFromDb = async (): Promise<LearningPath[]> => {
     const paths = await prisma.learningPath.findMany({
       include: {
         learningPathCourses: {
-          include: { course: {select: {id: true, title: true, imageUrl:true, categoryNameCache:true, instructor:true }} }, 
+          include: { course: {select: {id: true, title: true, imageUrl:true, categoryNameCache:true, instructor:true }} },
           orderBy: { order: 'asc' }
         }
       },
@@ -649,7 +649,7 @@ export const addLearningPathToDb = async (
   }
 };
 export const updateLearningPathInDb = async (
-  pathId: string, 
+  pathId: string,
   pathData: Partial<Omit<LearningPath, 'id'|'createdAt'|'updatedAt'|'learningPathCourses'>> & { courseIdsToConnect?: string[] }
 ): Promise<LearningPath> => {
   console.log(`[dbUtils-Prisma] updateLearningPathInDb: Attempting to update LP ID ${pathId}. Data:`, JSON.stringify(pathData, null, 1));
@@ -691,13 +691,13 @@ export const deleteLearningPathFromDb = async (pathId: string): Promise<void> =>
 
 // --- Quiz Data Persistence (Example for CourseForm - saveQuizWithQuestionsToDb) ---
 export const saveQuizWithQuestionsToDb = async (
-    courseIdForQuiz: string, 
-    quizData: Pick<Quiz, 'id'|'title'|'quizType'|'passingScore'> & { questionsToUpsert?: any[], questionIdsToDelete?: string[] } 
-): Promise<Quiz> => { 
+    courseIdForQuiz: string,
+    quizData: Pick<Quiz, 'id'|'title'|'quizType'|'passingScore'> & { questionsToUpsert?: any[], questionIdsToDelete?: string[] }
+): Promise<Quiz> => {
     console.log(`[dbUtils-Prisma] saveQuizWithQuestionsToDb: Saving quiz for course ${courseIdForQuiz}. Quiz Title: ${quizData.title}`);
     try {
-        let existingQuiz = quizData.id && !quizData.id.startsWith('quiz-new-') 
-            ? await prisma.quiz.findUnique({ where: { id: quizData.id }, include: { questions: { include: { options: true, correctOption: true } } } }) 
+        let existingQuiz = quizData.id && !quizData.id.startsWith('quiz-new-')
+            ? await prisma.quiz.findUnique({ where: { id: quizData.id }, include: { questions: { include: { options: true, correctOption: true } } } })
             : null;
 
         if (existingQuiz) {
@@ -715,7 +715,7 @@ export const saveQuizWithQuestionsToDb = async (
                 const questionPayload: any = { text: qData.text, order: qData.order ?? 0, points: qData.points };
                 let savedQuestion: Question & { options: Option[] };
 
-                if (qData.id && !qData.id.startsWith('q-new-')) { 
+                if (qData.id && !qData.id.startsWith('q-new-')) {
                     console.log(`[dbUtils-Prisma] saveQuizWithQuestionsToDb: Updating question ID ${qData.id}`);
                     await prisma.option.deleteMany({where: {questionId: qData.id}}); // Delete old options before recreating
                     savedQuestion = await prisma.question.update({
@@ -723,7 +723,7 @@ export const saveQuizWithQuestionsToDb = async (
                         data: { ...questionPayload, options: { create: optionsPayload } },
                         include: { options: true }
                     });
-                } else { 
+                } else {
                     console.log(`[dbUtils-Prisma] saveQuizWithQuestionsToDb: Creating new question for quiz ${existingQuiz!.id}`);
                     savedQuestion = await prisma.question.create({
                         data: { ...questionPayload, quizId: existingQuiz!.id, options: { create: optionsPayload } },
@@ -741,7 +741,7 @@ export const saveQuizWithQuestionsToDb = async (
                 return savedQuestion;
             }) || [];
             await Promise.all(upsertPromises);
-            
+
             const updatedQuiz = await prisma.quiz.update({
                 where: { id: existingQuiz.id },
                 data: { title: quizData.title, quizType: quizData.quizType as PrismaQuizTypeEnum, passingScore: quizData.passingScore },
@@ -761,28 +761,25 @@ export const saveQuizWithQuestionsToDb = async (
                     questions: quizData.questionsToUpsert ? {
                         create: quizData.questionsToUpsert.map(qData => {
                             const optionsToCreate = qData.optionsToCreate.map((opt: any) => ({ text: opt.text! }));
-                            // Correct option ID linking on create needs to be done after options are created with their IDs
                             return { text: qData.text, order: qData.order ?? 0, points: qData.points, options: { create: optionsToCreate } };
                         })
                     } : undefined
                 },
-                include: { questions: { include: { options: true, correctOption: true }, orderBy: {order: 'asc'} } } // Ensure correctOption is included
+                include: { questions: { include: { options: true, correctOption: true }, orderBy: {order: 'asc'} } }
             });
-            // Now, link correctOptionId for newly created questions
-             if (createdQuiz.questions && quizData.questionsToUpsert) {
+            if (createdQuiz.questions && quizData.questionsToUpsert) {
                 for (let i = 0; i < createdQuiz.questions.length; i++) {
                     const dbQuestion = createdQuiz.questions[i];
                     const formQuestion = quizData.questionsToUpsert[i];
                     if (formQuestion?.correctOptionTextForNew && dbQuestion.options.length > 0) {
                         const correctOpt = dbQuestion.options.find(opt => opt.text === formQuestion.correctOptionTextForNew);
-                        if(correctOpt && dbQuestion.correctOptionId !== correctOpt.id){ // Check if update is needed
+                        if(correctOpt && dbQuestion.correctOptionId !== correctOpt.id){
                             await prisma.question.update({where: {id: dbQuestion.id}, data: {correctOptionId: correctOpt.id}});
                             console.log(`[dbUtils-Prisma] saveQuizWithQuestionsToDb:   Updated correctOptionId for new question ${dbQuestion.id} to ${correctOpt.id}`);
                         }
                     }
                 }
             }
-            // Re-fetch the quiz to get the updated questions with correctOptionId properly linked and included.
             const finalQuiz = await prisma.quiz.findUniqueOrThrow({where: {id: createdQuiz.id}, include: {questions: {include: {options: true, correctOption: true}}}});
             console.log(`[dbUtils-Prisma] saveQuizWithQuestionsToDb: New quiz created with ID ${finalQuiz.id}.`);
             return finalQuiz;
@@ -894,51 +891,60 @@ export const getPaymentSubmissionsFromDb = async (filter?: { userId?: string }):
   try {
     const submissions = await prisma.paymentSubmission.findMany({
       where: filter,
-      include: { user: {select: {id:true, name:true, email:true}}, course: {select: {id:true, title: true}} }, 
+      include: { user: {select: {id:true, name:true, email:true}}, course: {select: {id:true, title: true}} },
       orderBy: { submittedAt: 'desc' }
     });
     console.log("[dbUtils-Prisma] getPaymentSubmissionsFromDb: Found submissions:", submissions.length);
     return submissions;
-  } catch (error) {
+  } catch (error: any) {
     console.error("[dbUtils-Prisma] getPaymentSubmissionsFromDb: Error fetching submissions:", error);
+    console.error("[dbUtils-Prisma] getPaymentSubmissionsFromDb: Full Error Object:", error);
+    if (error.code) { console.error("[dbUtils-Prisma] getPaymentSubmissionsFromDb: Prisma Error Code:", error.code); }
+    if (error.meta) { console.error("[dbUtils-Prisma] getPaymentSubmissionsFromDb: Prisma Error Meta:", JSON.stringify(error.meta, null, 2)); }
     throw error;
   }
 };
 export const addPaymentSubmissionToDb = async (
   submissionData: Omit<PaymentSubmission, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'submittedAt' | 'reviewedAt' | 'adminNotes' | 'user' | 'course'> & { userId: string, courseId: string }
 ): Promise<PaymentSubmission> => {
+  console.log("============================================================");
   console.log("[dbUtils-Prisma] addPaymentSubmissionToDb: Received data:", JSON.stringify(submissionData, null, 2));
   const validation = PaymentSubmissionInputSchema.safeParse(submissionData);
   if (!validation.success) {
-    console.error("[dbUtils-Prisma] addPaymentSubmissionToDb: Zod validation failed:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
+    console.error("[dbUtils-Prisma] addPaymentSubmissionToDb: ZOD VALIDATION FAILED:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
     throw new Error(validation.error.flatten().fieldErrors._errors?.join(', ') || "Invalid payment submission data. Zod validation failed.");
   }
   console.log("[dbUtils-Prisma] addPaymentSubmissionToDb: Zod validation successful. Data for Prisma:", JSON.stringify(validation.data, null, 2));
   try {
     const newSubmission = await prisma.paymentSubmission.create({
       data: {
-        ...validation.data,
-        status: 'PENDING', 
-        submittedAt: new Date(),
+        userId: validation.data.userId,
+        courseId: validation.data.courseId,
+        amount: validation.data.amount,
+        currency: validation.data.currency,
+        screenshotUrl: validation.data.screenshotUrl,
+        status: 'PENDING', // Default status
+        submittedAt: new Date(), // Prisma schema has @default(now()), but can be explicit
       },
       include: { user: {select: {id:true, name:true, email:true}}, course: {select: {id:true, title: true}} }
     });
     console.log("[dbUtils-Prisma] addPaymentSubmissionToDb: Successfully created submission in DB:", JSON.stringify(newSubmission, null, 2));
+    console.log("============================================================");
     return newSubmission;
-  } catch (error) {
-    console.error("[dbUtils-Prisma] addPaymentSubmissionToDb: Prisma error creating submission:", error);
-    // @ts-ignore
+  } catch (error: any) {
+    console.error("============================================================");
+    console.error("[dbUtils-Prisma] addPaymentSubmissionToDb: PRISMA ERROR creating submission.");
+    console.error("[dbUtils-Prisma] addPaymentSubmissionToDb: Full Error Object:", error);
     if (error.code) {  console.error("[dbUtils-Prisma] addPaymentSubmissionToDb: Prisma Error Code:", error.code); }
-    // @ts-ignore
     if (error.meta) { console.error("[dbUtils-Prisma] addPaymentSubmissionToDb: Prisma Error Meta:", JSON.stringify(error.meta, null, 2)); }
-    if (error instanceof Error) {
-      throw new Error(`Prisma error: ${error.message}`);
-    }
-    throw new Error("Failed to create payment submission in database.");
+    if (error.clientVersion) { console.error("[dbUtils-Prisma] addPaymentSubmissionToDb: Prisma Client Version:", error.clientVersion); }
+    if (error instanceof Error && error.message) { console.error("[dbUtils-Prisma] addPaymentSubmissionToDb: Error Message:", error.message); }
+    console.error("============================================================");
+    throw error;
   }
 };
 export const updatePaymentSubmissionInDb = async (
-  submissionId: string, 
+  submissionId: string,
   dataToUpdate: { status: PrismaPaymentStatus, adminNotes?: string | null, reviewedAt?: Date }
 ): Promise<PaymentSubmission> => {
   console.log(`[dbUtils-Prisma] updatePaymentSubmissionInDb: Updating submission ID ${submissionId}. Data:`, JSON.stringify(dataToUpdate, null, 1));
@@ -947,15 +953,18 @@ export const updatePaymentSubmissionInDb = async (
       where: { id: submissionId },
       data: {
         status: dataToUpdate.status,
-        adminNotes: dataToUpdate.adminNotes === null ? undefined : dataToUpdate.adminNotes, 
+        adminNotes: dataToUpdate.adminNotes === null ? undefined : dataToUpdate.adminNotes,
         reviewedAt: dataToUpdate.reviewedAt || new Date(),
       },
       include: { user: {select: {id: true, name:true, email:true}}, course: {select: {id:true, title: true}} }
     });
     console.log(`[dbUtils-Prisma] updatePaymentSubmissionInDb: Successfully updated submission ID ${submissionId}.`);
     return updatedSubmission;
-  } catch (error) {
+  } catch (error: any) {
     console.error(`[dbUtils-Prisma] updatePaymentSubmissionInDb: Error updating submission ID ${submissionId}:`, error);
+    console.error("[dbUtils-Prisma] updatePaymentSubmissionInDb: Full Error Object:", error);
+    if (error.code) { console.error("[dbUtils-Prisma] updatePaymentSubmissionInDb: Prisma Error Code:", error.code); }
+    if (error.meta) { console.error("[dbUtils-Prisma] updatePaymentSubmissionInDb: Prisma Error Meta:", JSON.stringify(error.meta, null, 2)); }
     throw error;
   }
 };
@@ -966,7 +975,7 @@ export const getEnrollmentForUserAndCourseFromDb = async (userId: string, course
   try {
     return await prisma.enrollment.findUnique({
       where: { userId_courseId: { userId, courseId } },
-      include: { course: true } 
+      include: { course: true }
     });
   } catch (error) {
      console.error(`[dbUtils-Prisma] getEnrollmentForUserAndCourseFromDb: Error for user ${userId}, course ${courseId}:`, error);
@@ -1008,7 +1017,7 @@ export const getEnrollmentsByUserIdFromDb = async (userId: string): Promise<Enro
   try {
     return await prisma.enrollment.findMany({
       where: { userId },
-      include: { course: true }, 
+      include: { course: true },
       orderBy: { enrolledDate: 'desc' }
     });
   } catch (error) {
@@ -1033,7 +1042,7 @@ export const getSitePageBySlug = async (slug: string): Promise<SitePage | null> 
 export const upsertSitePage = async (
   slug: string,
   title: string,
-  content: Prisma.JsonValue | string 
+  content: Prisma.JsonValue | string
 ): Promise<SitePage> => {
   console.log(`[dbUtils-Prisma] upsertSitePage: Upserting page with slug "${slug}".`);
   const validation = SitePageInputSchema.safeParse({ title, content });
@@ -1041,11 +1050,11 @@ export const upsertSitePage = async (
     console.error("[dbUtils-Prisma] upsertSitePage: SitePage validation failed:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
     throw new Error(validation.error.flatten().fieldErrors._errors?.join(', ') || "Invalid site page data.");
   }
-  
+
   const dataToUpsert = {
     slug,
     title: validation.data.title,
-    content: validation.data.content as Prisma.JsonValue, 
+    content: validation.data.content as Prisma.JsonValue,
   };
 
   try {
@@ -1086,32 +1095,32 @@ export const seedCoursesToDb = async (): Promise<{ successCount: number; errorCo
       if(await prisma.course.findUnique({where:{id:cd.id}})){sk++;continue;}
       let cat=await prisma.category.findUnique({where:{name:cd.category}});
       if(!cat)cat=await prisma.category.create({data:{name:cd.category, iconName:'Shapes'}});
-      
+
       const quizzesToCreate = cd.quizzes?.map(q => {
         const questionsToCreate = q.questions.map(qs => {
             const optionsToCreate = qs.options.map(o => ({ id: o.id, text: o.text }));
-            return { 
-                id: qs.id, 
-                text: qs.text, 
-                points: qs.points, 
-                order: 0, 
+            return {
+                id: qs.id,
+                text: qs.text,
+                points: qs.points,
+                order: 0,
                 options: { create: optionsToCreate },
             };
         });
-        return { 
-            id: q.id, 
-            title: q.title, 
-            quizType: q.quizType.toUpperCase() as PrismaQuizTypeEnum, 
+        return {
+            id: q.id,
+            title: q.title,
+            quizType: q.quizType.toUpperCase() as PrismaQuizTypeEnum,
             passingScore: q.passingScore,
             questions: { create: questionsToCreate }
         };
       });
 
-      const courseCreateData: Prisma.CourseCreateInput = { // Type assertion for instructor
+      const courseCreateData: Prisma.CourseCreateInput = {
         id: cd.id,
         title: cd.title,
         description: cd.description,
-        instructor: cd.instructor, // Prisma expects string here as per updated schema
+        instructor: cd.instructor,
         imageUrl: cd.imageUrl,
         dataAiHint: cd.dataAiHint,
         price: cd.price,
@@ -1126,9 +1135,9 @@ export const seedCoursesToDb = async (): Promise<{ successCount: number; errorCo
         modules: cd.modules ? { create: cd.modules.map(m => ({...m, lessons: m.lessons ? { create: m.lessons } : undefined })) } : undefined,
         quizzes: quizzesToCreate ? { create: quizzesToCreate } : undefined
       };
-      
+
       const createdCourse = await prisma.course.create({data:courseCreateData, include: { quizzes: { include: {questions: { include: {options:true}}}}}});
-      
+
       if (createdCourse.quizzes && cd.quizzes) {
           for (let i=0; i < createdCourse.quizzes.length; i++) {
               const dbQuiz = createdCourse.quizzes[i];
@@ -1139,7 +1148,7 @@ export const seedCoursesToDb = async (): Promise<{ successCount: number; errorCo
                       const mockQuestion = mockQuiz.questions[j];
                       const correctMockOption = mockQuestion.options.find(o => o.id === mockQuestion.correctOptionId);
                       if (correctMockOption) {
-                          const correctDbOption = dbQuestion.options.find(o => o.text === correctMockOption.text); 
+                          const correctDbOption = dbQuestion.options.find(o => o.text === correctMockOption.text);
                           if (correctDbOption && dbQuestion.correctOptionId !== correctDbOption.id) {
                               await prisma.question.update({
                                   where: {id: dbQuestion.id},
@@ -1164,7 +1173,7 @@ export const seedLearningPathsToDb = async (): Promise<{ successCount: number; e
   for(const lpd of mockLearningPathsForSeeding){
     try{
       if(await prisma.learningPath.findUnique({where:{id:lpd.id}})){sk++;continue;}
-      const { courseIds, ...restOfLpData } = lpd; 
+      const { courseIds, ...restOfLpData } = lpd;
       await prisma.learningPath.create({data:{...restOfLpData,id:lpd.id,learningPathCourses:{create:courseIds.map((ci,i)=>({courseId:ci,order:i}))}}});s++;
     }catch(err){console.error(`Err seed LP ${lpd.title}:`,err);e++;}
   }
@@ -1175,12 +1184,12 @@ export const seedLearningPathsToDb = async (): Promise<{ successCount: number; e
 export const seedVideosToDb = async (): Promise<{ successCount: number; errorCount: number; skippedCount: number }> => {
   console.log("[dbUtils-Prisma] seedVideosToDb: Seeding videos to DB.");
   let s=0,e=0,sk=0;
-  for(const vd of mockVideosForSeedingData){ 
+  for(const vd of mockVideosForSeedingData){
     try{
       const existing = await prisma.video.findUnique({where:{id:vd.id}});
       if(existing){sk++;continue;}
-      const { createdAt, updatedAt, videoUrl, ...prismaVideoData } = vd; 
-      await prisma.video.create({data:{...prismaVideoData, id:vd.id}});s++; 
+      const { createdAt, updatedAt, videoUrl, ...prismaVideoData } = vd;
+      await prisma.video.create({data:{...prismaVideoData, id:vd.id}});s++;
     }catch(err){console.error(`Err seed Video ${vd.title}:`,err);e++;}
   }
   console.log(`[dbUtils-Prisma] seedVideosToDb: Done. Success: ${s}, Errors: ${e}, Skipped: ${sk}`);
@@ -1203,7 +1212,3 @@ export const seedPaymentSettingsToDb = async (): Promise<{ successCount: number;
       return{successCount:0,errorCount:1,skippedCount:0};
     }
 };
- 
-    
-
-    
