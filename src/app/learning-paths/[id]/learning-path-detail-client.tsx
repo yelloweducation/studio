@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { type LearningPath, type Course } from '@/lib/dbUtils'; 
+import { type LearningPath, type Course } from '@/lib/dbUtils';
 // import { getLearningPathsFromDb, getCoursesFromDb } from '@/lib/dbUtils'; // Removed direct dbUtils import
 import { serverGetLearningPaths, serverGetCourses } from '@/actions/adminDataActions'; // Use Server Actions
 import { Button } from '@/components/ui/button';
@@ -12,10 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronLeft, AlertTriangle, Home, BookOpenCheck, BookMarked, ArrowRight, Loader2 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
-
-const isValidLucideIcon = (iconName: string | undefined | null): iconName is keyof typeof LucideIcons => {
-  return typeof iconName === 'string' && iconName in LucideIcons;
-};
+import { isValidLucideIcon } from '@/lib/utils';
 
 interface LearningPathDetailClientProps {
   pathId: string;
@@ -35,10 +32,10 @@ export default function LearningPathDetailClient({ pathId }: LearningPathDetailC
         return;
       }
       setIsLoading(true);
-      
+
       try {
         // Use Server Actions for data fetching
-        const allPaths = await serverGetLearningPaths(); 
+        const allPaths = await serverGetLearningPaths();
         const currentPath = allPaths.find(p => p.id === pathId);
         setLearningPath(currentPath || null);
 
@@ -65,12 +62,12 @@ export default function LearningPathDetailClient({ pathId }: LearningPathDetailC
   if (isLoading) {
     return (
       <div className="max-w-3xl mx-auto py-8 space-y-6">
-        <Skeleton className="h-8 w-1/4 mb-4" /> 
+        <Skeleton className="h-8 w-1/4 mb-4" />
         <Card className="shadow-xl">
           <CardHeader>
-            <Skeleton className="h-10 w-3/4 mb-2" /> 
-            <Skeleton className="h-20 w-full" /> 
-            <Skeleton className="h-6 w-1/2 mt-2" /> 
+            <Skeleton className="h-10 w-3/4 mb-2" />
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-6 w-1/2 mt-2" />
           </CardHeader>
           <CardContent className="py-10">
             <div className="flex justify-center items-center">
@@ -123,10 +120,10 @@ export default function LearningPathDetailClient({ pathId }: LearningPathDetailC
                 <Image
                 src={learningPath.imageUrl}
                 alt={learningPath.title}
-                fill 
+                fill
                 objectFit="cover"
                 data-ai-hint={learningPath.dataAiHint || 'learning journey'}
-                priority 
+                priority
                 />
             </div>
         )}

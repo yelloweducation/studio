@@ -17,12 +17,13 @@ const CourseCard = React.memo(({ course }: CourseCardProps) => {
       <CardHeader className="p-0">
         {course.imageUrl && (
           <div className="aspect-[16/9] relative w-full">
-            <Image 
-              src={course.imageUrl} 
-              alt={course.title} 
-              layout="fill" 
-              objectFit="cover" 
+            <Image
+              src={course.imageUrl}
+              alt={course.title}
+              layout="fill"
+              objectFit="cover"
               data-ai-hint={course.dataAiHint || 'education learning'}
+              // Removed priority, typically not needed for card lists
             />
           </div>
         )}

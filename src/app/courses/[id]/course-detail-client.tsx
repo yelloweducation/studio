@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { type Course, type Module, type Lesson, type User, type Enrollment, type PaymentSubmission, type PaymentSubmissionStatus, type Quiz, type QuizType } from '@/lib/dbUtils'; 
+import { type Course, type Module, type Lesson, type User, type Enrollment, type PaymentSubmission, type PaymentSubmissionStatus, type Quiz, type QuizType } from '@/lib/dbUtils';
 // Removed direct dbUtils imports, will use server actions
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -22,7 +22,7 @@ interface CompletionInfo {
   progress: number;
 }
 interface PaymentInfo {
-  status: PaymentSubmissionStatus | null; 
+  status: PaymentSubmissionStatus | null;
   submission?: PaymentSubmission;
 }
 
@@ -117,7 +117,7 @@ const courseDetailTranslations = {
 
 interface CourseDetailClientProps {
   initialCourse: Course | null;
-  courseId: string; 
+  courseId: string;
 }
 
 export default function CourseDetailClient({ initialCourse, courseId }: CourseDetailClientProps) {
@@ -134,7 +134,7 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
   const [isLoadingUserSpecificData, setIsLoadingUserSpecificData] = useState(true);
 
   useEffect(() => {
-    setCurrentCourse(initialCourse); 
+    setCurrentCourse(initialCourse);
     if (initialCourse?.modules?.[0]?.lessons?.[0]) {
       setFirstLessonPath(`/courses/${initialCourse.id}/learn/${initialCourse.modules[0].id}/${initialCourse.modules[0].lessons[0].id}`);
     } else {
@@ -148,11 +148,11 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
         return;
       }
       if (!currentCourse) {
-        setIsLoadingUserSpecificData(false); 
+        setIsLoadingUserSpecificData(false);
         return;
       }
 
-      setIsLoadingUserSpecificData(true); 
+      setIsLoadingUserSpecificData(true);
       try {
         if (isAuthenticated && user) {
           const enrollment = await serverGetEnrollmentForCourse(user.id, currentCourse.id);
@@ -166,9 +166,9 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
             const userSubmission = await serverGetPaymentSubmissionForCourse(user.id, currentCourse.id);
             setPaymentInfo({ status: userSubmission?.status || null, submission: userSubmission || undefined });
           } else {
-            setPaymentInfo({ status: null }); 
+            setPaymentInfo({ status: null });
           }
-        } else { 
+        } else {
           setCompletionInfo({ isCompleted: false, progress: 0 });
           setPaymentInfo({ status: null });
         }
@@ -186,7 +186,7 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
   }, [user, isAuthenticated, authLoading, currentCourse, toast, language]);
 
   const getDashboardPath = () => {
-    if (!isAuthenticated) return '/login'; 
+    if (!isAuthenticated) return '/login';
     if (role === 'admin') return '/dashboard/admin';
     if (role === 'student') return '/dashboard/student';
     return '/login'; // Default fallback
@@ -247,7 +247,7 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
                     <p className="text-sm text-blue-600 dark:text-blue-400">{t.paymentSubmittedDesc}</p>
                 </div>
             );
-        } else { 
+        } else {
              if (!currentCourse.modules || currentCourse.modules.length === 0 || !firstLessonPath) {
                 return (
                     <div className="flex flex-col items-center text-center p-4 bg-muted rounded-lg shadow">
@@ -283,7 +283,7 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
       );
     }
 
-    if (!firstLessonPath) { 
+    if (!firstLessonPath) {
          return (
             <div className="flex flex-col items-center text-center p-4 bg-muted rounded-lg shadow">
                 <AlertTriangle className="w-12 h-12 text-amber-500 mb-2" />
@@ -302,7 +302,7 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
     );
   };
 
-  if (authLoading || (currentCourse && isLoadingUserSpecificData)) { 
+  if (authLoading || (currentCourse && isLoadingUserSpecificData)) {
     return (
       <div className="max-w-4xl mx-auto py-4 md:py-8 space-y-6">
         <Skeleton className="h-8 w-1/4" />
@@ -344,7 +344,7 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
     );
   }
 
-  if (!currentCourse) { 
+  if (!currentCourse) {
     return (
       <div className="max-w-lg mx-auto py-6 sm:py-12 text-center">
         <div className="flex items-center gap-2 mb-4 md:mb-6"> {/* Moved here to be visible on not found page too */}
@@ -416,10 +416,10 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
                 <Image
                   src={imageUrl}
                   alt={title}
-                  fill 
+                  fill
                   objectFit="cover"
                   data-ai-hint={dataAiHint || 'course education'}
-                  priority 
+                  priority
                 />
               </div>
             )}
@@ -439,7 +439,7 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
             </CardContent>
           </Card>
 
-          
+
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle className="text-xl font-headline flex items-center"><ListChecks className="mr-2 h-6 w-6 text-primary" /> {t.whatYouWillLearn}</CardTitle>
@@ -455,10 +455,10 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
             </CardContent>
           </Card>
 
-          
+
           <Card className="shadow-lg">
             <CardHeader>
-              <CardTitle className="text-xl font-headline flex items-center"><TargetAudienceIcon className="mr-2 h-6 w-6 text-primary" /> {t.targetAudience}</CardTitle>
+              <CardTitle className="text-xl font-headline flex items-center"><Users as TargetAudienceIcon className="mr-2 h-6 w-6 text-primary" /> {t.targetAudience}</CardTitle>
             </CardHeader>
             <CardContent>
               {targetAudience ? (
@@ -469,7 +469,7 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
             </CardContent>
           </Card>
 
-          
+
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle className="text-xl font-headline flex items-center"><ShieldCheck className="mr-2 h-6 w-6 text-primary" /> {t.prerequisites}</CardTitle>
@@ -506,7 +506,7 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
               <CardContent>
                 <ul className="space-y-3">
                   {quizzes.map((quiz: Quiz) => {
-                    const QuizIcon = quiz.quizType === 'GRADED' ? GradedQuizIcon : PracticeQuizIcon; 
+                    const QuizIcon = quiz.quizType === 'GRADED' ? GradedQuizIcon : PracticeQuizIcon;
                     const quizLabel = quiz.quizType === 'GRADED' ? t.gradedQuiz : t.practiceQuiz;
                     return (
                       <li key={quiz.id} className="p-3 border rounded-lg bg-card hover:shadow-sm transition-shadow">
@@ -617,4 +617,3 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
     </div>
   );
 }
-
