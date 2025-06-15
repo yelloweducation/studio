@@ -37,12 +37,12 @@ const headerTranslations = {
     toggleTheme: "Toggle Theme",
     loading: "Loading...",
     menu: "Menu",
-    adminDashboard: "Admin Panel", // Retained for potential future use if admin gets specific menu items
+    adminDashboard: "Admin Panel",
     myAccount: "My Account",
   },
   my: {
     home: "ပင်မ",
-    all: "အားလုံး", // Kept "ALL" as per display requirement, but translation context is 'All'
+    all: "အားလုံး",
     explore: "သင်တန်းများ",
     videos: "ဗီဒီယို",
     flashCards: "ကတ်ပြားများ",
@@ -63,12 +63,12 @@ const headerTranslations = {
 
 const UserAvatar = React.memo(({ user: usr, sizeClass = "h-8 w-8" }: { user: { name?: string | null, email?: string | null, avatarUrl?: string | null } | null, sizeClass?: string }) => (
   <Avatar className={cn("bg-muted text-muted-foreground", sizeClass)}>
-    <AvatarImage src={usr?.avatarUrl || undefined} alt={usr?.name || 'User'} />
+    <AvatarImage src={usr?.avatarUrl || undefined} alt={usr?.name ?? 'User'} />
     <AvatarFallback className={cn(
       "bg-primary text-primary-foreground",
-      sizeClass.includes('h-7') || sizeClass.includes('w-7') ? "text-[0.6rem] sm:text-xs" : "text-xs sm:text-sm" 
+      sizeClass.includes('h-7') || sizeClass.includes('w-7') ? "text-[0.6rem] sm:text-xs" : "text-xs sm:text-sm"
     )}>
-      {usr?.name ? usr.name.charAt(0).toUpperCase() : 
+      {usr?.name ? usr.name.charAt(0).toUpperCase() :
         <UserCircle className={cn(sizeClass.includes('h-7') || sizeClass.includes('w-7') ? "h-4 w-4 sm:h-5 sm:w-5" : "h-5 w-5 sm:h-6 sm:h-6")} />
       }
     </AvatarFallback>
@@ -92,7 +92,7 @@ const Header = () => {
   const [headerVisible, setHeaderVisible] = useState(true);
 
   const isOnHomepage = pathname === '/';
-  const useScrollHidingHeader = isOnHomepage; 
+  const useScrollHidingHeader = isOnHomepage;
   const headerScrollThreshold = 50;
 
   const toggleTheme = useCallback(() => {
@@ -103,14 +103,14 @@ const Header = () => {
     if (typeof window === 'undefined') return;
     const controlHeaderBackground = () => {
       if (pathname === '/videos') {
-        setDynamicHeaderBackgroundClasses('bg-transparent border-transparent'); // Videos page has its own header
+        setDynamicHeaderBackgroundClasses('bg-transparent border-transparent');
       } else if (window.scrollY < headerScrollThreshold) {
         setDynamicHeaderBackgroundClasses('bg-transparent border-transparent');
       } else {
         setDynamicHeaderBackgroundClasses('bg-background/80 backdrop-blur-md border-b');
       }
     };
-    controlHeaderBackground();
+    controlHeaderBackground(); // Call on mount
     window.addEventListener('scroll', controlHeaderBackground, { passive: true });
     return () => window.removeEventListener('scroll', controlHeaderBackground);
   }, [pathname, headerScrollThreshold]);
@@ -131,10 +131,11 @@ const Header = () => {
       }
       lastScrollYLocal = currentScrollY;
     };
-    controlHeaderVisibility();
+    controlHeaderVisibility(); // Call on mount
     window.addEventListener('scroll', controlHeaderVisibility, { passive: true });
     return () => window.removeEventListener('scroll', controlHeaderVisibility);
   }, [pathname, useScrollHidingHeader, headerScrollThreshold]);
+
 
   if (pathname === '/videos') return null;
 
@@ -144,11 +145,11 @@ const Header = () => {
   }, [logout, router]);
 
   const getDashboardPath = useCallback(() => {
-    if (!isAuthenticated) return '/login'; 
+    if (!isAuthenticated) return '/login';
     const userRoleLower = role?.toLowerCase();
     if (userRoleLower === 'admin') return '/dashboard/admin';
     if (userRoleLower === 'student') return '/dashboard/student';
-    return '/login'; 
+    return '/login';
   }, [isAuthenticated, role]);
 
   const commonNavItems = [
@@ -164,7 +165,7 @@ const Header = () => {
       ? "bg-accent text-accent-foreground font-semibold"
       : "text-muted-foreground hover:text-foreground"
   );
-  
+
   const mobileMenuLinkClasses = (targetPath: string) => cn(
     "w-full",
     pathname === targetPath
@@ -178,7 +179,7 @@ const Header = () => {
       <div className="flex items-center">
         <Link href="/" className="text-xl font-bold font-headline text-foreground hover:text-primary/80 transition-colors group mr-6">
           <span className="relative py-1">
-            ALL 
+            ALL
             <span className="absolute bottom-[-2px] left-0 w-full h-[3px] bg-primary transition-transform duration-300 ease-out group-hover:scale-x-105"></span>
           </span>
         </Link>
@@ -203,8 +204,8 @@ const Header = () => {
             <DropdownMenuContent className="w-56" align="end" forceMount>
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{user.name}</p>
-                  <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                  <p className="text-sm font-medium leading-none">{user.name ?? ''}</p>
+                  <p className="text-xs leading-none text-muted-foreground">{user.email ?? ''}</p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
@@ -237,7 +238,7 @@ const Header = () => {
             size="icon"
             onClick={toggleTheme}
             aria-label={t.toggleTheme}
-            className={cn("hover:bg-accent/20 text-foreground w-8 h-8")} 
+            className={cn("hover:bg-accent/20 text-foreground w-8 h-8")}
           >
             {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
           </Button>
@@ -249,15 +250,26 @@ const Header = () => {
     return (
       <div className="flex items-center justify-between w-full">
         <Link href="/" className="text-sm sm:text-base font-bold text-foreground hover:text-primary/80 transition-colors relative group py-1 mr-auto">
-          ALL
+          ALL {/* Hardcoded for consistency as per previous request, instead of t.all */}
           <span className="absolute bottom-[-2px] left-0 w-full h-[2.5px] sm:h-[3px] bg-primary transform scale-x-100 transition-transform duration-300 ease-out group-hover:scale-x-105"></span>
         </Link>
 
-        <div className="flex items-center gap-1 sm:gap-2">
+        <div className="flex items-center gap-0.5 sm:gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleTheme}
+            aria-label={t.toggleTheme}
+            className="text-foreground hover:text-primary w-7 h-7 sm:w-8 sm:h-8"
+          >
+            {theme === 'light' ?
+              <Moon className="h-4 w-4 sm:h-5 sm:w-5" /> :
+              <Sun className="h-4 w-4 sm:h-5 sm:w-5" />}
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-foreground hover:text-primary w-8 h-8 sm:w-9 sm:h-9">
-                <MenuIcon className="h-5 w-5 sm:h-[22px] sm:w-[22px]" />
+              <Button variant="ghost" size="icon" className="text-foreground hover:text-primary w-7 h-7 sm:w-8 sm:h-8">
+                <MenuIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                 <span className="sr-only">{t.menu}</span>
               </Button>
             </DropdownMenuTrigger>
@@ -268,8 +280,8 @@ const Header = () => {
                     <div className="flex items-center gap-2">
                        <UserAvatar user={user} sizeClass="h-7 w-7" />
                        <div>
-                         <p className="text-sm font-medium leading-none">{user.name}</p>
-                         <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                         <p className="text-sm font-medium leading-none">{user.name ?? ''}</p>
+                         <p className="text-xs leading-none text-muted-foreground">{user.email ?? ''}</p>
                        </div>
                     </div>
                   </DropdownMenuLabel>
@@ -309,16 +321,6 @@ const Header = () => {
               )}
             </DropdownMenuContent>
           </DropdownMenu>
-          
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleTheme}
-            aria-label={t.toggleTheme}
-            className="text-foreground hover:text-primary w-8 h-8 sm:w-9 sm:h-9"
-          >
-            {theme === 'light' ? <Moon className="h-5 w-5 sm:h-[22px] sm:w-[22px]" /> : <Sun className="h-5 w-5 sm:h-[22px] sm:w-[22px]" />}
-          </Button>
         </div>
       </div>
     );
@@ -329,7 +331,7 @@ const Header = () => {
       className={cn(
         "sticky top-0 z-50 w-full transition-all duration-300 ease-in-out",
         dynamicHeaderBackgroundClasses,
-        {'!-translate-y-full': !headerVisible && useScrollHidingHeader } 
+        {'!-translate-y-full': !headerVisible && useScrollHidingHeader }
       )}
     >
       <div className="container mx-auto px-4 flex items-center justify-between min-h-[56px] sm:min-h-[60px] py-2">
@@ -340,4 +342,3 @@ const Header = () => {
 };
 
 export default Header;
-
