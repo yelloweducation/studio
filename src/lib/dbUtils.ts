@@ -221,7 +221,7 @@ export const getCoursesFromDb = async (): Promise<Course[]> => {
       include: {
         category: true,
         modules: { include: { lessons: true }, orderBy: { order: 'asc' } },
-        quizzes: { include: { questions: { include: { options: true, correctOption: true }, orderBy: {order: 'asc'} } } }
+        quizzes: { include: { questions: { include: { options: true }, orderBy: {order: 'asc'} } } } // Removed correctOption: true
       },
       orderBy: { title: 'asc' }
     });
@@ -243,7 +243,7 @@ export const getCourseByIdFromDb = async (courseId: string): Promise<Course | nu
       include: {
         category: true,
         modules: { include: { lessons: {orderBy: {order: 'asc'}} }, orderBy: { order: 'asc' } },
-        quizzes: { include: { questions: { include: { options: true, correctOption: true }, orderBy: {order: 'asc'} } } }
+        quizzes: { include: { questions: { include: { options: true }, orderBy: {order: 'asc'} } } } // Removed correctOption: true
       }
     });
     console.log(`[dbUtils-Prisma] getCourseByIdFromDb: Course ${courseId} ${course ? 'found' : 'not found'}.`);
@@ -291,7 +291,7 @@ export const addCourseToDb = async (
 
     const prismaCourseData: Prisma.CourseCreateInput = {
       ...mainCourseData,
-      instructor: instructorName, 
+      instructor: instructorName,
       category: { connect: { id: category.id } },
       categoryNameCache: category.name,
       learningObjectives: mainCourseData.learningObjectives || [],
@@ -336,7 +336,7 @@ export const addCourseToDb = async (
     try {
       createdCourse = await prisma.course.create({
         data: prismaCourseData,
-        include: { category: true, modules: { include: { lessons: true } }, quizzes: { include: { questions: { include: { options: true, correctOption: true } } } } }
+        include: { category: true, modules: { include: { lessons: true } }, quizzes: { include: { questions: { include: { options: true } } } } } // Removed correctOption: true
       });
     } catch (prismaCreateError: any) {
       console.error("[dbUtils-Prisma] addCourseToDb: PRISMA CREATE OPERATION FAILED.");
@@ -471,7 +471,7 @@ export const updateCourseInDb = async (
 
     const prismaCourseUpdateData: Prisma.CourseUpdateInput = {
       ...mainCourseData,
-      instructor: instructorName, 
+      instructor: instructorName,
       learningObjectives: mainCourseData.learningObjectives || [],
       prerequisites: mainCourseData.prerequisites || [],
     };
@@ -525,7 +525,7 @@ export const updateCourseInDb = async (
       updatedCourse = await prisma.course.update({
         where: { id: courseId },
         data: prismaCourseUpdateData,
-        include: { category: true, modules: { include: { lessons: true } }, quizzes: { include: { questions: { include: { options: true, correctOption: true } } } } }
+        include: { category: true, modules: { include: { lessons: true } }, quizzes: { include: { questions: { include: { options: true } } } } } // Removed correctOption: true
       });
     } catch (prismaUpdateError: any) {
       console.error(`[dbUtils-Prisma] updateCourseInDb: PRISMA UPDATE OPERATION FAILED for course ID ${courseId}.`);
@@ -723,7 +723,7 @@ export const saveQuizWithQuestionsToDb = async (
     console.log(`[dbUtils-Prisma] saveQuizWithQuestionsToDb: Saving quiz for course ${courseIdForQuiz}. Quiz Title: ${quizData.title}`);
     try {
         let existingQuiz = quizData.id && !quizData.id.startsWith('quiz-new-')
-            ? await prisma.quiz.findUnique({ where: { id: quizData.id }, include: { questions: { include: { options: true, correctOption: true } } } })
+            ? await prisma.quiz.findUnique({ where: { id: quizData.id }, include: { questions: { include: { options: true }, orderBy: {order: 'asc'} } } }) // Removed correctOption: true
             : null;
 
         if (existingQuiz) {
@@ -771,7 +771,7 @@ export const saveQuizWithQuestionsToDb = async (
             const updatedQuiz = await prisma.quiz.update({
                 where: { id: existingQuiz.id },
                 data: { title: quizData.title, quizType: quizData.quizType as PrismaQuizTypeEnum, passingScore: quizData.passingScore },
-                include: { questions: { include: { options: true, correctOption: true }, orderBy: {order: 'asc'} } }
+                include: { questions: { include: { options: true }, orderBy: {order: 'asc'} } } // Removed correctOption: true
             });
             console.log(`[dbUtils-Prisma] saveQuizWithQuestionsToDb: Quiz ID ${existingQuiz.id} updated successfully.`);
             return updatedQuiz;
@@ -791,7 +791,7 @@ export const saveQuizWithQuestionsToDb = async (
                         })
                     } : undefined
                 },
-                include: { questions: { include: { options: true, correctOption: true }, orderBy: {order: 'asc'} } }
+                include: { questions: { include: { options: true }, orderBy: {order: 'asc'} } } // Removed correctOption: true
             });
             if (createdQuiz.questions && quizData.questionsToUpsert) {
                 for (let i = 0; i < createdQuiz.questions.length; i++) {
@@ -806,7 +806,7 @@ export const saveQuizWithQuestionsToDb = async (
                     }
                 }
             }
-            const finalQuiz = await prisma.quiz.findUniqueOrThrow({where: {id: createdQuiz.id}, include: {questions: {include: {options: true, correctOption: true}}}});
+            const finalQuiz = await prisma.quiz.findUniqueOrThrow({where: {id: createdQuiz.id}, include: {questions: {include: {options: true}}}}); // Removed correctOption: true
             console.log(`[dbUtils-Prisma] saveQuizWithQuestionsToDb: New quiz created with ID ${finalQuiz.id}.`);
             return finalQuiz;
         }
@@ -946,7 +946,7 @@ export const addPaymentSubmissionToDb = async (
 
   } catch (existenceError: any) {
       console.error("[dbUtils-Prisma] addPaymentSubmissionToDb: Error during existence check:", existenceError);
-      throw existenceError; 
+      throw existenceError;
   }
 
   try {
@@ -957,7 +957,7 @@ export const addPaymentSubmissionToDb = async (
         amount: validation.data.amount,
         currency: validation.data.currency,
         screenshotUrl: validation.data.screenshotUrl,
-        status: 'PENDING', 
+        status: 'PENDING',
         submittedAt: new Date(),
       },
       include: { user: {select: {id:true, name:true, email:true}}, course: {select: {id:true, title: true}} }
@@ -1154,7 +1154,7 @@ export const seedCoursesToDb = async (): Promise<{ successCount: number; errorCo
         id: cd.id,
         title: cd.title,
         description: cd.description,
-        instructor: cd.instructor, 
+        instructor: cd.instructor,
         imageUrl: cd.imageUrl,
         dataAiHint: cd.dataAiHint,
         price: cd.price,
@@ -1170,7 +1170,7 @@ export const seedCoursesToDb = async (): Promise<{ successCount: number; errorCo
         quizzes: quizzesToCreate ? { create: quizzesToCreate } : undefined
       };
 
-      const createdCourse = await prisma.course.create({data:courseCreateData, include: { quizzes: { include: {questions: { include: {options:true}}}}}});
+      const createdCourse = await prisma.course.create({data:courseCreateData, include: { quizzes: { include: {questions: { include: {options:true}}}}}}); // Removed correctOption: true
 
       if (createdCourse.quizzes && cd.quizzes) {
           for (let i=0; i < createdCourse.quizzes.length; i++) {
@@ -1239,3 +1239,4 @@ export const seedVideosToDb = async (): Promise<{ successCount: number; errorCou
   console.log(`[dbUtils-localStorage] seedVideosToDb: Seeded ${mockVideosForSeeding.length} videos to localStorage.`);
   return { successCount: mockVideosForSeeding.length, errorCount: 0, skippedCount: 0 };
 };
+
