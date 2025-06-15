@@ -3,7 +3,7 @@
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { BookUser, BookMarked, History, GraduationCap, Loader2, Users } from "lucide-react"; // Added Users
+import { BookUser, BookMarked, History, GraduationCap, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import CourseCard from "@/components/courses/CourseCard";
