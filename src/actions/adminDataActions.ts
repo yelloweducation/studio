@@ -16,6 +16,7 @@ import {
   type PaymentSubmissionStatus,
   type QuizType as PrismaQuizType,
   type PaymentSettings,
+  type Video, // Added back Video type
 } from '@/lib/dbUtils';
 
 import {
@@ -37,6 +38,8 @@ import {
   seedPaymentSettingsToDb as seedPaymentSettingsDbUtil,
   getSitePageBySlug as getSitePageBySlugDbUtil,
   upsertSitePage as upsertSitePageDbUtil,
+  // Added back Video actions
+  getVideosFromDb, addVideoToDb, updateVideoInDb, deleteVideoFromDb, seedVideosToDb as seedVideosDbUtil,
 } from '@/lib/dbUtils';
 import type { Prisma } from '@prisma/client';
 
@@ -214,11 +217,20 @@ export async function serverAddLearningPath(pathData: Omit<LearningPath, 'id'|'c
 export async function serverUpdateLearningPath(pathId: string, pathData: Partial<Omit<LearningPath, 'id'|'createdAt'|'updatedAt'|'learningPathCourses'>> & { courseIdsToConnect?: string[] }): Promise<LearningPath> { return updateLearningPathInDb(pathId, pathData); }
 export async function serverDeleteLearningPath(pathId: string): Promise<void> { return deleteLearningPathFromDb(pathId); }
 
+// --- Video Actions --- Added back
+export async function serverGetVideos(): Promise<Video[]> { return getVideosFromDb(); }
+export async function serverAddVideo(videoData: Omit<Video, 'id' | 'createdAt' | 'updatedAt'>): Promise<Video> { return addVideoToDb(videoData); }
+export async function serverUpdateVideo(videoId: string, videoData: Partial<Omit<Video, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Video> { return updateVideoInDb(videoId, videoData); }
+export async function serverDeleteVideo(videoId: string): Promise<void> { return deleteVideoFromDb(videoId); }
+
+
 // --- Seeding Actions ---
 export async function serverSeedCategories(): Promise<{ successCount: number; errorCount: number; skippedCount: number }> { return seedCategoriesDbUtil(); }
 export async function serverSeedCourses(): Promise<{ successCount: number; errorCount: number; skippedCount: number }> { return seedCoursesDbUtil(); }
 export async function serverSeedLearningPaths(): Promise<{ successCount: number; errorCount: number; skippedCount: number }> { return seedLearningPathsDbUtil(); }
 export async function serverSeedPaymentSettings(): Promise<{ successCount: number; errorCount: number; skippedCount: number }> { return seedPaymentSettingsDbUtil(); }
+export async function serverSeedVideos(): Promise<{ successCount: number; errorCount: number; skippedCount: number }> { return seedVideosDbUtil(); } // Added back
+
 
 // --- User-Specific Data Fetching for Course Display ---
 export async function serverGetEnrollmentForCourse(userId: string, courseId: string): Promise<Enrollment | null> { return getEnrollmentForUserAndCourseFromDb(userId, courseId); }

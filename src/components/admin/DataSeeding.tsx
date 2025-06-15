@@ -3,17 +3,18 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { DatabaseZap, BookText, FolderKanban, Users, Loader2, Settings } from 'lucide-react';
+import { DatabaseZap, BookText, FolderKanban, Users, Loader2, Settings, PlaySquare } from 'lucide-react'; // Added PlaySquare
 import { useToast } from '@/hooks/use-toast';
 import { 
   serverSeedCourses, 
   serverSeedCategories, 
   serverSeedLearningPaths,
-  serverSeedPaymentSettings
+  serverSeedPaymentSettings,
+  serverSeedVideos, // Added back
 } from '@/actions/adminDataActions'; 
 import { serverSeedInitialUsers } from '@/actions/authActions'; 
 
-type SeedOperation = 'courses' | 'categories' | 'learningPaths' | 'users' | 'paymentSettings';
+type SeedOperation = 'courses' | 'categories' | 'learningPaths' | 'users' | 'paymentSettings' | 'videos'; // Added 'videos'
 
 export default function DataSeeding() {
   const [loadingStates, setLoadingStates] = useState<Record<SeedOperation, boolean>>({
@@ -22,6 +23,7 @@ export default function DataSeeding() {
     learningPaths: false,
     users: false,
     paymentSettings: false,
+    videos: false, // Added 'videos'
   });
   const { toast } = useToast();
 
@@ -30,8 +32,10 @@ export default function DataSeeding() {
     let result: { successCount: number; errorCount: number; skippedCount: number } | undefined;
     let operationName = operation.charAt(0).toUpperCase() + operation.slice(1);
     if (operation === 'paymentSettings') operationName = 'Payment Settings';
+    if (operation === 'videos') operationName = 'Videos';
 
     try {
+      let storageType = 'database (Neon/Postgres)';
       switch (operation) {
         case 'courses':
           result = await serverSeedCourses(); 
@@ -48,12 +52,15 @@ export default function DataSeeding() {
         case 'paymentSettings':
           result = await serverSeedPaymentSettings(); 
           break;
+        case 'videos': // Added videos
+          result = await serverSeedVideos();
+          storageType = 'localStorage'; // Videos are seeded to localStorage
+          break;
         default:
           throw new Error("Invalid seed operation");
       }
 
       if (result) {
-        const storageType = 'database (Neon/Postgres)';
         toast({
           title: `${operationName} Seeding Complete`,
           description: `Successfully seeded/updated: ${result.successCount}, Skipped: ${result.skippedCount}, Errors: ${result.errorCount}. Data is in ${storageType}.`,
@@ -77,6 +84,7 @@ export default function DataSeeding() {
     { operation: 'learningPaths' as SeedOperation, label: 'Seed Learning Paths to DB', Icon: DatabaseZap },
     { operation: 'users' as SeedOperation, label: 'Seed Initial Users to DB', Icon: Users },
     { operation: 'paymentSettings' as SeedOperation, label: 'Seed Payment Settings to DB', Icon: Settings },
+    { operation: 'videos' as SeedOperation, label: 'Seed Videos to LocalStorage', Icon: PlaySquare }, // Added videos
   ];
 
   return (
@@ -86,7 +94,7 @@ export default function DataSeeding() {
           <DatabaseZap className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Data Seeding
         </CardTitle>
         <CardDescription>
-          Populate your Neon/PostgreSQL database with initial mock data via Prisma.
+          Populate your Neon/PostgreSQL database and localStorage (for videos) with initial mock data.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -114,7 +122,7 @@ export default function DataSeeding() {
           </Card>
         ))}
          <p className="text-xs text-muted-foreground text-center pt-4">
-            Note: Seeding will attempt to create entries from mock data. If entries with the same unique identifiers (like ID or name for categories) already exist in the database, they might be skipped.
+            Note: Seeding will attempt to create entries from mock data. If entries with the same unique identifiers (like ID or name for categories) already exist, they might be skipped.
         </p>
       </CardContent>
     </Card>

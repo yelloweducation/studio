@@ -7,6 +7,8 @@ import { ThemeProvider } from '@/contexts/ThemeContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import VideoPageHeader from '@/components/layout/VideoPageHeader';
+import VideoPageFooter from '@/components/layout/VideoPageFooter';
 import { Poppins, PT_Sans } from 'next/font/google';
 import { headers } from 'next/headers';
 import { siteConfig } from '@/config/site';
@@ -32,7 +34,7 @@ export const metadata: Metadata = {
     template: `%s | ${siteConfig.name}`,
   },
   description: siteConfig.description,
-  keywords: ["education", "online learning", "courses", "tech education", "yellow institute", "e-learning", "study tools", "flashcards"],
+  keywords: ["education", "online learning", "courses", "tech education", "yellow institute", "e-learning", "study tools", "flashcards", "video reels"],
   authors: [{ name: "Yellow Institute Team", url: siteConfig.url }],
   creator: "Yellow Institute Team",
   robots: {
@@ -87,11 +89,15 @@ export const viewport: Viewport = {
   ],
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const heads = headers();
+  const pathname = heads.get('next-url') || '';
+  const isVideoPage = pathname === '/videos';
+
   return (
     <html lang="en" suppressHydrationWarning className={`${poppins.variable} ${ptSans.variable}`}>
       <head>
@@ -100,11 +106,11 @@ export default async function RootLayout({
         <ThemeProvider>
           <AuthProvider>
             <LanguageProvider>
-              <Header /> 
-              <main className="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              {isVideoPage ? <VideoPageHeader /> : <Header />}
+              <main className={`flex-grow w-full ${isVideoPage ? '' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'}`}>
                 {children}
               </main>
-              <Footer /> 
+              {isVideoPage ? <VideoPageFooter /> : <Footer />}
               <Toaster />
             </LanguageProvider>
           </AuthProvider>

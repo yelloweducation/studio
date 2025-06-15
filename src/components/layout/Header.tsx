@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home as HomeIcon, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Compass, Layers, Brain, Loader2, Settings as SettingsIcon, UserCircle, Menu as MenuIcon } from 'lucide-react';
+import { Home as HomeIcon, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Compass, Layers, Brain, Loader2, Settings as SettingsIcon, UserCircle, Menu as MenuIcon, PlaySquare } from 'lucide-react'; // Added PlaySquare
 import { useTheme } from '@/contexts/ThemeContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from "@/lib/utils";
@@ -25,6 +25,7 @@ const headerTranslations = {
     home: "Home",
     all: "ALL",
     explore: "Explore Courses",
+    reels: "Reels", // Added Reels
     flashCards: "Flash Cards",
     personalityTest: "Assessments",
     welcome: "Welcome",
@@ -43,6 +44,7 @@ const headerTranslations = {
     home: "ပင်မ",
     all: "အားလုံး",
     explore: "သင်တန်းများ",
+    reels: "ဗီဒီယိုတို", // Added Reels
     flashCards: "ကတ်ပြားများ",
     personalityTest: "စစ်ဆေးမှုများ",
     welcome: "ကြိုဆိုပါတယ်",
@@ -90,7 +92,7 @@ const Header = () => {
   const [headerVisible, setHeaderVisible] = useState(true);
 
   const isOnHomepage = pathname === '/';
-  const useScrollHidingHeader = isOnHomepage;
+  const useScrollHidingHeader = isOnHomepage; // Enable scroll hiding only on homepage for mobile
   const headerScrollThreshold = 50;
 
   const toggleTheme = useCallback(() => {
@@ -98,7 +100,11 @@ const Header = () => {
   }, [contextToggleTheme]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || pathname === '/videos') {
+      setDynamicHeaderBackgroundClasses('bg-background border-b'); // Video page header is always opaque
+      return;
+    }
+    
     const controlHeaderBackground = () => {
       if (window.scrollY < headerScrollThreshold) {
         setDynamicHeaderBackgroundClasses('bg-transparent border-transparent');
@@ -113,7 +119,7 @@ const Header = () => {
 
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !useScrollHidingHeader) {
+    if (typeof window === 'undefined' || !useScrollHidingHeader || pathname === '/videos') {
       setHeaderVisible(true);
       return;
     }
@@ -148,6 +154,7 @@ const Header = () => {
 
   const commonNavItems = [
     { href: "/courses/search", label: t.explore, Icon: Compass },
+    { href: "/videos", label: t.reels, Icon: PlaySquare }, // Re-added Reels
     { href: "/flash-cards", label: t.flashCards, Icon: Layers },
     { href: "/personality-tests", label: t.personalityTest, Icon: Brain }
   ];

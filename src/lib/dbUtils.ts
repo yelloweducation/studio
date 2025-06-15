@@ -6,11 +6,10 @@ import {
   mockCategoriesForSeeding,
   mockLearningPathsForSeeding,
   initialPaymentSettings as mockDefaultPaymentSettingsData,
+  mockVideosForSeeding, // Added back
 } from '@/data/mockData';
-import { QuizType as PrismaQuizTypeEnum, type SitePage, type Course, type Category, type LearningPath, type Module, type Lesson, type Quiz, type Question, type Option, type QuizType as PrismaQuizTypeTypeAlias, type PaymentSettings, type PaymentSubmission, type Enrollment, type User, type PaymentSubmissionStatus as PrismaPaymentStatus } from '@prisma/client';
+import { QuizType as PrismaQuizTypeEnum, type SitePage, type Course, type Category, type LearningPath, type Module, type Lesson, type Quiz, type Question, type Option, type QuizType as PrismaQuizTypeTypeAlias, type PaymentSettings, type PaymentSubmission, type Enrollment, type User, type PaymentSubmissionStatus as PrismaPaymentStatus, type Video as PrismaVideoType } from '@prisma/client'; // Added PrismaVideoType
 import { z } from 'zod';
-
-// Note: The 'Video' type and related functions are removed as the video page is removed.
 
 console.log("[dbUtils-Prisma] Loading dbUtils.ts module. DATABASE_URL from env (initial check):", process.env.DATABASE_URL ? "Exists" : "NOT FOUND/EMPTY");
 if (process.env.DATABASE_URL) {
@@ -18,11 +17,24 @@ if (process.env.DATABASE_URL) {
 }
 
 export type {
-    Category, Course, Module, Lesson, Quiz, Question, Option, SitePage,
+    Category, Course, Module, Lesson, Quiz, Question, Option, SitePage, Video as PrismaVideo, // Renamed Video to PrismaVideo to avoid conflict with mock type
     LearningPath, User, PaymentSettings, PaymentSubmission, Enrollment,
     PrismaPaymentStatus as PaymentSubmissionStatus,
     PrismaQuizTypeTypeAlias as QuizType
 };
+
+// Video Type (mock for localStorage, matches PrismaVideoType structure as much as possible)
+export type Video = {
+  id: string;
+  title: string;
+  description: string;
+  thumbnailUrl?: string | null;
+  embedUrl: string; // Keep as non-nullable for form consistency
+  dataAiHint?: string | null;
+  createdAt?: Date;
+  updatedAt?: Date;
+};
+
 
 const CategoryInputSchema = z.object({
   name: z.string().min(1, "Category name is required"),
@@ -89,6 +101,17 @@ const CourseInputSchema = z.object({
   quizzes: z.array(QuizInputSchema).optional(),
 });
 
+const VideoInputSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().min(1, "Description is required"),
+  thumbnailUrl: z.string().url("Invalid thumbnail URL").optional().nullable(),
+  embedUrl: z.string().min(1, "Embed URL is required").url("Invalid embed URL").refine(val => val.includes("youtube.com") || val.includes("tiktok.com") || val.includes("drive.google.com"), {
+    message: "Embed URL must be a valid YouTube, TikTok, or Google Drive URL."
+  }),
+  dataAiHint: z.string().max(100, "AI hint too long").optional().nullable(),
+});
+
+
 const LearningPathInputSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().min(1, "Description is required"),
@@ -119,6 +142,18 @@ const SitePageInputSchema = z.object({
   title: z.string().min(1, "Title is required"),
   content: z.any(),
 });
+
+// --- Helper for localStorage (for entities still using localStorage) ---
+const getStoredData = <T>(key: string, fallbackData: T[]): T[] => {
+  if (typeof window === 'undefined') return [...fallbackData];
+  const storedJson = localStorage.getItem(key);
+  if (storedJson) {
+    try { return JSON.parse(storedJson); } catch (e) { console.error(`Error parsing ${key}`, e); localStorage.setItem(key, JSON.stringify(fallbackData)); return [...fallbackData]; }
+  } else { localStorage.setItem(key, JSON.stringify(fallbackData)); return [...fallbackData]; }
+};
+const saveStoredData = <T>(key: string, data: T[]) => {
+  if (typeof window !== 'undefined') localStorage.setItem(key, JSON.stringify(data));
+};
 
 
 // --- Category Functions (Using Prisma) ---
@@ -788,6 +823,48 @@ export const saveQuizWithQuestionsToDb = async (
     }
 };
 
+// --- Video Functions (localStorage) --- Added back
+export const getVideosFromDb = async (): Promise<Video[]> => {
+  return Promise.resolve(getStoredData('adminVideos', mockVideosForSeeding));
+};
+export const addVideoToDb = async (videoData: Omit<Video, 'id' | 'createdAt' | 'updatedAt'>): Promise<Video> => {
+  const validation = VideoInputSchema.safeParse(videoData);
+  if (!validation.success) {
+    console.error("Video validation failed (add):", validation.error.flatten().fieldErrors);
+    throw new Error(validation.error.flatten().fieldErrors._errors?.join(', ') || "Invalid video data.");
+  }
+  const newVideo: Video = {
+    id: `vid-${Date.now()}`,
+    ...validation.data,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  };
+  const videos = getStoredData('adminVideos', mockVideosForSeeding);
+  videos.unshift(newVideo);
+  saveStoredData('adminVideos', videos);
+  return Promise.resolve(newVideo);
+};
+export const updateVideoInDb = async (videoId: string, videoData: Partial<Omit<Video, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Video> => {
+  const validation = VideoInputSchema.partial().safeParse(videoData);
+  if (!validation.success) {
+    console.error("Video validation failed (update):", validation.error.flatten().fieldErrors);
+    throw new Error(validation.error.flatten().fieldErrors._errors?.join(', ') || "Invalid video data for update.");
+  }
+  let videos = getStoredData('adminVideos', mockVideosForSeeding);
+  const index = videos.findIndex(v => v.id === videoId);
+  if (index === -1) throw new Error("Video not found");
+  videos[index] = { ...videos[index], ...validation.data, updatedAt: new Date() };
+  saveStoredData('adminVideos', videos);
+  return Promise.resolve(videos[index]);
+};
+export const deleteVideoFromDb = async (videoId: string): Promise<void> => {
+  let videos = getStoredData('adminVideos', mockVideosForSeeding);
+  videos = videos.filter(v => v.id !== videoId);
+  saveStoredData('adminVideos', videos);
+  return Promise.resolve();
+};
+
+
 // --- PaymentSettings (Using Prisma) ---
 export const getPaymentSettingsFromDb = async (): Promise<PaymentSettings | null> => {
   console.log("[dbUtils-Prisma] getPaymentSettingsFromDb: Fetching payment settings from DB.");
@@ -1153,4 +1230,12 @@ export const seedPaymentSettingsToDb = async (): Promise<{ successCount: number;
       console.error('Err seed PaymentSettings:',err);
       return{successCount:0,errorCount:1,skippedCount:0};
     }
+};
+
+// Seed Videos to localStorage (Added back)
+export const seedVideosToDb = async (): Promise<{ successCount: number; errorCount: number; skippedCount: number }> => {
+  if (typeof window === 'undefined') return { successCount: 0, errorCount: 0, skippedCount: 0 };
+  localStorage.setItem('adminVideos', JSON.stringify(mockVideosForSeeding));
+  console.log(`[dbUtils-localStorage] seedVideosToDb: Seeded ${mockVideosForSeeding.length} videos to localStorage.`);
+  return { successCount: mockVideosForSeeding.length, errorCount: 0, skippedCount: 0 };
 };
