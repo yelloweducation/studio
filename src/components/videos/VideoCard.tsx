@@ -14,7 +14,10 @@ const VideoCard = ({ video }: VideoCardProps) => {
   const description = video.description || ""; 
   const thumbnailUrl = video.thumbnailUrl; 
 
-  const containerClasses = "bg-black rounded-lg shadow-xl overflow-hidden w-full max-w-full sm:max-w-md mx-auto aspect-[9/16] max-h-[calc(100vh-theme(spacing.14)-env(safe-area-inset-bottom,0px))] h-auto flex flex-col items-center justify-center relative";
+  // Apply fixed width and height, centered horizontally.
+  // Removed aspect-[9/16], max-h, and max-w-full.
+  // Added fixed w-[360px] and h-[460px]. mx-auto remains for centering on wider screens.
+  const containerClasses = "bg-black rounded-lg shadow-xl overflow-hidden w-[360px] h-[460px] mx-auto flex flex-col items-center justify-center relative";
 
 
   if (embeddableUrl) {
@@ -25,20 +28,21 @@ const VideoCard = ({ video }: VideoCardProps) => {
           title={title}
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
           allowFullScreen
-          className="w-full h-full border-0"
+          className="w-full h-full border-0" // iframe will fill the 360x460 container
         ></iframe>
       </div>
     );
   }
 
+  // Fallback if no embeddable URL (e.g., direct video link or placeholder)
   return (
     <div className={`${containerClasses} text-white`}>
       {thumbnailUrl && ( 
         <Image
             src={thumbnailUrl}
             alt={title} 
-            layout="fill"
-            objectFit="cover"
+            layout="fill" // Image will fill the 360x460 container
+            objectFit="cover" // Maintain aspect ratio and cover, might crop
             className="opacity-70"
             data-ai-hint={video.dataAiHint || 'video placeholder'}
             onError={(e) => { 
