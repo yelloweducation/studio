@@ -305,7 +305,7 @@ const QuizQuestionsDialog = ({
       // Find the correct option object from the potentially re-IDed newOptions
       const correctFormOption = questionData.options?.find(opt => opt.id === questionData.correctOptionId);
       const correctDbOptionInNewList = newOptions.find(opt => opt.text === correctFormOption?.text);
-      
+
       const newQuestionEntry: FormQuestion = {
           ...questionData,
           id: newId,
@@ -328,7 +328,6 @@ const QuizQuestionsDialog = ({
   };
 
   const handleSaveAndClose = async () => {
-    // Pass the current state of the quiz (with all its questions) and the list of deleted question IDs
     await onSaveQuiz(currentQuizState, questionIdsToDelete);
   };
 
@@ -439,7 +438,7 @@ const CourseForm = ({
   );
 
   const [editingQuizForQuestions, setEditingQuizForQuestions] = useState<FormQuiz | null>(null);
-  const [isSubmittingForm, setIsSubmittingForm] = useState(isSubmitting); // Local submitting state for the form
+  const [isSubmittingForm, setIsSubmittingForm] = useState(isSubmitting);
 
 
   const [learningObjectives, setLearningObjectives] = useState(course?.learningObjectives?.join('\n') || '');
@@ -500,7 +499,7 @@ const CourseForm = ({
       return;
     }
     const newQuizEntry: FormQuiz = {
-      id: `quiz-new-${Date.now()}-${Math.random().toString(36).substring(2,7)}`, // Make ID more unique for local state
+      id: `quiz-new-${Date.now()}-${Math.random().toString(36).substring(2,7)}`,
       title: newQuizTitle,
       quizType: newQuizType,
       questions: [],
@@ -521,14 +520,14 @@ const CourseForm = ({
     deletedQuestionIdsFromDialog: string[]
   ) => {
     setQuizzes(prevQuizzes =>
-      prevQuizzes.map(q =>
-        q.id === quizDataFromDialog.id
-          ? { ...quizDataFromDialog }
-          : q
-      )
+        prevQuizzes.map(q =>
+            q.id === quizDataFromDialog.id ?
+            { ...quizDataFromDialog } // Ensure new object reference
+            : q
+        )
     );
 
-    if (course?.id) {
+    if (course?.id && !quizDataFromDialog.id?.startsWith('quiz-new-')) {
       setIsSubmittingForm(true);
       try {
         const questionsToUpsert = quizDataFromDialog.questions?.map(q => ({
@@ -544,7 +543,7 @@ const CourseForm = ({
         }));
 
         const payloadForServer = {
-          id: quizDataFromDialog.id?.startsWith('quiz-new-') ? undefined : quizDataFromDialog.id,
+          id: quizDataFromDialog.id,
           title: quizDataFromDialog.title,
           quizType: quizDataFromDialog.quizType.toUpperCase() as PrismaQuizTypeEnum,
           passingScore: quizDataFromDialog.passingScore,
@@ -555,7 +554,7 @@ const CourseForm = ({
         const savedQuiz = await serverSaveQuizWithQuestions(course.id, payloadForServer);
         setQuizzes(prevQuizzes =>
           prevQuizzes.map(q =>
-            q.id === quizDataFromDialog.id || q.title === savedQuiz.title
+            q.id === savedQuiz.id // Use savedQuiz.id to match
               ? {
                   ...savedQuiz,
                   quizType: savedQuiz.quizType as MockQuizEnumType,
@@ -637,7 +636,7 @@ const CourseForm = ({
                 id: opt.id?.startsWith('opt-new-') ? undefined: opt.id,
                 text: opt.text,
               })),
-              correctOptionText: ques.correctOptionText, // Pass this for dbUtils
+              correctOptionText: ques.correctOptionText,
           }))
       }))
     };
@@ -906,7 +905,7 @@ export default function CourseManagement() {
   const [editingCourse, setEditingCourse] = useState<(Course & { modules?: (Module & { lessons?: Lesson[] })[], quizzes?: (Quiz & { questions?: (Question & { options?: Option[], correctOptionId?: string | null })[] })[] }) | undefined>(undefined);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
-  const [isSubmittingFormState, setIsSubmittingFormState] = useState(false); // Renamed to avoid conflict
+  const [isSubmittingFormState, setIsSubmittingFormState] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
