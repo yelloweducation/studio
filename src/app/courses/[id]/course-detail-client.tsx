@@ -431,7 +431,7 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
                 {t.taughtBy.replace('{instructor}', instructor || '')} &bull; {t.categoryLabel.replace('{category}', categoryNameCache || '')}
                 {price && price > 0 && currency && (
                     <span className="block mt-1 font-semibold text-primary">
-                        {t.priceLabel.replace('{price}', price.toFixed(2)).replace('{currency}', currency)}
+                        {t.priceLabel.replace('{price}', (price ?? 0).toFixed(2)).replace('{currency}', currency)}
                     </span>
                 )}
               </CardDescription>
@@ -460,7 +460,7 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
 
           <Card className="shadow-lg">
             <CardHeader>
-              <CardTitle className="text-xl font-headline flex items-center"><Users as TargetAudienceIcon className="mr-2 h-6 w-6 text-primary" /> {t.targetAudience}</CardTitle>
+              <CardTitle className="text-xl font-headline flex items-center"><TargetAudienceIcon className="mr-2 h-6 w-6 text-primary" /> {t.targetAudience}</CardTitle>
             </CardHeader>
             <CardContent>
               {targetAudience ? (
