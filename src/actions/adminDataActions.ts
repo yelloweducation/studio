@@ -29,7 +29,7 @@ import {
   seedLearningPathsToDb as seedLearningPathsDbUtil,
   getEnrollmentForUserAndCourseFromDb,
   getPaymentSubmissionsFromDb,
-  createEnrollmentInDb as createEnrollmentDbUtil,
+  createEnrollmentInDb as createEnrollmentDbUtil, // Alias is used here
   addPaymentSubmissionToDb as addPaymentSubmissionDbUtil,
   updatePaymentSubmissionInDb as updatePaymentSubmissionDbUtil,
   getEnrollmentsByUserIdFromDb as getEnrollmentsByUserIdDbUtil,
@@ -239,7 +239,7 @@ export async function serverGetPaymentSubmissionForCourse(userId: string, course
   return allUserSubmissions.find(s => s.courseId === courseId) || null;
 }
 export async function serverCreateEnrollment(userId: string, courseId: string): Promise<Enrollment | null> {
-  try { return await createEnrollmentInDb(userId, courseId); }
+  try { return await createEnrollmentDbUtil(userId, courseId); } // Corrected to use alias
   catch (error) { console.error("[ServerAction serverCreateEnrollment] Error creating enrollment:", error); throw error; }
 }
 export async function serverUpdateEnrollmentProgress(enrollmentId: string, progress: number): Promise<Enrollment | null> {
