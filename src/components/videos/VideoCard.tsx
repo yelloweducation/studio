@@ -1,7 +1,7 @@
 
 import type { Video } from '@/lib/dbUtils';
 import Image from 'next/image';
-import { PlayCircle, AlertTriangle } from 'lucide-react'; // Added AlertTriangle
+import { PlayCircle, AlertTriangle } from 'lucide-react';
 import { getEmbedUrl } from '@/lib/utils';
 
 interface VideoCardProps {
@@ -9,9 +9,9 @@ interface VideoCardProps {
 }
 
 const VideoCard = ({ video }: VideoCardProps) => {
-  // Ensure video and embedUrl are valid before processing
-  if (!video || typeof video.embedUrl !== 'string') {
-    console.warn('VideoCard: Invalid video data or missing embedUrl.', video);
+  // Top-level check for critical video data
+  if (!video || !video.id || typeof video.embedUrl !== 'string') {
+    console.warn('VideoCard: Invalid or incomplete video data received.', video);
     return (
       <div className="bg-black rounded-lg shadow-xl w-[360px] h-[460px] mx-auto flex flex-col items-center justify-center text-white p-4">
         <AlertTriangle className="h-12 w-12 text-destructive mb-2" />
@@ -22,23 +22,29 @@ const VideoCard = ({ video }: VideoCardProps) => {
 
   const embeddableUrl = getEmbedUrl(video.embedUrl);
 
-  // Sanitize string properties with fallbacks
+  // Sanitize string properties with fallbacks and log warnings if data is not as expected
   const title = typeof video.title === 'string' ? video.title : "Untitled Video";
-  const description = typeof video.description === 'string' ? video.description : "No description available.";
-  const aiHint = typeof video.dataAiHint === 'string' ? video.dataAiHint : (typeof video.dataAiHint === 'undefined' || video.dataAiHint === null) ? 'video content' : String(video.dataAiHint);
-  const thumbnailUrl = typeof video.thumbnailUrl === 'string' ? video.thumbnailUrl : null;
-
   if (typeof video.title !== 'string') {
-    console.warn(`VideoCard: video.title is not a string for video ID ${video.id}. Received:`, video.title, ". Using fallback.");
+    console.warn(`VideoCard (ID: ${video.id}): video.title is not a string. Received:`, video.title);
   }
+
+  const description = typeof video.description === 'string' ? video.description : "No description available.";
   if (typeof video.description !== 'string') {
-    console.warn(`VideoCard: video.description is not a string for video ID ${video.id}. Received:`, video.description, ". Using fallback.");
+    console.warn(`VideoCard (ID: ${video.id}): video.description is not a string. Received:`, video.description);
   }
+  
+  const thumbnailUrl = typeof video.thumbnailUrl === 'string' ? video.thumbnailUrl : null;
+  if (video.thumbnailUrl !== null && typeof video.thumbnailUrl !== 'string' && typeof video.thumbnailUrl !== 'undefined') {
+     console.warn(`VideoCard (ID: ${video.id}): video.thumbnailUrl is not a string or null/undefined. Received:`, video.thumbnailUrl);
+  }
+
+  const aiHint = typeof video.dataAiHint === 'string' 
+    ? video.dataAiHint 
+    : (video.dataAiHint === null || typeof video.dataAiHint === 'undefined' 
+      ? 'video content' 
+      : String(video.dataAiHint)); // Fallback for non-string, non-null/undefined dataAiHint
   if (video.dataAiHint !== null && typeof video.dataAiHint !== 'string' && typeof video.dataAiHint !== 'undefined') {
-    console.warn(`VideoCard: video.dataAiHint is not a string or null/undefined for video ID ${video.id}. Received:`, video.dataAiHint, ". Using fallback or stringified value.");
-  }
-   if (video.thumbnailUrl !== null && typeof video.thumbnailUrl !== 'string' && typeof video.thumbnailUrl !== 'undefined') {
-    console.warn(`VideoCard: video.thumbnailUrl is not a string or null/undefined for video ID ${video.id}. Received:`, video.thumbnailUrl, ". Clearing it.");
+     console.warn(`VideoCard (ID: ${video.id}): video.dataAiHint is not a string or null/undefined. Received:`, video.dataAiHint);
   }
 
 
@@ -53,25 +59,29 @@ const VideoCard = ({ video }: VideoCardProps) => {
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
           allowFullScreen
           className="w-full h-full border-0"
+          loading="lazy" // Add lazy loading for iframes
         ></iframe>
       </div>
     );
   }
 
-  // Fallback display if embeddableUrl is null (e.g., invalid original URL)
+  // Fallback display if embeddableUrl is null (e.g., invalid original URL or processed as null)
   return (
     <div className={`${containerClasses} text-white`}>
       {thumbnailUrl ? (
         <Image
             src={thumbnailUrl}
-            alt={title}
+            alt={title} // Uses sanitized title
             layout="fill"
             objectFit="cover"
             className="opacity-70"
-            data-ai-hint={aiHint}
+            data-ai-hint={aiHint} // Uses sanitized aiHint
+            priority={false} // No priority for fallback images in a list
             onError={(e) => {
-              console.warn(`Failed to load image for video "${title}": ${thumbnailUrl}`, e);
-              // Optionally, set a state to hide the image or show a placeholder
+              // Target is available on SyntheticEvent<HTMLImageElement, Event>
+              const target = e.target as HTMLImageElement; 
+              console.warn(`VideoCard (ID: ${video.id}): Failed to load image from ${target.src}.`);
+              target.style.display = 'none'; // Hide broken image icon
             }}
         />
       ) : (
@@ -86,7 +96,6 @@ const VideoCard = ({ video }: VideoCardProps) => {
         <div
           aria-label={`Play video ${title}`}
           className="bg-primary/80 text-primary-foreground rounded-full p-2 sm:p-3 inline-block cursor-pointer hover:bg-primary transition-colors"
-          // onClick could be added here if this fallback itself should be interactive
         >
           <PlayCircle size={28} className="sm:h-8 sm:w-8" />
         </div>
@@ -96,3 +105,4 @@ const VideoCard = ({ video }: VideoCardProps) => {
 };
 
 export default VideoCard;
+
