@@ -68,7 +68,8 @@ const courseDetailTranslations = {
     practiceQuiz: "Practice Quiz",
     gradedQuiz: "Graded Quiz",
     startQuiz: "Start Quiz",
-    noQuizzesAvailable: "No quizzes available for this course yet."
+    noQuizzesAvailable: "No quizzes available for this course yet.",
+    completedNoLessons: "Course Completed (No lessons available for review)" // New translation
   },
   my: {
     backToCourses: "အတန်းများသို့ ပြန်သွားရန်",
@@ -111,7 +112,8 @@ const courseDetailTranslations = {
     practiceQuiz: "လေ့ကျင့်ရန် စာမေးပွဲငယ်",
     gradedQuiz: "အဆင့်သတ်မှတ် စာမေးပွဲငယ်",
     startQuiz: "စာမေးပွဲငယ် စတင်ရန်",
-    noQuizzesAvailable: "ဤသင်တန်းအတွက် စာမေးပွဲငယ်များ မရှိသေးပါ။"
+    noQuizzesAvailable: "ဤသင်တန်းအတွက် စာမေးပွဲငယ်များ မရှိသေးပါ။",
+    completedNoLessons: "သင်တန်း ပြီးဆုံးသွားပါပြီ (ပြန်လည်သုံးသပ်ရန် သင်ခန်းစာများ မရှိပါ)" // New translation
   }
 };
 
@@ -199,7 +201,7 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
     const coursePriceDisplay = (currentCourse.price ?? 0).toFixed(2);
     const courseCurrencyDisplay = currentCourse.currency || 'USD';
 
-    if (currentCourse.price && currentCourse.price > 0) {
+    if (currentCourse.price && currentCourse.price > 0) { // Priced course
         if (!isAuthenticated) {
             return (
                  <Button asChild size="lg" className="w-full shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150 whitespace-normal h-auto py-3">
@@ -210,22 +212,24 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
                 </Button>
             );
         }
-        if (paymentInfo?.status === 'APPROVED') {
+        if (paymentInfo?.status === 'APPROVED') { // User has paid and approved
             if (completionInfo?.isCompleted) {
                 return (
                     <div className="flex flex-col items-center text-center p-4 bg-green-100 dark:bg-green-900/50 rounded-lg shadow">
                         <CheckCircle className="w-12 h-12 text-green-600 dark:text-green-400 mb-2" />
                         <p className="font-semibold text-green-700 dark:text-green-300">{t.finishedCourse}</p>
                         <p className="text-sm text-green-600 dark:text-green-400">{t.progressLabel.replace('{progress}', (completionInfo.progress || 0).toString())}</p>
-                        {firstLessonPath && (
+                        {firstLessonPath ? (
                             <Button asChild size="lg" className="mt-3 whitespace-normal h-auto py-3">
                             <Link href={firstLessonPath}>{t.reviewCourse}</Link>
                             </Button>
+                        ) : (
+                            <p className="text-sm text-muted-foreground mt-2">{t.completedNoLessons}</p>
                         )}
                     </div>
                 );
             }
-             if (!firstLessonPath) {
+             if (!firstLessonPath) { // Not completed, paid, but no lessons
                  return (
                     <div className="flex flex-col items-center text-center p-4 bg-muted rounded-lg shadow">
                         <AlertTriangle className="w-12 h-12 text-amber-500 mb-2" />
@@ -234,14 +238,14 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
                     </div>
                 );
             }
-            return (
+            return ( // Not completed, paid, has lessons
                 <Button asChild size="lg" className="w-full shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150 whitespace-normal h-auto py-3">
                     <Link href={firstLessonPath}>
                     {t.startLearning} <ArrowRight className="ml-2 h-5 w-5" />
                     </Link>
                 </Button>
             );
-        } else if (paymentInfo?.status === 'PENDING') {
+        } else if (paymentInfo?.status === 'PENDING') { // Payment submitted, pending review
             return (
                 <div className="flex flex-col items-center text-center p-4 bg-blue-100 dark:bg-blue-900/50 rounded-lg shadow">
                     <Hourglass className="w-12 h-12 text-blue-600 dark:text-blue-400 mb-2" />
@@ -249,8 +253,8 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
                     <p className="text-sm text-blue-600 dark:text-blue-400">{t.paymentSubmittedDesc}</p>
                 </div>
             );
-        } else {
-             if (!currentCourse.modules || currentCourse.modules.length === 0 || !firstLessonPath) {
+        } else { // Not paid or payment rejected
+             if (!currentCourse.modules || currentCourse.modules.length === 0 || !firstLessonPath) { // Priced course with no lessons
                 return (
                     <div className="flex flex-col items-center text-center p-4 bg-muted rounded-lg shadow">
                         <AlertTriangle className="w-12 h-12 text-amber-500 mb-2" />
@@ -259,7 +263,7 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
                     </div>
                 );
             }
-            return (
+            return ( // Priced course with lessons, user needs to purchase
                 <Button asChild size="lg" className="w-full shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150 whitespace-normal h-auto py-3">
                     <Link href={`/courses/${courseId}/checkout`}>
                         <ShoppingCart className="mr-2 h-5 w-5" />
@@ -270,22 +274,25 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
         }
     }
 
+    // Free course logic
     if (completionInfo?.isCompleted) {
       return (
         <div className="flex flex-col items-center text-center p-4 bg-green-100 dark:bg-green-900/50 rounded-lg shadow">
           <CheckCircle className="w-12 h-12 text-green-600 dark:text-green-400 mb-2" />
           <p className="font-semibold text-green-700 dark:text-green-300">{t.finishedCourse}</p>
           <p className="text-sm text-green-600 dark:text-green-400">{t.progressLabel.replace('{progress}', (completionInfo.progress || 0).toString())}</p>
-          {firstLessonPath && (
-            <Button asChild size="lg" className="mt-3 whitespace-normal h-auto py-3">
-              <Link href={firstLessonPath}>{t.reviewCourse}</Link>
-            </Button>
-          )}
+           {firstLessonPath ? (
+                <Button asChild size="lg" className="mt-3 whitespace-normal h-auto py-3">
+                <Link href={firstLessonPath}>{t.reviewCourse}</Link>
+                </Button>
+            ) : (
+                <p className="text-sm text-muted-foreground mt-2">{t.completedNoLessons}</p>
+            )}
         </div>
       );
     }
 
-    if (!firstLessonPath) {
+    if (!firstLessonPath) { // Free course, not completed, but no lessons
          return (
             <div className="flex flex-col items-center text-center p-4 bg-muted rounded-lg shadow">
                 <AlertTriangle className="w-12 h-12 text-amber-500 mb-2" />
@@ -295,7 +302,7 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
         );
     }
 
-    return (
+    return ( // Free course, not completed, has lessons
       <Button asChild size="lg" className="w-full shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150 whitespace-normal h-auto py-3">
         <Link href={firstLessonPath}>
           {t.startLearningFree} <ArrowRight className="ml-2 h-5 w-5" />

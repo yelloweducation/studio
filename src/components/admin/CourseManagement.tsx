@@ -39,7 +39,7 @@ import type { QuizType as MockQuizEnumType } from '@/data/mockData'; // Keep for
 type FormLesson = Partial<Omit<Lesson, 'moduleId'|'createdAt'|'updatedAt'>>;
 type FormModule = Partial<Omit<Module, 'courseId'|'createdAt'|'updatedAt'>> & { lessons?: FormLesson[] };
 type FormOption = Partial<Omit<Option, 'questionId'|'createdAt'|'updatedAt'>>;
-type FormQuestion = Partial<Omit<Question, 'quizId'|'createdAt'|'updatedAt'|'options'|'correctOption'>> & { options?: FormOption[], correctOptionTextForNew?: string }; // Removed correctOption, add correctOptionTextForNew
+type FormQuestion = Partial<Omit<Question, 'quizId'|'createdAt'|'updatedAt'|'options'|'correctOption'>> & { options?: FormOption[], correctOptionText?: string }; // Changed correctOptionTextForNew to correctOptionText
 type FormQuiz = Partial<Omit<Quiz, 'courseId'|'createdAt'|'updatedAt'|'questions'>> & { quizType: MockQuizEnumType, questions?: FormQuestion[] };
 
 
@@ -174,7 +174,7 @@ const QuestionEditDialog = ({
       order,
       points,
       options: currentOptions.map(({ isCorrect, ...optData }) => optData), 
-      correctOptionTextForNew: correctOption.text, 
+      correctOptionText: correctOption.text, // Changed from correctOptionTextForNew
       correctOptionId: correctOption.id, 
     });
   };
@@ -312,7 +312,7 @@ const QuizQuestionsDialog = ({
         return {
             ...q, 
             optionsToCreate: q.options?.map(opt => ({ id: opt.id?.startsWith('opt-new-') ? undefined : opt.id, text: opt.text })),
-            correctOptionTextForNew: q.options?.find(o => o.id === q.correctOptionId)?.text,
+            correctOptionText: q.options?.find(o => o.id === q.correctOptionId)?.text, // Changed from correctOptionTextForNew
             id: q.id?.startsWith('q-new-') ? undefined : q.id, 
         };
     });
@@ -577,7 +577,7 @@ const CourseForm = ({
                 id: opt.id?.startsWith('opt-new-') ? undefined: opt.id,
                 text: opt.text,
               })),
-              correctOptionTextForNew: ques.options?.find(opt => opt.id === ques.correctOptionId)?.text, // Ensure this is correctOptionText for new questions
+              correctOptionText: ques.options?.find(opt => opt.id === ques.correctOptionId)?.text, // Changed from correctOptionTextForNew
           }))
       }))
     };
@@ -1034,3 +1034,4 @@ export default function CourseManagement() {
     </Card>
   );
 }
+
