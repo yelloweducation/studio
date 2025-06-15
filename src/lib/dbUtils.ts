@@ -6,9 +6,9 @@ import {
   mockCategoriesForSeeding,
   mockLearningPathsForSeeding,
   initialPaymentSettings as mockDefaultPaymentSettingsData,
-  mockVideosForSeeding, // Added back
+  mockVideosForSeeding,
 } from '@/data/mockData';
-import { QuizType as PrismaQuizTypeEnum, type SitePage, type Course, type Category, type LearningPath, type Module, type Lesson, type Quiz, type Question, type Option, type QuizType as PrismaQuizTypeTypeAlias, type PaymentSettings, type PaymentSubmission, type Enrollment, type User, type PaymentSubmissionStatus as PrismaPaymentStatus, type Video as PrismaVideoType } from '@prisma/client'; // Added PrismaVideoType
+import { QuizType as PrismaQuizTypeEnum, type SitePage, type Course, type Category, type LearningPath, type Module, type Lesson, type Quiz, type Question, type Option, type QuizType as PrismaQuizTypeTypeAlias, type PaymentSettings, type PaymentSubmission, type Enrollment, type User, type PaymentSubmissionStatus as PrismaPaymentStatus, type Video as PrismaVideoType, type Certificate as PrismaCertificate } from '@prisma/client'; // Added PrismaCertificate
 import { z } from 'zod';
 
 console.log("[dbUtils-Prisma] Loading dbUtils.ts module. DATABASE_URL from env (initial check):", process.env.DATABASE_URL ? "Exists" : "NOT FOUND/EMPTY");
@@ -17,8 +17,8 @@ if (process.env.DATABASE_URL) {
 }
 
 export type {
-    Category, Course, Module, Lesson, Quiz, Question, Option, SitePage, Video as PrismaVideo, // Renamed Video to PrismaVideo to avoid conflict with mock type
-    LearningPath, User, PaymentSettings, PaymentSubmission, Enrollment,
+    Category, Course, Module, Lesson, Quiz, Question, Option, SitePage, Video as PrismaVideo,
+    LearningPath, User, PaymentSettings, PaymentSubmission, Enrollment, PrismaCertificate as Certificate, // Added Certificate
     PrismaPaymentStatus as PaymentSubmissionStatus,
     PrismaQuizTypeTypeAlias as QuizType
 };
@@ -143,6 +143,14 @@ const SitePageInputSchema = z.object({
   content: z.any(),
 });
 
+const CertificateInputSchema = z.object({
+  userId: z.string().min(1, "User ID is required"),
+  courseId: z.string().min(1, "Course ID is required"),
+  // userName and courseTitle will be fetched, not taken as direct input from admin form
+  certificateUrl: z.string().url("Invalid URL for certificate").optional().nullable(),
+});
+
+
 // --- Helper for localStorage (for entities still using localStorage) ---
 const getStoredData = <T>(key: string, fallbackData: T[]): T[] => {
   if (typeof window === 'undefined') return [...fallbackData];
@@ -262,7 +270,7 @@ export const getCourseByIdFromDb = async (courseId: string): Promise<Course | nu
 };
 
 export const addCourseToDb = async (
-  courseData: Omit<Course, 'id'|'createdAt'|'updatedAt'|'categoryId'|'categoryNameCache'|'modules'|'quizzes'|'learningPathCourses'|'category'|'enrollments'|'paymentSubmissions'> & {
+  courseData: Omit<Course, 'id'|'createdAt'|'updatedAt'|'categoryId'|'categoryNameCache'|'modules'|'quizzes'|'learningPathCourses'|'category'|'enrollments'|'paymentSubmissions'|'certificates'> & {
     categoryName: string,
     instructor: string,
     modules?: Array<Partial<Omit<Module, 'id'|'courseId'|'createdAt'|'updatedAt'|'lessons'>> & { lessons?: Array<Partial<Omit<Lesson, 'id'|'moduleId'|'createdAt'|'updatedAt'>>> }>,
@@ -430,7 +438,7 @@ export const addCourseToDb = async (
 
 export const updateCourseInDb = async (
   courseId: string,
-  courseData: Partial<Omit<Course, 'id'|'createdAt'|'updatedAt'|'categoryId'|'categoryNameCache'|'modules'|'quizzes'|'learningPathCourses'|'category'|'enrollments'|'paymentSubmissions'>> & {
+  courseData: Partial<Omit<Course, 'id'|'createdAt'|'updatedAt'|'categoryId'|'categoryNameCache'|'modules'|'quizzes'|'learningPathCourses'|'category'|'enrollments'|'paymentSubmissions'|'certificates'>> & {
     categoryName?: string,
     instructor?: string,
     modules?: Array<Partial<Omit<Module, 'id'|'courseId'|'createdAt'|'updatedAt'|'lessons'>> & { id?: string, lessons?: Array<Partial<Omit<Lesson, 'id'|'moduleId'|'createdAt'|'updatedAt'>> & {id?: string}> }>,
@@ -1056,7 +1064,7 @@ export const getEnrollmentsByUserIdFromDb = async (userId: string): Promise<Enro
     const enrollments = await prisma.enrollment.findMany({
       where: { userId },
       include: {
-        course: { // Select only necessary fields for CourseCard
+        course: {
           select: {
             id: true,
             title: true,
@@ -1068,7 +1076,6 @@ export const getEnrollmentsByUserIdFromDb = async (userId: string): Promise<Enro
             price: true,
             currency: true,
             isFeatured: true,
-            // modules, lessons, quizzes are NOT needed for the CourseCard
           }
         }
       },
@@ -1125,6 +1132,81 @@ export const upsertSitePage = async (
     throw error;
   }
 };
+
+// --- Certificate Functions (Using Prisma) ---
+export const getCertificatesFromDb = async (): Promise<PrismaCertificate[]> => {
+  console.log("[dbUtils-Prisma] getCertificatesFromDb: Fetching certificates...");
+  try {
+    const certificates = await prisma.certificate.findMany({
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        course: { select: { id: true, title: true } },
+      },
+      orderBy: { issueDate: 'desc' },
+    });
+    console.log("[dbUtils-Prisma] getCertificatesFromDb: Found certificates:", certificates.length);
+    return JSON.parse(JSON.stringify(certificates));
+  } catch (error) {
+    console.error("[dbUtils-Prisma] getCertificatesFromDb: Error fetching certificates:", error);
+    throw error;
+  }
+};
+
+export const issueCertificateToDb = async (
+  data: Pick<PrismaCertificate, 'userId' | 'courseId' | 'certificateUrl'>
+): Promise<PrismaCertificate> => {
+  console.log("[dbUtils-Prisma] issueCertificateToDb: Attempting to issue certificate. Data:", JSON.stringify(data, null, 1));
+  const validation = CertificateInputSchema.safeParse(data);
+  if (!validation.success) {
+    console.error("[dbUtils-Prisma] issueCertificateToDb: Certificate validation failed:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
+    throw new Error(validation.error.flatten().fieldErrors._errors?.join(', ') || "Invalid certificate data.");
+  }
+
+  try {
+    const user = await prisma.user.findUnique({ where: { id: validation.data.userId } });
+    if (!user) throw new Error(`User with ID ${validation.data.userId} not found.`);
+    
+    const course = await prisma.course.findUnique({ where: { id: validation.data.courseId } });
+    if (!course) throw new Error(`Course with ID ${validation.data.courseId} not found.`);
+
+    // Check if certificate already exists
+    const existingCertificate = await prisma.certificate.findUnique({
+      where: { userId_courseId: { userId: validation.data.userId, courseId: validation.data.courseId } }
+    });
+    if (existingCertificate) {
+      throw new Error(`Certificate already exists for user ${user.name} and course ${course.title}.`);
+    }
+    
+    const newCertificate = await prisma.certificate.create({
+      data: {
+        userId: validation.data.userId,
+        courseId: validation.data.courseId,
+        userName: user.name || 'N/A',
+        courseTitle: course.title,
+        certificateUrl: validation.data.certificateUrl,
+        issueDate: new Date(),
+      },
+      include: { user: true, course: true }
+    });
+    console.log("[dbUtils-Prisma] issueCertificateToDb: Certificate issued successfully:", JSON.stringify(newCertificate, null, 1));
+    return JSON.parse(JSON.stringify(newCertificate));
+  } catch (error) {
+    console.error("[dbUtils-Prisma] issueCertificateToDb: Error issuing certificate:", error);
+    throw error;
+  }
+};
+
+export const deleteCertificateFromDb = async (certificateId: string): Promise<void> => {
+  console.log(`[dbUtils-Prisma] deleteCertificateFromDb: Attempting to delete certificate ID ${certificateId}.`);
+  try {
+    await prisma.certificate.delete({ where: { id: certificateId } });
+    console.log(`[dbUtils-Prisma] deleteCertificateFromDb: Certificate ID ${certificateId} deleted successfully.`);
+  } catch (error) {
+    console.error(`[dbUtils-Prisma] deleteCertificateFromDb: Error deleting certificate ID ${certificateId}:`, error);
+    throw error;
+  }
+};
+
 
 // --- Seeding Functions (Updated for Prisma) ---
 export const seedCategoriesToDb = async (): Promise<{ successCount: number; errorCount: number; skippedCount: number }> => {
@@ -1253,7 +1335,6 @@ export const seedPaymentSettingsToDb = async (): Promise<{ successCount: number;
     }
 };
 
-// Seed Videos to localStorage (Added back)
 export const seedVideosToDb = async (): Promise<{ successCount: number; errorCount: number; skippedCount: number }> => {
   if (typeof window === 'undefined') return { successCount: 0, errorCount: 0, skippedCount: 0 };
   localStorage.setItem('adminVideos', JSON.stringify(mockVideosForSeeding));

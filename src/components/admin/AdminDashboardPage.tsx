@@ -13,9 +13,10 @@ import PaymentSettingsManagement from "@/components/admin/PaymentSettingsManagem
 import LearningPathManagement from "@/components/admin/LearningPathManagement";
 import DataSeeding from "@/components/admin/DataSeeding";
 import SiteContentManagement from "@/components/admin/SiteContentManagement";
-import VideoManagement from "@/components/admin/VideoManagement"; // Re-added
+import VideoManagement from "@/components/admin/VideoManagement";
+import CertificateManagement from "@/components/admin/CertificateManagement"; // Added
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, BarChart3, ImageIcon as ImageIconLucide, Shapes, GraduationCap, Menu as MenuIcon, CreditCard, BookOpenCheck, DatabaseZap, FileText, PlaySquare } from "lucide-react"; // Changed VideoOff to PlaySquare
+import { Users, BarChart3, ImageIcon as ImageIconLucide, Shapes, GraduationCap, Menu as MenuIcon, CreditCard, BookOpenCheck, DatabaseZap, FileText, PlaySquare, Award } from "lucide-react"; // Added Award
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import {
@@ -36,12 +37,13 @@ const adminDashboardTranslations = {
     learningPaths: "Paths",
     payments: "Payments",
     paymentConfig: "Payment Config",
-    videos: "Videos", // Changed from "Videos (Disabled)"
+    videos: "Videos",
     images: "Images",
     users: "Users",
     stats: "Stats",
     dataSeed: "Data Seed",
     siteContent: "Site Content",
+    certificates: "Certificates", // Added
   },
   my: {
     title: "အက်ဒမင် ဒက်ရှ်ဘုတ်",
@@ -51,12 +53,13 @@ const adminDashboardTranslations = {
     learningPaths: "လမ်းကြောင်းများ",
     payments: "ငွေပေးချေမှုများ",
     paymentConfig: "ငွေပေးချေမှု ဆက်တင်",
-    videos: "ဗီဒီယိုများ", // Changed
+    videos: "ဗီဒီယိုများ",
     images: "ပုံများ",
     users: "အသုံးပြုသူများ",
     stats: "စာရင်းအင်း",
     dataSeed: "ဒေတာထည့်သွင်းရန်",
     siteContent: "စာမျက်နှာ အကြောင်းအရာ",
+    certificates: "လက်မှတ်များ", // Added
   }
 };
 
@@ -64,10 +67,11 @@ const adminTabsConfig = (t: typeof adminDashboardTranslations.en) => [
   { value: "courses", label: t.courses, Icon: GraduationCap, Component: CourseManagement },
   { value: "categories", label: t.categories, Icon: Shapes, Component: CategoryManagement },
   { value: "learningPaths", label: t.learningPaths, Icon: BookOpenCheck, Component: LearningPathManagement },
-  { value: "videos", label: t.videos, Icon: PlaySquare, Component: VideoManagement }, // Changed Icon
+  { value: "videos", label: t.videos, Icon: PlaySquare, Component: VideoManagement },
   { value: "images", label: t.images, Icon: ImageIconLucide, Component: ImageManagement },
   { value: "siteContent", label: t.siteContent, Icon: FileText, Component: SiteContentManagement },
   { value: "users", label: t.users, Icon: Users, Component: UserManagement },
+  { value: "certificates", label: t.certificates, Icon: Award, Component: CertificateManagement }, // Added
   { value: "payments", label: t.payments, Icon: CreditCard, Component: PaymentSubmissions },
   { value: "paymentSettings", label: t.paymentConfig, Icon: SettingsIcon, Component: PaymentSettingsManagement },
   { value: "stats", label: t.stats, Icon: BarChart3, Component: EnrollmentStats },
@@ -120,7 +124,7 @@ export default function AdminDashboardPage() {
               </DropdownMenu>
             </div>
           ) : (
-            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-11 gap-1 md:gap-2 mb-6 h-auto flex-wrap">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-12 gap-1 md:gap-2 mb-6 h-auto flex-wrap">
               {adminTabs.map((tab) => (
                 <TabsTrigger
                   key={tab.value}
@@ -143,4 +147,3 @@ export default function AdminDashboardPage() {
     </ProtectedRoute>
   );
 }
-

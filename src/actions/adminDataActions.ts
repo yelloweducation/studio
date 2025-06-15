@@ -16,7 +16,8 @@ import {
   type PaymentSubmissionStatus,
   type QuizType as PrismaQuizType,
   type PaymentSettings,
-  type Video, // Added back Video type
+  type Video,
+  type Certificate, // Added Certificate type
 } from '@/lib/dbUtils';
 
 import {
@@ -29,7 +30,7 @@ import {
   seedLearningPathsToDb as seedLearningPathsDbUtil,
   getEnrollmentForUserAndCourseFromDb,
   getPaymentSubmissionsFromDb,
-  createEnrollmentInDb as createEnrollmentDbUtil, // Alias is used here
+  createEnrollmentInDb as createEnrollmentDbUtil,
   addPaymentSubmissionToDb as addPaymentSubmissionDbUtil,
   updatePaymentSubmissionInDb as updatePaymentSubmissionDbUtil,
   getEnrollmentsByUserIdFromDb as getEnrollmentsByUserIdDbUtil,
@@ -38,8 +39,8 @@ import {
   seedPaymentSettingsToDb as seedPaymentSettingsDbUtil,
   getSitePageBySlug as getSitePageBySlugDbUtil,
   upsertSitePage as upsertSitePageDbUtil,
-  // Added back Video actions
   getVideosFromDb, addVideoToDb, updateVideoInDb, deleteVideoFromDb, seedVideosToDb as seedVideosDbUtil,
+  getCertificatesFromDb, issueCertificateToDb, deleteCertificateFromDb, // Added Certificate actions
 } from '@/lib/dbUtils';
 import type { Prisma } from '@prisma/client';
 
@@ -92,7 +93,7 @@ export async function serverGetCourseById(courseId: string): Promise<Course | nu
 }
 
 export async function serverAddCourse(
-  courseData: Omit<Course, 'id'|'createdAt'|'updatedAt'|'categoryId'|'categoryNameCache'|'modules'|'quizzes'|'learningPathCourses'|'category'|'enrollments'|'paymentSubmissions'> & {
+  courseData: Omit<Course, 'id'|'createdAt'|'updatedAt'|'categoryId'|'categoryNameCache'|'modules'|'quizzes'|'learningPathCourses'|'category'|'enrollments'|'paymentSubmissions'|'certificates'> & {
     categoryName: string,
     instructor: string,
     modules?: Array<Partial<Omit<Module, 'id'|'courseId'|'createdAt'|'updatedAt'|'lessons'>> & { lessons?: Array<Partial<Omit<Lesson, 'id'|'moduleId'|'createdAt'|'updatedAt'>>> }>,
@@ -139,7 +140,7 @@ export async function serverAddCourse(
 }
 export async function serverUpdateCourse(
   courseId: string,
-  courseData: Partial<Omit<Course, 'id'|'createdAt'|'updatedAt'|'categoryId'|'categoryNameCache'|'modules'|'quizzes'|'learningPathCourses'|'category'|'enrollments'|'paymentSubmissions'>> & {
+  courseData: Partial<Omit<Course, 'id'|'createdAt'|'updatedAt'|'categoryId'|'categoryNameCache'|'modules'|'quizzes'|'learningPathCourses'|'category'|'enrollments'|'paymentSubmissions'|'certificates'>> & {
     categoryName?: string,
     instructor?: string,
     modules?: Array<Partial<Omit<Module, 'id'|'courseId'|'createdAt'|'updatedAt'|'lessons'>> & { id?: string, lessons?: Array<Partial<Omit<Lesson, 'id'|'moduleId'|'createdAt'|'updatedAt'>> & {id?: string}> }>,
@@ -217,7 +218,7 @@ export async function serverAddLearningPath(pathData: Omit<LearningPath, 'id'|'c
 export async function serverUpdateLearningPath(pathId: string, pathData: Partial<Omit<LearningPath, 'id'|'createdAt'|'updatedAt'|'learningPathCourses'>> & { courseIdsToConnect?: string[] }): Promise<LearningPath> { return updateLearningPathInDb(pathId, pathData); }
 export async function serverDeleteLearningPath(pathId: string): Promise<void> { return deleteLearningPathFromDb(pathId); }
 
-// --- Video Actions --- Added back
+// --- Video Actions ---
 export async function serverGetVideos(): Promise<Video[]> { return getVideosFromDb(); }
 export async function serverAddVideo(videoData: Omit<Video, 'id' | 'createdAt' | 'updatedAt'>): Promise<Video> { return addVideoToDb(videoData); }
 export async function serverUpdateVideo(videoId: string, videoData: Partial<Omit<Video, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Video> { return updateVideoInDb(videoId, videoData); }
@@ -229,7 +230,7 @@ export async function serverSeedCategories(): Promise<{ successCount: number; er
 export async function serverSeedCourses(): Promise<{ successCount: number; errorCount: number; skippedCount: number }> { return seedCoursesDbUtil(); }
 export async function serverSeedLearningPaths(): Promise<{ successCount: number; errorCount: number; skippedCount: number }> { return seedLearningPathsDbUtil(); }
 export async function serverSeedPaymentSettings(): Promise<{ successCount: number; errorCount: number; skippedCount: number }> { return seedPaymentSettingsDbUtil(); }
-export async function serverSeedVideos(): Promise<{ successCount: number; errorCount: number; skippedCount: number }> { return seedVideosDbUtil(); } // Added back
+export async function serverSeedVideos(): Promise<{ successCount: number; errorCount: number; skippedCount: number }> { return seedVideosDbUtil(); }
 
 
 // --- User-Specific Data Fetching for Course Display ---
@@ -239,7 +240,7 @@ export async function serverGetPaymentSubmissionForCourse(userId: string, course
   return allUserSubmissions.find(s => s.courseId === courseId) || null;
 }
 export async function serverCreateEnrollment(userId: string, courseId: string): Promise<Enrollment | null> {
-  try { return await createEnrollmentDbUtil(userId, courseId); } // Corrected to use alias
+  try { return await createEnrollmentDbUtil(userId, courseId); }
   catch (error) { console.error("[ServerAction serverCreateEnrollment] Error creating enrollment:", error); throw error; }
 }
 export async function serverUpdateEnrollmentProgress(enrollmentId: string, progress: number): Promise<Enrollment | null> {
@@ -348,3 +349,13 @@ export async function serverUpsertSitePage(
   return upsertSitePageDbUtil(slug, title, content);
 }
 
+// --- Certificate Actions ---
+export async function serverGetCertificates(): Promise<Certificate[]> {
+  return getCertificatesFromDb();
+}
+export async function serverIssueCertificate(data: Pick<Certificate, 'userId' | 'courseId' | 'certificateUrl'>): Promise<Certificate> {
+  return issueCertificateToDb(data);
+}
+export async function serverDeleteCertificate(certificateId: string): Promise<void> {
+  return deleteCertificateFromDb(certificateId);
+}
