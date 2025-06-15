@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Compass, Brain, Layers, Circle, View, PlaySquare } from 'lucide-react'; // Added View and PlaySquare
+import { Search, Compass, Brain, Layers, Circle, PlaySquare } from 'lucide-react'; // Removed View
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from "@/lib/utils";
@@ -16,9 +16,8 @@ const homePageTranslations = {
     subtitle: "Your Future Tech Infused Education.",
     searchPlaceholder: "Search courses, e.g., Web Development",
     coursesButton: "Courses",
-    reelsButton: "Reels", // Added Reels
+    reelsButton: "Reels",
     flashCardsButton: "Flash Cards",
-    threeDMenuButton: "3D Menu", // Added 3D Menu
     personalityTestLink: "Discover Your Strengths",
     privacyPolicy: "Privacy Policy",
     termsOfService: "Terms of Service",
@@ -33,9 +32,8 @@ const homePageTranslations = {
     subtitle: "သင့်အတွက် အနာဂတ်နည်းပညာပညာရေး။",
     searchPlaceholder: "အတန်းများရှာပါ၊ ဥပမာ - Web Development",
     coursesButton: "အတန်း",
-    reelsButton: "ဗီဒီယိုတို", // Added Reels
+    reelsButton: "ဗီဒီယိုတို",
     flashCardsButton: "ကတ်ပြားများ",
-    threeDMenuButton: "3D မီနူး", // Added 3D Menu
     personalityTestLink: "သင်၏ အားသာချက်များကို ရှာဖွေပါ",
     privacyPolicy: "ကိုယ်ရေးအချက်အလက်မူဝါဒ",
     termsOfService: "ဝန်ဆောင်မှုစည်းမျဉ်းများ",
@@ -92,7 +90,7 @@ export default function Home() {
           </Button>
         </form>
         
-        <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 items-center justify-center gap-2 sm:gap-3 w-full max-w-xs sm:max-w-md lg:max-w-lg mx-auto">
+        <div className="mt-8 grid grid-cols-2 items-center justify-center gap-2 sm:gap-3 w-full max-w-xs sm:max-w-sm lg:max-w-lg mx-auto">
             <Button 
               asChild 
               size="lg" 
@@ -115,21 +113,8 @@ export default function Home() {
                 language === 'my' ? 'text-xs sm:text-sm' : 'text-sm'
               )}
             >
-                <Link href="/videos"> {/* Link to videos page */}
+                <Link href="/videos">
                     <PlaySquare className="mr-2 h-5 w-5" /> {t.reelsButton}
-                </Link>
-            </Button>
-            <Button 
-              asChild 
-              size="lg" 
-              variant="default" 
-              className={cn(
-                "w-full col-span-2 sm:col-span-1", // Make it full width on small, then 1/3
-                language === 'my' ? 'text-xs sm:text-sm' : 'text-sm'
-              )}
-            >
-                <Link href="/"> {/* Placeholder Link */}
-                    <View className="mr-2 h-5 w-5" /> {t.threeDMenuButton}
                 </Link>
             </Button>
         </div>
