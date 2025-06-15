@@ -11,12 +11,13 @@ import CategoryManagement from "@/components/admin/CategoryManagement";
 import PaymentSubmissions from "@/components/admin/PaymentSubmissions";
 import PaymentSettingsManagement from "@/components/admin/PaymentSettingsManagement";
 import LearningPathManagement from "@/components/admin/LearningPathManagement";
+import QuizManagement from "@/components/admin/QuizManagement"; // New
 import DataSeeding from "@/components/admin/DataSeeding";
 import SiteContentManagement from "@/components/admin/SiteContentManagement";
 import VideoManagement from "@/components/admin/VideoManagement";
-import CertificateManagement from "@/components/admin/CertificateManagement"; // Added
+import CertificateManagement from "@/components/admin/CertificateManagement";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, BarChart3, ImageIcon as ImageIconLucide, Shapes, GraduationCap, Menu as MenuIcon, CreditCard, BookOpenCheck, DatabaseZap, FileText, PlaySquare, Award } from "lucide-react"; // Added Award
+import { Users, BarChart3, ImageIcon as ImageIconLucide, Shapes, GraduationCap, Menu as MenuIcon, CreditCard, BookOpenCheck, DatabaseZap, FileText, PlaySquare, Award, FileQuestion } from "lucide-react"; // Added FileQuestion
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import {
@@ -35,6 +36,7 @@ const adminDashboardTranslations = {
     courses: "Courses",
     categories: "Categories",
     learningPaths: "Paths",
+    quizzes: "Quizzes", // New
     payments: "Payments",
     paymentConfig: "Payment Config",
     videos: "Videos",
@@ -43,7 +45,7 @@ const adminDashboardTranslations = {
     stats: "Stats",
     dataSeed: "Data Seed",
     siteContent: "Site Content",
-    certificates: "Certificates", // Added
+    certificates: "Certificates",
   },
   my: {
     title: "အက်ဒမင် ဒက်ရှ်ဘုတ်",
@@ -51,6 +53,7 @@ const adminDashboardTranslations = {
     courses: "အတန်းများ",
     categories: "အမျိုးအစားများ",
     learningPaths: "လမ်းကြောင်းများ",
+    quizzes: "စာမေးပွဲငယ်များ", // New
     payments: "ငွေပေးချေမှုများ",
     paymentConfig: "ငွေပေးချေမှု ဆက်တင်",
     videos: "ဗီဒီယိုများ",
@@ -59,7 +62,7 @@ const adminDashboardTranslations = {
     stats: "စာရင်းအင်း",
     dataSeed: "ဒေတာထည့်သွင်းရန်",
     siteContent: "စာမျက်နှာ အကြောင်းအရာ",
-    certificates: "လက်မှတ်များ", // Added
+    certificates: "လက်မှတ်များ",
   }
 };
 
@@ -67,11 +70,12 @@ const adminTabsConfig = (t: typeof adminDashboardTranslations.en) => [
   { value: "courses", label: t.courses, Icon: GraduationCap, Component: CourseManagement },
   { value: "categories", label: t.categories, Icon: Shapes, Component: CategoryManagement },
   { value: "learningPaths", label: t.learningPaths, Icon: BookOpenCheck, Component: LearningPathManagement },
+  { value: "quizzes", label: t.quizzes, Icon: FileQuestion, Component: QuizManagement }, // New
   { value: "videos", label: t.videos, Icon: PlaySquare, Component: VideoManagement },
   { value: "images", label: t.images, Icon: ImageIconLucide, Component: ImageManagement },
   { value: "siteContent", label: t.siteContent, Icon: FileText, Component: SiteContentManagement },
   { value: "users", label: t.users, Icon: Users, Component: UserManagement },
-  { value: "certificates", label: t.certificates, Icon: Award, Component: CertificateManagement }, // Added
+  { value: "certificates", label: t.certificates, Icon: Award, Component: CertificateManagement },
   { value: "payments", label: t.payments, Icon: CreditCard, Component: PaymentSubmissions },
   { value: "paymentSettings", label: t.paymentConfig, Icon: SettingsIcon, Component: PaymentSettingsManagement },
   { value: "stats", label: t.stats, Icon: BarChart3, Component: EnrollmentStats },
