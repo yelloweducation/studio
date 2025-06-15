@@ -196,6 +196,8 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
     if (!currentCourse) return null;
 
     const canAccessContent = (paymentInfo?.status === 'APPROVED') || (!currentCourse.price || currentCourse.price <= 0);
+    const coursePriceDisplay = (currentCourse.price ?? 0).toFixed(2);
+    const courseCurrencyDisplay = currentCourse.currency || 'USD';
 
     if (currentCourse.price && currentCourse.price > 0) {
         if (!isAuthenticated) {
@@ -203,7 +205,7 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
                  <Button asChild size="lg" className="w-full shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150 whitespace-normal h-auto py-3">
                     <Link href={`/login?redirect=/courses/${courseId}`}>
                         <BadgeDollarSign className="mr-2 h-5 w-5" />
-                        {t.loginToPurchase.replace('{price}', currentCourse.price.toFixed(2)).replace('{currency}', currentCourse.currency || 'USD')}
+                        {t.loginToPurchase.replace('{price}', coursePriceDisplay).replace('{currency}', courseCurrencyDisplay)}
                     </Link>
                 </Button>
             );
@@ -261,7 +263,7 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
                 <Button asChild size="lg" className="w-full shadow-lg hover:shadow-md active:translate-y-px transition-all duration-150 whitespace-normal h-auto py-3">
                     <Link href={`/courses/${courseId}/checkout`}>
                         <ShoppingCart className="mr-2 h-5 w-5" />
-                        {t.purchaseFor.replace('{price}', currentCourse.price.toFixed(2)).replace('{currency}', currentCourse.currency || 'USD')}
+                        {t.purchaseFor.replace('{price}', coursePriceDisplay).replace('{currency}', courseCurrencyDisplay)}
                     </Link>
                 </Button>
             );
@@ -617,3 +619,4 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
     </div>
   );
 }
+
