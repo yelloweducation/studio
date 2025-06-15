@@ -30,7 +30,7 @@ const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
   }, [video.embedUrl, title]);
 
   // Adjusted classes for responsive width and aspect ratio
-  const containerClasses = "relative w-full max-w-[360px] aspect-[18/23] bg-black rounded-xl shadow-2xl overflow-hidden flex flex-col";
+  const containerClasses = "relative w-full max-w-[330px] aspect-[18/23] bg-black rounded-xl shadow-2xl overflow-hidden flex flex-col";
 
   return (
     <div className={containerClasses}>
@@ -75,3 +75,4 @@ const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
 };
 
 export default React.memo(VideoCard);
+

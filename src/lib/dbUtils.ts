@@ -162,7 +162,7 @@ export const getCategoriesFromDb = async (): Promise<Category[]> => {
   try {
     const categories = await prisma.category.findMany({ orderBy: { name: 'asc' } });
     console.log("[dbUtils-Prisma] getCategoriesFromDb: Found categories:", categories.length);
-    return categories;
+    return JSON.parse(JSON.stringify(categories));
   } catch (error) {
     console.error("[dbUtils-Prisma] getCategoriesFromDb: Error fetching categories:", error);
     throw error;
@@ -179,7 +179,7 @@ export const addCategoryToDb = async (categoryData: Omit<Category, 'id' | 'creat
   try {
     const newCategory = await prisma.category.create({ data: validation.data });
     console.log("[dbUtils-Prisma] addCategoryToDb: Category created successfully in DB:", JSON.stringify(newCategory, null, 1));
-    return newCategory;
+    return JSON.parse(JSON.stringify(newCategory));
   } catch (error) {
     console.error("[dbUtils-Prisma] addCategoryToDb: Error creating category in DB:", error);
     throw error;
@@ -196,7 +196,7 @@ export const updateCategoryInDb = async (categoryId: string, categoryData: Parti
   try {
     const updatedCategory = await prisma.category.update({ where: { id: categoryId }, data: validation.data });
     console.log("[dbUtils-Prisma] updateCategoryInDb: Category updated successfully in DB:", JSON.stringify(updatedCategory, null, 1));
-    return updatedCategory;
+    return JSON.parse(JSON.stringify(updatedCategory));
   } catch (error) {
     console.error(`[dbUtils-Prisma] updateCategoryInDb: Error updating category ID ${categoryId} in DB:`, error);
     throw error;
@@ -400,7 +400,7 @@ export const addCourseToDb = async (
     }
     console.log("[dbUtils-Prisma] addCourseToDb: Successfully added and retrieved course. ID:", finalCourse.id);
     console.log("============================================================");
-    return finalCourse;
+    return JSON.parse(JSON.stringify(finalCourse));
 
   } catch (error: any) {
     console.error("============================================================");
@@ -509,7 +509,7 @@ export const updateCourseInDb = async (
             quizType: quizData.quizType!,
             passingScore: quizData.passingScore,
             questions: quizData.questions ? {
-              create: quizzes.questions.map(q => ({
+              create: quizData.questions.map(q => ({ // Changed from quizzes.questions to quizData.questions
                 text: q.text!,
                 order: q.order!,
                 points: q.points,
@@ -589,7 +589,7 @@ export const updateCourseInDb = async (
     }
     console.log(`[dbUtils-Prisma] updateCourseInDb: Successfully updated and retrieved course ${courseId}.`);
     console.log("============================================================");
-    return finalCourse;
+    return JSON.parse(JSON.stringify(finalCourse));
 
   } catch (error: any) {
     console.error("============================================================");
