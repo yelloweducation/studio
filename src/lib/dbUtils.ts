@@ -1055,7 +1055,23 @@ export const getEnrollmentsByUserIdFromDb = async (userId: string): Promise<Enro
   try {
     const enrollments = await prisma.enrollment.findMany({
       where: { userId },
-      include: { course: true },
+      include: {
+        course: { // Select only necessary fields for CourseCard
+          select: {
+            id: true,
+            title: true,
+            imageUrl: true,
+            dataAiHint: true,
+            categoryNameCache: true,
+            description: true,
+            instructor: true,
+            price: true,
+            currency: true,
+            isFeatured: true,
+            // modules, lessons, quizzes are NOT needed for the CourseCard
+          }
+        }
+      },
       orderBy: { enrolledDate: 'desc' }
     });
     return JSON.parse(JSON.stringify(enrollments));
@@ -1244,6 +1260,4 @@ export const seedVideosToDb = async (): Promise<{ successCount: number; errorCou
   console.log(`[dbUtils-localStorage] seedVideosToDb: Seeded ${mockVideosForSeeding.length} videos to localStorage.`);
   return { successCount: mockVideosForSeeding.length, errorCount: 0, skippedCount: 0 };
 };
-
-
     

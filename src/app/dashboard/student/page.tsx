@@ -43,39 +43,38 @@ export default function StudentDashboardPage() {
   const { language } = useLanguage();
   const t = studentDashboardTranslations[language];
   const [enrolledCoursesDetails, setEnrolledCoursesDetails] = useState<Course[]>([]);
-  const [isLoadingCourses, setIsLoadingCourses] = useState(true);
+  const [isLoadingCourses, setIsLoadingCourses] = useState(true); // Start with true
 
   useEffect(() => {
     const fetchEnrolledCourses = async () => {
       if (authLoading) {
-        // Authentication state is still loading, keep the page in a loading state.
-        setIsLoadingCourses(true);
+        setIsLoadingCourses(true); // Ensure loading state while auth is resolving
         return;
       }
 
-      if (user) {
-        setIsLoadingCourses(true); // Explicitly start loading courses for this user.
+      if (user && user.id) { // Ensure user and user.id are available
+        setIsLoadingCourses(true);
         console.log("[StudentDashboard] Auth loaded. Fetching enrollments for user:", user.id);
         try {
           const userEnrollments = await serverGetEnrollmentsByUserId(user.id);
-          console.log("[StudentDashboard] Fetched userEnrollments via server action:", userEnrollments);
+          console.log("[StudentDashboard] Fetched userEnrollments via server action:", userEnrollments.length);
           
           const coursesData = userEnrollments
             .map(enrollment => enrollment.course) 
             .filter(Boolean) as Course[]; 
           
-          console.log("[StudentDashboard] Processed coursesData to display:", coursesData);
+          console.log("[StudentDashboard] Processed coursesData to display:", coursesData.length);
           setEnrolledCoursesDetails(coursesData);
         } catch (error) {
           console.error("[StudentDashboard] Error fetching enrolled courses from server action:", error);
           setEnrolledCoursesDetails([]);
+        } finally {
+            setIsLoadingCourses(false);
         }
-        setIsLoadingCourses(false); // Finished loading courses (or failed)
       } else {
-        // No user is authenticated (after auth has loaded)
-        console.log("[StudentDashboard] Auth loaded. No user authenticated.");
+        console.log("[StudentDashboard] Auth loaded. No user authenticated or user.id missing.");
         setEnrolledCoursesDetails([]);
-        setIsLoadingCourses(false); // Not loading courses because there's no user.
+        setIsLoadingCourses(false);
       }
     };
     fetchEnrolledCourses();
