@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home as HomeIcon, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Compass, Layers, Brain, Loader2, VideoIcon as VideoReelsIcon, Settings as SettingsIcon, UserCircle } from 'lucide-react';
+import { Home as HomeIcon, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Compass, Layers, Brain, Loader2, VideoIcon as VideoReelsIcon, Settings as SettingsIcon, UserCircle, Menu as MenuIcon } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from "@/lib/utils";
@@ -37,12 +37,12 @@ const headerTranslations = {
     toggleTheme: "Toggle Theme",
     loading: "Loading...",
     menu: "Menu",
-    adminDashboard: "Admin Panel",
+    adminDashboard: "Admin Panel", // Retained for potential future use if admin gets specific menu items
     myAccount: "My Account",
   },
   my: {
     home: "ပင်မ",
-    all: "အားလုံး",
+    all: "အားလုံး", // Kept "ALL" as per display requirement, but translation context is 'All'
     explore: "သင်တန်းများ",
     videos: "ဗီဒီယို",
     flashCards: "ကတ်ပြားများ",
@@ -61,13 +61,11 @@ const headerTranslations = {
   }
 };
 
-// Modified UserAvatar to accept a sizeClass prop
-const UserAvatar = React.memo(({ user: usr, sizeClass = "h-8 w-8" }: { user: { name?: string | null, avatarUrl?: string | null } | null, sizeClass?: string }) => (
+const UserAvatar = React.memo(({ user: usr, sizeClass = "h-8 w-8" }: { user: { name?: string | null, email?: string | null, avatarUrl?: string | null } | null, sizeClass?: string }) => (
   <Avatar className={cn("bg-muted text-muted-foreground", sizeClass)}>
     <AvatarImage src={usr?.avatarUrl || undefined} alt={usr?.name || 'User'} />
     <AvatarFallback className={cn(
       "bg-primary text-primary-foreground",
-      // Adjust text size based on overall avatar size for better scaling
       sizeClass.includes('h-7') || sizeClass.includes('w-7') ? "text-[0.6rem] sm:text-xs" : "text-xs sm:text-sm" 
     )}>
       {usr?.name ? usr.name.charAt(0).toUpperCase() : 
@@ -103,17 +101,15 @@ const Header = () => {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-
     const controlHeaderBackground = () => {
       if (pathname === '/videos') {
-        setDynamicHeaderBackgroundClasses('bg-transparent border-transparent');
+        setDynamicHeaderBackgroundClasses('bg-transparent border-transparent'); // Videos page has its own header
       } else if (window.scrollY < headerScrollThreshold) {
         setDynamicHeaderBackgroundClasses('bg-transparent border-transparent');
       } else {
         setDynamicHeaderBackgroundClasses('bg-background/80 backdrop-blur-md border-b');
       }
     };
-
     controlHeaderBackground();
     window.addEventListener('scroll', controlHeaderBackground, { passive: true });
     return () => window.removeEventListener('scroll', controlHeaderBackground);
@@ -156,7 +152,6 @@ const Header = () => {
   }, [isAuthenticated, role]);
 
   const commonNavItems = [
-    { href: "/", label: t.home, Icon: HomeIcon },
     { href: "/courses/search", label: t.explore, Icon: Compass },
     { href: "/videos", label: t.videos, Icon: VideoReelsIcon },
     { href: "/flash-cards", label: t.flashCards, Icon: Layers },
@@ -169,13 +164,21 @@ const Header = () => {
       ? "bg-accent text-accent-foreground font-semibold"
       : "text-muted-foreground hover:text-foreground"
   );
+  
+  const mobileMenuLinkClasses = (targetPath: string) => cn(
+    "w-full",
+    pathname === targetPath
+      ? "bg-accent text-accent-foreground font-semibold"
+      : "text-foreground hover:text-accent-foreground"
+  );
+
 
   const DesktopNav = () => (
     <>
       <div className="flex items-center">
         <Link href="/" className="text-xl font-bold font-headline text-foreground hover:text-primary/80 transition-colors group mr-6">
           <span className="relative py-1">
-            ALL
+            ALL 
             <span className="absolute bottom-[-2px] left-0 w-full h-[3px] bg-primary transition-transform duration-300 ease-out group-hover:scale-x-105"></span>
           </span>
         </Link>
@@ -245,61 +248,76 @@ const Header = () => {
   const MobileHeaderContents = () => {
     return (
       <div className="flex items-center justify-between w-full">
-        <Link href="/" className="text-sm sm:text-base font-bold text-foreground hover:text-primary/80 transition-colors relative group py-1 mr-2">
+        <Link href="/" className="text-sm sm:text-base font-bold text-foreground hover:text-primary/80 transition-colors relative group py-1 mr-auto">
           ALL
           <span className="absolute bottom-[-2px] left-0 w-full h-[2.5px] sm:h-[3px] bg-primary transform scale-x-100 transition-transform duration-300 ease-out group-hover:scale-x-105"></span>
         </Link>
 
-        <div className="flex items-center gap-0.5 sm:gap-1">
-          <Button variant="ghost" size="icon" asChild className="text-foreground hover:text-primary w-7 h-7 sm:w-8 sm:h-8">
-            <Link href={getDashboardPath()} aria-label={t.dashboard}>
-              <LayoutDashboard className="h-4 w-4 sm:h-5 sm:w-5" />
-            </Link>
-          </Button>
-
-          {authLoading ? (
-            <Button variant="ghost" size="icon" disabled className="text-foreground w-7 h-7 sm:w-8 sm:h-8">
-              <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
-            </Button>
-          ) : isAuthenticated && user ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative rounded-full p-0 w-7 h-7 sm:w-8 sm:h-8">
-                  <UserAvatar user={user} sizeClass="h-full w-full" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end" forceMount>
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{user.name}</p>
-                    <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/dashboard/settings"><SettingsIcon className="mr-2 h-4 w-4" /> {t.settings}</Link>
+        <div className="flex items-center gap-1 sm:gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="text-foreground hover:text-primary w-8 h-8 sm:w-9 sm:h-9">
+                <MenuIcon className="h-5 w-5 sm:h-[22px] sm:w-[22px]" />
+                <span className="sr-only">{t.menu}</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-64" align="end" forceMount>
+              {isAuthenticated && user && (
+                <>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex items-center gap-2">
+                       <UserAvatar user={user} sizeClass="h-7 w-7" />
+                       <div>
+                         <p className="text-sm font-medium leading-none">{user.name}</p>
+                         <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                       </div>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                </>
+              )}
+              {commonNavItems.map(item => (
+                <DropdownMenuItem key={item.label} asChild className={mobileMenuLinkClasses(item.href)}>
+                  <Link href={item.href}><item.Icon className="mr-2 h-4 w-4" />{item.label}</Link>
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
-                  <LogOut className="mr-2 h-4 w-4" /> {t.logout}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <Button variant="ghost" size="icon" asChild className="text-foreground hover:text-primary w-7 h-7 sm:w-8 sm:h-8">
-              <Link href="/login" aria-label={t.login}>
-                <LogIn className="h-4 w-4 sm:h-5 sm:w-5" />
-              </Link>
-            </Button>
-          )}
+              ))}
+              <DropdownMenuSeparator />
+              {authLoading ? (
+                <DropdownMenuItem disabled><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t.loading}</DropdownMenuItem>
+              ) : isAuthenticated && user ? (
+                <>
+                  <DropdownMenuItem asChild className={mobileMenuLinkClasses(getDashboardPath())}>
+                    <Link href={getDashboardPath()}><LayoutDashboard className="mr-2 h-4 w-4" /> {t.dashboard}</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className={mobileMenuLinkClasses('/dashboard/settings')}>
+                    <Link href="/dashboard/settings"><SettingsIcon className="mr-2 h-4 w-4" /> {t.settings}</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+                    <LogOut className="mr-2 h-4 w-4" /> {t.logout}
+                  </DropdownMenuItem>
+                </>
+              ) : (
+                <>
+                  <DropdownMenuItem asChild className={mobileMenuLinkClasses('/login')}>
+                    <Link href="/login"><LogIn className="mr-2 h-4 w-4" /> {t.login}</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className={mobileMenuLinkClasses('/register')}>
+                    <Link href="/register"><UserPlus className="mr-2 h-4 w-4" /> {t.register}</Link>
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
           <Button
             variant="ghost"
             size="icon"
             onClick={toggleTheme}
             aria-label={t.toggleTheme}
-            className="text-foreground hover:text-primary w-7 h-7 sm:w-8 sm:h-8"
+            className="text-foreground hover:text-primary w-8 h-8 sm:w-9 sm:h-9"
           >
-            {theme === 'light' ? <Moon className="h-4 w-4 sm:h-5 sm:w-5" /> : <Sun className="h-4 w-4 sm:h-5 sm:w-5" />}
+            {theme === 'light' ? <Moon className="h-5 w-5 sm:h-[22px] sm:w-[22px]" /> : <Sun className="h-5 w-5 sm:h-[22px] sm:w-[22px]" />}
           </Button>
         </div>
       </div>
@@ -322,3 +340,4 @@ const Header = () => {
 };
 
 export default Header;
+
