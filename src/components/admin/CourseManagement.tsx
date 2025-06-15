@@ -41,7 +41,7 @@ import type { QuizType as PrismaQuizTypeEnum} from '@prisma/client';
 type FormLesson = Partial<Omit<Lesson, 'moduleId'|'createdAt'|'updatedAt'>>;
 type FormModule = Partial<Omit<Module, 'courseId'|'createdAt'|'updatedAt'>> & { lessons?: FormLesson[] };
 type FormOption = Partial<Omit<Option, 'questionId'|'createdAt'|'updatedAt'>>;
-type FormQuestion = Partial<Omit<Question, 'quizId'|'createdAt'|'updatedAt'|'options'|'correctOptionId'>> & { options?: FormOption[], correctOptionText?: string, correctOptionId?: string | null };
+type FormQuestion = Partial<Omit<Question, 'quizId'|'createdAt'|'updatedAt'|'options'|'correctOptionId'>> & { options?: FormOption[], correctOptionText?: string, correctOptionId?: string | null, order?: number };
 type FormQuiz = Partial<Omit<Quiz, 'courseId'|'createdAt'|'updatedAt'|'questions'>> & { quizType: MockQuizEnumType, questions?: FormQuestion[] };
 
 
@@ -176,8 +176,8 @@ const QuestionEditDialog = ({
       order,
       points,
       options: currentOptions.map(({ isCorrect, ...optData }) => optData),
-      correctOptionText: correctOption.text, // Save the text of the correct option
-      correctOptionId: correctOption.id,   // Save the ID of the correct option
+      correctOptionText: correctOption.text,
+      correctOptionId: correctOption.id,
     });
   };
 
@@ -286,43 +286,51 @@ const QuizQuestionsDialog = ({
     if (!questionId) return;
     setCurrentQuizState(prev => ({
       ...prev,
-      questions: prev.questions?.filter(q => q.id !== questionId),
+      questions: (prev.questions || []).filter(q => q.id !== questionId),
     }));
     if (questionId && !questionId.startsWith('q-new-')) {
-      setQuestionIdsToDelete(prev => [...new Set([...prev, questionId])]);
+      setQuestionIdsToDelete(prevIds => [...new Set([...prevIds, questionId])]);
     }
   };
 
   const handleSaveQuestionFromDialog = (questionData: FormQuestion) => {
-    setCurrentQuizState(prev => {
+    setCurrentQuizState(prevQuizState => {
       const newId = questionData.id || generateQuestionId();
-      // Ensure options also get new IDs if they are new
-      const newOptions = questionData.options?.map(opt => ({
+      const newOptions = (questionData.options || []).map(opt => ({
           id: opt.id || generateOptionId(),
           text: opt.text!
-      })) || [];
+      }));
 
-      // Find the correct option object from the potentially re-IDed newOptions
-      const correctFormOption = questionData.options?.find(opt => opt.id === questionData.correctOptionId);
+      const correctFormOption = (questionData.options || []).find(opt => opt.id === questionData.correctOptionId);
       const correctDbOptionInNewList = newOptions.find(opt => opt.text === correctFormOption?.text);
 
       const newQuestionEntry: FormQuestion = {
           ...questionData,
           id: newId,
+          order: questionData.order ?? (prevQuizState.questions?.length || 0),
           options: newOptions,
-          correctOptionId: correctDbOptionInNewList?.id || null, // Use the ID from the newly created/updated options list
+          correctOptionId: correctDbOptionInNewList?.id || null,
       };
 
-      const existingIndex = prev.questions?.findIndex(q => q.id === newId);
-      let newQuestionsList;
+      const existingQuestions = prevQuizState.questions || [];
+      const existingIndex = existingQuestions.findIndex(q => q.id === newId);
 
-      if (existingIndex !== undefined && existingIndex > -1 && prev.questions) {
-        newQuestionsList = [...prev.questions];
-        newQuestionsList[existingIndex] = newQuestionEntry;
+      let updatedQuestionsList: FormQuestion[];
+
+      if (existingIndex > -1) {
+        updatedQuestionsList = existingQuestions.map((q, index) =>
+          index === existingIndex ? newQuestionEntry : q
+        );
       } else {
-        newQuestionsList = [...(prev.questions || []), newQuestionEntry];
+        updatedQuestionsList = [...existingQuestions, newQuestionEntry];
       }
-      return { ...prev, questions: newQuestionsList };
+      
+      updatedQuestionsList.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      
+      return {
+        ...prevQuizState,
+        questions: updatedQuestionsList
+      };
     });
     setEditingQuestion(null);
   };
@@ -343,7 +351,7 @@ const QuizQuestionsDialog = ({
             <div className="space-y-3 py-2">
               {currentQuizState.questions && currentQuizState.questions.length > 0 ? (
                 currentQuizState.questions.map((q, index) => (
-                  <Card key={q.id || index} className="p-3">
+                  <Card key={q.id || `new-q-${index}`} className="p-3">
                     <div className="flex justify-between items-start">
                       <div className="flex-grow pr-2">
                         <p className="font-medium text-sm">{q.order || index + 1}. {q.text}</p>
@@ -385,7 +393,7 @@ const QuizQuestionsDialog = ({
           questionToEdit={editingQuestion}
           onSaveQuestion={handleSaveQuestionFromDialog}
           onCancel={() => setEditingQuestion(null)}
-          isSubmitting={isSavingQuiz}
+          isSubmitting={isSavingQuiz} 
         />
       )}
     </>
@@ -432,7 +440,7 @@ const CourseForm = ({
             points: ques.points ?? undefined,
             options: ques.options.map(opt => ({id: opt.id, text: opt.text})),
             correctOptionId: ques.correctOptionId || null,
-            correctOptionText: ques.options.find(opt => opt.id === ques.correctOptionId)?.text // Populate for edit
+            correctOptionText: ques.options.find(opt => opt.id === ques.correctOptionId)?.text
         }))
     })) || []
   );
@@ -522,7 +530,7 @@ const CourseForm = ({
     setQuizzes(prevQuizzes =>
         prevQuizzes.map(q =>
             q.id === quizDataFromDialog.id ?
-            { ...quizDataFromDialog } // Ensure new object reference
+            { ...quizDataFromDialog } 
             : q
         )
     );
@@ -554,7 +562,7 @@ const CourseForm = ({
         const savedQuiz = await serverSaveQuizWithQuestions(course.id, payloadForServer);
         setQuizzes(prevQuizzes =>
           prevQuizzes.map(q =>
-            q.id === savedQuiz.id // Use savedQuiz.id to match
+            q.id === savedQuiz.id
               ? {
                   ...savedQuiz,
                   quizType: savedQuiz.quizType as MockQuizEnumType,
@@ -636,7 +644,7 @@ const CourseForm = ({
                 id: opt.id?.startsWith('opt-new-') ? undefined: opt.id,
                 text: opt.text,
               })),
-              correctOptionText: ques.correctOptionText,
+              correctOptionText: ques.correctOptionText, // Ensure this is passed
           }))
       }))
     };
@@ -1101,3 +1109,4 @@ export default function CourseManagement() {
     </Card>
   );
 }
+
