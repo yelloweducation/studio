@@ -121,7 +121,7 @@ export default function LearningPathDetailClient({ pathId }: LearningPathDetailC
                 src={learningPath.imageUrl}
                 alt={learningPath.title}
                 fill
-                objectFit="cover"
+                style={{objectFit:"cover"}}
                 data-ai-hint={learningPath.dataAiHint || 'learning journey'}
                 priority
                 />
@@ -149,7 +149,7 @@ export default function LearningPathDetailClient({ pathId }: LearningPathDetailC
                       <div className="flex items-center gap-3">
                         {course.imageUrl && (
                             <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-md overflow-hidden shrink-0 bg-muted">
-                                <Image src={course.imageUrl} alt={course.title} fill objectFit="cover" data-ai-hint={course.dataAiHint || 'course content'}/>
+                                <Image src={course.imageUrl} alt={course.title} fill style={{objectFit:"cover"}} data-ai-hint={course.dataAiHint || 'course content'}/>
                             </div>
                         )}
                         <div>

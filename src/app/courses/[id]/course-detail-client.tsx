@@ -69,7 +69,7 @@ const courseDetailTranslations = {
     gradedQuiz: "Graded Quiz",
     startQuiz: "Start Quiz",
     noQuizzesAvailable: "No quizzes available for this course yet.",
-    completedNoLessons: "Course Completed (No lessons available for review)" // New translation
+    completedNoLessons: "Course Completed (No lessons available for review)" 
   },
   my: {
     backToCourses: "အတန်းများသို့ ပြန်သွားရန်",
@@ -113,7 +113,7 @@ const courseDetailTranslations = {
     gradedQuiz: "အဆင့်သတ်မှတ် စာမေးပွဲငယ်",
     startQuiz: "စာမေးပွဲငယ် စတင်ရန်",
     noQuizzesAvailable: "ဤသင်တန်းအတွက် စာမေးပွဲငယ်များ မရှိသေးပါ။",
-    completedNoLessons: "သင်တန်း ပြီးဆုံးသွားပါပြီ (ပြန်လည်သုံးသပ်ရန် သင်ခန်းစာများ မရှိပါ)" // New translation
+    completedNoLessons: "သင်တန်း ပြီးဆုံးသွားပါပြီ (ပြန်လည်သုံးသပ်ရန် သင်ခန်းစာများ မရှိပါ)"
   }
 };
 
@@ -426,7 +426,7 @@ export default function CourseDetailClient({ initialCourse, courseId }: CourseDe
                   src={imageUrl}
                   alt={title}
                   fill
-                  objectFit="cover"
+                  style={{objectFit:"cover"}}
                   data-ai-hint={dataAiHint || 'course education'}
                   priority
                 />

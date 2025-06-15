@@ -34,7 +34,12 @@ export const metadata: Metadata = {
     template: `%s | ${siteConfig.name}`,
   },
   description: siteConfig.description,
-  keywords: ["education", "online learning", "courses", "tech education", "yellow institute", "e-learning", "study tools", "flashcards", "video reels"],
+  keywords: [
+    "education", "online learning", "courses", "tech education", "yellow institute", 
+    "e-learning", "tutorials", "programming", "web development", "data science", 
+    "ai", "software development", "study tools", "flashcards", "video reels", 
+    "online courses", "educational platform", "learn programming", "tech skills"
+  ],
   authors: [{ name: "Yellow Institute Team", url: siteConfig.url }],
   creator: "Yellow Institute Team",
   robots: {
