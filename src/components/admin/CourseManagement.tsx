@@ -176,8 +176,8 @@ const QuestionEditDialog = ({
       order,
       points,
       options: currentOptions.map(({ isCorrect, ...optData }) => optData),
-      correctOptionText: correctOption.text,
-      correctOptionId: correctOption.id,
+      correctOptionText: correctOption.text, // Save the text of the correct option
+      correctOptionId: correctOption.id,   // Save the ID of the correct option
     });
   };
 
@@ -260,7 +260,7 @@ const QuizQuestionsDialog = ({
   isSavingQuiz,
 }: {
   quiz: FormQuiz;
-  onSaveQuiz: (updatedQuiz: FormQuiz, deletedQuestionIds: string[]) => Promise<void>; // Modified signature
+  onSaveQuiz: (updatedQuiz: FormQuiz, deletedQuestionIds: string[]) => Promise<void>;
   onCancel: () => void;
   isSavingQuiz: boolean;
 }) => {
@@ -268,9 +268,9 @@ const QuizQuestionsDialog = ({
   const [editingQuestion, setEditingQuestion] = useState<FormQuestion | null>(null);
   const [questionIdsToDelete, setQuestionIdsToDelete] = useState<string[]>([]);
 
-  useEffect(() => { // Keep dialog state in sync if prop changes (e.g. parent re-render)
+  useEffect(() => {
     setCurrentQuizState(JSON.parse(JSON.stringify(quiz)));
-    setQuestionIdsToDelete([]); // Reset deleted IDs when dialog re-opens for a different quiz or new instance
+    setQuestionIdsToDelete([]);
   }, [quiz]);
 
 
@@ -288,7 +288,7 @@ const QuizQuestionsDialog = ({
       ...prev,
       questions: prev.questions?.filter(q => q.id !== questionId),
     }));
-    if (questionId && !questionId.startsWith('q-new-')) { // Only track DB IDs for deletion
+    if (questionId && !questionId.startsWith('q-new-')) {
       setQuestionIdsToDelete(prev => [...new Set([...prev, questionId])]);
     }
   };
@@ -296,24 +296,21 @@ const QuizQuestionsDialog = ({
   const handleSaveQuestionFromDialog = (questionData: FormQuestion) => {
     setCurrentQuizState(prev => {
       const newId = questionData.id || generateQuestionId();
-      const newOptions = questionData.options?.map(opt => ({ id: opt.id || generateOptionId(), text: opt.text! })) || [];
-      let correctOptionIdForSave = questionData.correctOptionId;
+      // Ensure options also get new IDs if they are new
+      const newOptions = questionData.options?.map(opt => ({
+          id: opt.id || generateOptionId(),
+          text: opt.text!
+      })) || [];
 
-      // If correctOptionId was for a newly generated option, ensure it maps to the *new* ID of that option
-      if (questionData.correctOptionId && questionData.correctOptionId.startsWith('opt-new-')) {
-          const correctOptionText = questionData.options?.find(opt => opt.id === questionData.correctOptionId)?.text;
-          const newlyCreatedCorrectOption = newOptions.find(opt => opt.text === correctOptionText);
-          if (newlyCreatedCorrectOption) {
-            correctOptionIdForSave = newlyCreatedCorrectOption.id;
-          }
-      }
-
-
+      // Find the correct option object from the potentially re-IDed newOptions
+      const correctFormOption = questionData.options?.find(opt => opt.id === questionData.correctOptionId);
+      const correctDbOptionInNewList = newOptions.find(opt => opt.text === correctFormOption?.text);
+      
       const newQuestionEntry: FormQuestion = {
           ...questionData,
           id: newId,
           options: newOptions,
-          correctOptionId: correctOptionIdForSave,
+          correctOptionId: correctDbOptionInNewList?.id || null, // Use the ID from the newly created/updated options list
       };
 
       const existingIndex = prev.questions?.findIndex(q => q.id === newId);
@@ -331,6 +328,7 @@ const QuizQuestionsDialog = ({
   };
 
   const handleSaveAndClose = async () => {
+    // Pass the current state of the quiz (with all its questions) and the list of deleted question IDs
     await onSaveQuiz(currentQuizState, questionIdsToDelete);
   };
 
@@ -426,7 +424,7 @@ const CourseForm = ({
     course?.quizzes?.map(q => ({
         id: q.id,
         title: q.title,
-        quizType: q.quizType as MockQuizEnumType, // Cast from PrismaQuizTypeEnum
+        quizType: q.quizType as MockQuizEnumType,
         passingScore: q.passingScore ?? undefined,
         questions: q.questions.map(ques => ({
             id: ques.id,
@@ -435,11 +433,13 @@ const CourseForm = ({
             points: ques.points ?? undefined,
             options: ques.options.map(opt => ({id: opt.id, text: opt.text})),
             correctOptionId: ques.correctOptionId || null,
+            correctOptionText: ques.options.find(opt => opt.id === ques.correctOptionId)?.text // Populate for edit
         }))
     })) || []
   );
 
   const [editingQuizForQuestions, setEditingQuizForQuestions] = useState<FormQuiz | null>(null);
+  const [isSubmittingForm, setIsSubmittingForm] = useState(isSubmitting); // Local submitting state for the form
 
 
   const [learningObjectives, setLearningObjectives] = useState(course?.learningObjectives?.join('\n') || '');
@@ -452,6 +452,10 @@ const CourseForm = ({
 
   const [newQuizTitle, setNewQuizTitle] = useState('');
   const [newQuizType, setNewQuizType] = useState<MockQuizEnumType>('practice');
+
+  useEffect(() => {
+    setIsSubmittingForm(isSubmitting);
+  }, [isSubmitting]);
 
   const handleModuleChange = (index: number, field: keyof FormModule, value: string | number) => {
     const newModules = [...modules];
@@ -496,7 +500,7 @@ const CourseForm = ({
       return;
     }
     const newQuizEntry: FormQuiz = {
-      id: `quiz-new-${Date.now()}`,
+      id: `quiz-new-${Date.now()}-${Math.random().toString(36).substring(2,7)}`, // Make ID more unique for local state
       title: newQuizTitle,
       quizType: newQuizType,
       questions: [],
@@ -516,18 +520,16 @@ const CourseForm = ({
     quizDataFromDialog: FormQuiz,
     deletedQuestionIdsFromDialog: string[]
   ) => {
-    // 1. Update local state first for UI responsiveness
     setQuizzes(prevQuizzes =>
       prevQuizzes.map(q =>
         q.id === quizDataFromDialog.id
-          ? { ...quizDataFromDialog } // Create a new object for re-render
+          ? { ...quizDataFromDialog }
           : q
       )
     );
 
-    // 2. If the course already exists, save the quiz to the DB
     if (course?.id) {
-      setIsSubmittingForm(true); // Indicate a sub-part of the form is saving
+      setIsSubmittingForm(true);
       try {
         const questionsToUpsert = quizDataFromDialog.questions?.map(q => ({
           id: q.id?.startsWith('q-new-') ? undefined : q.id,
@@ -538,11 +540,11 @@ const CourseForm = ({
             id: opt.id?.startsWith('opt-new-') ? undefined : opt.id,
             text: opt.text
           })),
-          correctOptionText: q.options?.find(o => o.id === q.correctOptionId)?.text,
+          correctOptionText: q.correctOptionText,
         }));
 
         const payloadForServer = {
-          id: quizDataFromDialog.id?.startsWith('quiz-new-') ? undefined : quizDataFromDialog.id, // Send undefined if it's a new quiz for an existing course
+          id: quizDataFromDialog.id?.startsWith('quiz-new-') ? undefined : quizDataFromDialog.id,
           title: quizDataFromDialog.title,
           quizType: quizDataFromDialog.quizType.toUpperCase() as PrismaQuizTypeEnum,
           passingScore: quizDataFromDialog.passingScore,
@@ -551,10 +553,9 @@ const CourseForm = ({
         };
 
         const savedQuiz = await serverSaveQuizWithQuestions(course.id, payloadForServer);
-        // Update local state AGAIN with potentially new IDs from DB
         setQuizzes(prevQuizzes =>
           prevQuizzes.map(q =>
-            q.id === quizDataFromDialog.id || q.title === savedQuiz.title // Match by temp ID or title if new
+            q.id === quizDataFromDialog.id || q.title === savedQuiz.title
               ? {
                   ...savedQuiz,
                   quizType: savedQuiz.quizType as MockQuizEnumType,
@@ -565,6 +566,7 @@ const CourseForm = ({
                     points: sq.points,
                     options: sq.options?.map((opt: any) => ({ id: opt.id, text: opt.text })),
                     correctOptionId: sq.correctOptionId,
+                    correctOptionText: sq.options?.find((o: any) => o.id === sq.correctOptionId)?.text,
                   })) as FormQuestion[],
                 }
               : q
@@ -574,12 +576,11 @@ const CourseForm = ({
       } catch (error) {
         console.error("Error saving quiz questions to DB:", error);
         toast({ variant: "destructive", title: "Quiz DB Save Error", description: (error as Error).message });
-        // Optionally, revert local state if DB save fails, or let user retry.
       } finally {
         setIsSubmittingForm(false);
       }
     }
-    setEditingQuizForQuestions(null); // Close dialog regardless of DB save outcome for new courses
+    setEditingQuizForQuestions(null);
   };
 
 
@@ -636,7 +637,7 @@ const CourseForm = ({
                 id: opt.id?.startsWith('opt-new-') ? undefined: opt.id,
                 text: opt.text,
               })),
-              correctOptionText: ques.options?.find(opt => opt.id === ques.correctOptionId)?.text,
+              correctOptionText: ques.correctOptionText, // Pass this for dbUtils
           }))
       }))
     };
@@ -659,7 +660,7 @@ const CourseForm = ({
                     onCancel={() => setEditingLesson(null)}
                     moduleIndex={editingLesson.moduleIndex}
                     lessonIndex={editingLesson.lessonIndex}
-                    isSubmitting={isSubmitting}
+                    isSubmitting={isSubmittingForm}
                 />
             </DialogContent>
         </Dialog>
@@ -674,16 +675,16 @@ const CourseForm = ({
         <div className="space-y-4">
           <div>
             <Label htmlFor="title">Course Title</Label>
-            <Input id="title" value={title} onChange={e => setTitle(e.target.value)} required disabled={isSubmitting} />
+            <Input id="title" value={title} onChange={e => setTitle(e.target.value)} required disabled={isSubmittingForm} />
           </div>
           <div>
             <Label htmlFor="description">Description</Label>
-            <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} required disabled={isSubmitting} />
+            <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} required disabled={isSubmittingForm} />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="categoryName">Category Name</Label>
-               <Select value={categoryName} onValueChange={setCategoryName} disabled={isSubmitting || categories.length === 0}>
+               <Select value={categoryName} onValueChange={setCategoryName} disabled={isSubmittingForm || categories.length === 0}>
                 <SelectTrigger id="categoryName">
                   <SelectValue placeholder={categories.length === 0 ? "No categories available" : "Select category"} />
                 </SelectTrigger>
@@ -697,7 +698,7 @@ const CourseForm = ({
             </div>
             <div>
               <Label htmlFor="instructor">Instructor</Label>
-              <Input id="instructor" value={instructor} onChange={e => setInstructor(e.target.value)} required disabled={isSubmitting} />
+              <Input id="instructor" value={instructor} onChange={e => setInstructor(e.target.value)} required disabled={isSubmittingForm} />
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -705,19 +706,19 @@ const CourseForm = ({
               <Label htmlFor="price">Price (0 for free)</Label>
               <div className="relative">
                 <DollarSign className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input id="price" type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="e.g., 49.99" className="pl-8" step="0.01" min="0" disabled={isSubmitting} />
+                <Input id="price" type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="e.g., 49.99" className="pl-8" step="0.01" min="0" disabled={isSubmittingForm} />
               </div>
             </div>
             <div>
               <Label htmlFor="currency">Currency</Label>
               <div className="relative">
                 <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input id="currency" value={currency} onChange={e => setCurrency(e.target.value)} placeholder="e.g., USD" className="pl-8" disabled={isSubmitting} />
+                <Input id="currency" value={currency} onChange={e => setCurrency(e.target.value)} placeholder="e.g., USD" className="pl-8" disabled={isSubmittingForm} />
               </div>
             </div>
           </div>
            <div className="flex items-center space-x-2 pt-2">
-            <Checkbox id="isFeatured" checked={isFeatured} onCheckedChange={(checked) => setIsFeatured(checked as boolean)} disabled={isSubmitting} />
+            <Checkbox id="isFeatured" checked={isFeatured} onCheckedChange={(checked) => setIsFeatured(checked as boolean)} disabled={isSubmittingForm} />
             <Label htmlFor="isFeatured" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
               Mark as Featured Course
             </Label>
@@ -725,7 +726,7 @@ const CourseForm = ({
           <div>
             <Label htmlFor="imageUrl">Course Image URL</Label>
             <div className="relative">
-                <Input id="imageUrl" value={imageUrl || ''} onChange={e => setImageUrl(e.target.value)} className="pl-8" disabled={isSubmitting}/>
+                <Input id="imageUrl" value={imageUrl || ''} onChange={e => setImageUrl(e.target.value)} className="pl-8" disabled={isSubmittingForm}/>
                 <ImageIcon className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             </div>
             {imageUrl && (
@@ -737,7 +738,7 @@ const CourseForm = ({
           <div>
             <Label htmlFor="dataAiHint">Image AI Hint (for Unsplash search)</Label>
             <div className="relative">
-                <Input id="dataAiHint" value={dataAiHint || ''} onChange={e => setDataAiHint(e.target.value)} placeholder="e.g. technology learning" className="pl-8" disabled={isSubmitting}/>
+                <Input id="dataAiHint" value={dataAiHint || ''} onChange={e => setDataAiHint(e.target.value)} placeholder="e.g. technology learning" className="pl-8" disabled={isSubmittingForm}/>
                 <Info className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             </div>
           </div>
@@ -747,19 +748,19 @@ const CourseForm = ({
             <div className="space-y-4">
                 <div>
                     <Label htmlFor="learningObjectives" className="flex items-center"><ListChecks className="mr-2 h-4 w-4 text-muted-foreground"/> Learning Objectives (one per line)</Label>
-                    <Textarea id="learningObjectives" value={learningObjectives} onChange={e => setLearningObjectives(e.target.value)} rows={4} placeholder="Students will be able to...\nUnderstand concept X..." disabled={isSubmitting}/>
+                    <Textarea id="learningObjectives" value={learningObjectives} onChange={e => setLearningObjectives(e.target.value)} rows={4} placeholder="Students will be able to...\nUnderstand concept X..." disabled={isSubmittingForm}/>
                 </div>
                 <div>
                     <Label htmlFor="targetAudience" className="flex items-center"><TargetAudienceIcon className="mr-2 h-4 w-4 text-muted-foreground"/> Target Audience</Label>
-                    <Input id="targetAudience" value={targetAudience || ''} onChange={e => setTargetAudience(e.target.value)} placeholder="e.g., Beginners, Advanced Developers" disabled={isSubmitting}/>
+                    <Input id="targetAudience" value={targetAudience || ''} onChange={e => setTargetAudience(e.target.value)} placeholder="e.g., Beginners, Advanced Developers" disabled={isSubmittingForm}/>
                 </div>
                 <div>
                     <Label htmlFor="prerequisites" className="flex items-center"><ShieldCheck className="mr-2 h-4 w-4 text-muted-foreground"/> Prerequisites (one per line)</Label>
-                    <Textarea id="prerequisites" value={prerequisites} onChange={e => setPrerequisites(e.target.value)} rows={3} placeholder="Basic HTML knowledge\nFamiliarity with JavaScript..." disabled={isSubmitting}/>
+                    <Textarea id="prerequisites" value={prerequisites} onChange={e => setPrerequisites(e.target.value)} rows={3} placeholder="Basic HTML knowledge\nFamiliarity with JavaScript..." disabled={isSubmittingForm}/>
                 </div>
                 <div>
                     <Label htmlFor="estimatedTimeToComplete" className="flex items-center"><Timer className="mr-2 h-4 w-4 text-muted-foreground"/> Estimated Time to Complete</Label>
-                    <Input id="estimatedTimeToComplete" value={estimatedTimeToComplete || ''} onChange={e => setEstimatedTimeToComplete(e.target.value)} placeholder="e.g., Approx. 20 hours" disabled={isSubmitting}/>
+                    <Input id="estimatedTimeToComplete" value={estimatedTimeToComplete || ''} onChange={e => setEstimatedTimeToComplete(e.target.value)} placeholder="e.g., Approx. 20 hours" disabled={isSubmittingForm}/>
                 </div>
             </div>
           </div>
@@ -776,7 +777,7 @@ const CourseForm = ({
                       placeholder={`Module ${moduleIndex + 1} Title`}
                       className="text-md font-medium flex-grow mr-2"
                       onClick={(e) => e.stopPropagation()}
-                      disabled={isSubmitting}
+                      disabled={isSubmittingForm}
                     />
                   </AccordionTrigger>
                   <AccordionContent className="pl-2">
@@ -789,17 +790,17 @@ const CourseForm = ({
                                     <p className="text-xs text-muted-foreground">{lesson.duration} {lesson.embedUrl && <LinkIcon className="inline h-3 w-3 ml-1"/>}</p>
                                 </div>
                                 <div className="flex space-x-1 shrink-0">
-                                    <Button type="button" variant="ghost" size="icon_sm" onClick={() => setEditingLesson({ moduleIndex, lessonIndex, lesson })} disabled={isSubmitting}>
+                                    <Button type="button" variant="ghost" size="icon_sm" onClick={() => setEditingLesson({ moduleIndex, lessonIndex, lesson })} disabled={isSubmittingForm}>
                                         <Edit3 className="h-4 w-4" />
                                     </Button>
-                                    <Button type="button" variant="ghost" size="icon_sm" onClick={() => removeLesson(moduleIndex, lessonIndex)} disabled={isSubmitting}>
+                                    <Button type="button" variant="ghost" size="icon_sm" onClick={() => removeLesson(moduleIndex, lessonIndex)} disabled={isSubmittingForm}>
                                         <Trash2 className="h-4 w-4 text-destructive" />
                                     </Button>
                                 </div>
                            </div>
                         </Card>
                       ))}
-                      <Button type="button" variant="outline" size="sm" onClick={() => setEditingLesson({ moduleIndex, lesson: { title: '', duration: '', order: (module.lessons?.length || 0) } })} disabled={isSubmitting}>
+                      <Button type="button" variant="outline" size="sm" onClick={() => setEditingLesson({ moduleIndex, lesson: { title: '', duration: '', order: (module.lessons?.length || 0) } })} disabled={isSubmittingForm}>
                         <PlusCircle className="mr-2 h-4 w-4" /> Add Lesson
                       </Button>
                     </div>
@@ -810,14 +811,14 @@ const CourseForm = ({
                       size="sm"
                       className="mt-1 text-destructive hover:text-destructive-foreground hover:bg-destructive/90 w-full justify-start text-xs"
                       onClick={() => removeModule(moduleIndex)}
-                      disabled={isSubmitting}
+                      disabled={isSubmittingForm}
                     >
                       <Trash2 className="mr-2 h-3 w-3" /> Remove Module {moduleIndex + 1}
                     </Button>
                 </AccordionItem>
               ))}
             </Accordion>
-            <Button type="button" onClick={addModule} variant="outline" className="w-full" disabled={isSubmitting}>
+            <Button type="button" onClick={addModule} variant="outline" className="w-full" disabled={isSubmittingForm}>
               <PlusCircle className="mr-2 h-4 w-4" /> Add Module
             </Button>
           </div>
@@ -831,10 +832,10 @@ const CourseForm = ({
                 value={newQuizTitle}
                 onChange={(e) => setNewQuizTitle(e.target.value)}
                 placeholder="e.g., Mid-term Assessment"
-                disabled={isSubmitting}
+                disabled={isSubmittingForm}
               />
               <Label htmlFor="newQuizType">Quiz Type</Label>
-              <Select value={newQuizType} onValueChange={(value: MockQuizEnumType) => setNewQuizType(value)} disabled={isSubmitting}>
+              <Select value={newQuizType} onValueChange={(value: MockQuizEnumType) => setNewQuizType(value)} disabled={isSubmittingForm}>
                 <SelectTrigger id="newQuizType">
                   <SelectValue placeholder="Select quiz type" />
                 </SelectTrigger>
@@ -843,7 +844,7 @@ const CourseForm = ({
                   <SelectItem value="graded">Graded Quiz</SelectItem>
                 </SelectContent>
               </Select>
-              <Button type="button" onClick={addQuiz} size="sm" className="mt-2" disabled={isSubmitting}>
+              <Button type="button" onClick={addQuiz} size="sm" className="mt-2" disabled={isSubmittingForm}>
                 <PlusCircle className="mr-2 h-4 w-4" /> Add Quiz
               </Button>
             </div>
@@ -861,10 +862,10 @@ const CourseForm = ({
                         </p>
                       </div>
                       <div className="flex space-x-1 shrink-0">
-                         <Button type="button" variant="ghost" size="icon_sm" title="Manage Questions" onClick={() => setEditingQuizForQuestions(quizItem)} disabled={isSubmitting}>
+                         <Button type="button" variant="ghost" size="icon_sm" title="Manage Questions" onClick={() => setEditingQuizForQuestions(quizItem)} disabled={isSubmittingForm}>
                             <Settings2 className="h-4 w-4" />
                           </Button>
-                        <Button type="button" variant="ghost" size="icon_sm" title="Delete Quiz" onClick={() => removeQuiz(quizItem.id)} disabled={isSubmitting}>
+                        <Button type="button" variant="ghost" size="icon_sm" title="Delete Quiz" onClick={() => removeQuiz(quizItem.id)} disabled={isSubmittingForm}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>
@@ -879,10 +880,10 @@ const CourseForm = ({
       </ScrollArea>
       <DialogFooter className="pt-6 border-t">
         <DialogClose asChild>
-          <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>Cancel</Button>
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmittingForm}>Cancel</Button>
         </DialogClose>
-        <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90" disabled={isSubmitting}>
-           {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+        <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90" disabled={isSubmittingForm}>
+           {isSubmittingForm ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           {course?.id ? 'Save Changes' : 'Add Course'}
         </Button>
       </DialogFooter>
@@ -890,9 +891,9 @@ const CourseForm = ({
     {editingQuizForQuestions && (
         <QuizQuestionsDialog
           quiz={editingQuizForQuestions}
-          onSaveQuiz={handleSaveQuizStateAndUpdateDb} // Use the refactored handler
+          onSaveQuiz={handleSaveQuizStateAndUpdateDb}
           onCancel={() => setEditingQuizForQuestions(null)}
-          isSavingQuiz={isSubmittingForm} // Use the main form's submitting state for quiz sub-dialogs
+          isSavingQuiz={isSubmittingForm}
         />
     )}
     </>
@@ -905,7 +906,7 @@ export default function CourseManagement() {
   const [editingCourse, setEditingCourse] = useState<(Course & { modules?: (Module & { lessons?: Lesson[] })[], quizzes?: (Quiz & { questions?: (Question & { options?: Option[], correctOptionId?: string | null })[] })[] }) | undefined>(undefined);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
-  const [isSubmittingForm, setIsSubmittingForm] = useState(false);
+  const [isSubmittingFormState, setIsSubmittingFormState] = useState(false); // Renamed to avoid conflict
   const { toast } = useToast();
 
   useEffect(() => {
@@ -928,7 +929,7 @@ export default function CourseManagement() {
   }, [toast]);
 
   const handleAddCourse = async (data: Omit<Course, 'id' | 'createdAt' | 'updatedAt'| 'categoryId' | 'categoryNameCache' | 'enrollments' | 'paymentSubmissions'> & { categoryName: string, modules?: FormModule[], quizzes?: FormQuiz[] }) => {
-    setIsSubmittingForm(true);
+    setIsSubmittingFormState(true);
     try {
       const newCourse = await serverAddCourse(data);
       setCourses(prev => [newCourse, ...prev].sort((a, b) => a.title.localeCompare(b.title)));
@@ -938,13 +939,13 @@ export default function CourseManagement() {
       console.error("Error adding course:", error);
       toast({ variant: "destructive", title: "Error Adding Course", description: (error as Error).message || "Could not add course." });
     } finally {
-      setIsSubmittingForm(false);
+      setIsSubmittingFormState(false);
     }
   };
 
   const handleEditCourse = async (data: Partial<Omit<Course, 'id' | 'createdAt' | 'updatedAt' | 'categoryId'| 'categoryNameCache' | 'enrollments' | 'paymentSubmissions'>> & { categoryName?: string, modules?: FormModule[], quizzes?: FormQuiz[] }) => {
     if (!editingCourse || !editingCourse.id) return;
-    setIsSubmittingForm(true);
+    setIsSubmittingFormState(true);
     try {
       const updatedCourse = await serverUpdateCourse(editingCourse.id, data);
       setCourses(prev => prev.map(c => c.id === editingCourse.id ? updatedCourse : c).sort((a,b) => a.title.localeCompare(b.title)));
@@ -954,7 +955,7 @@ export default function CourseManagement() {
       console.error("Error updating course:", error);
       toast({ variant: "destructive", title: "Error Updating Course", description: (error as Error).message || "Could not update course." });
     } finally {
-      setIsSubmittingForm(false);
+      setIsSubmittingFormState(false);
     }
   };
 
@@ -970,7 +971,7 @@ export default function CourseManagement() {
   };
 
   const openForm = async (courseId?: string) => {
-    setIsLoadingData(true); // Show loading while fetching full course details for edit
+    setIsLoadingData(true);
     if (courseId) {
         try {
             const courseToEdit = await serverGetCourseById(courseId);
@@ -1021,13 +1022,13 @@ export default function CourseManagement() {
                   {editingCourse ? 'Modify the details of the existing course.' : 'Fill in the details for the new course.'}
                 </DialogDescription>
               </DialogHeader>
-              {isFormOpen && !isLoadingData ? ( // Ensure data is loaded before rendering form, especially for edit
+              {isFormOpen && !isLoadingData ? (
                 <CourseForm
                     course={editingCourse}
                     categories={categories}
                     onSubmit={editingCourse ? handleEditCourse : handleAddCourse}
                     onCancel={closeForm}
-                    isSubmitting={isSubmittingForm}
+                    isSubmitting={isSubmittingFormState}
                 />
               ) : (isFormOpen && isLoadingData) ? (
                  <div className="flex justify-center items-center p-10"><Loader2 className="h-6 w-6 animate-spin text-primary"/> Initializing form...</div>
@@ -1036,7 +1037,7 @@ export default function CourseManagement() {
           </Dialog>
         </div>
 
-        {isLoadingData && courses.length === 0 ? ( // Show loading spinner only if courses array is also empty
+        {isLoadingData && courses.length === 0 ? (
            <div className="flex justify-center items-center py-10">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <p className="ml-2 text-muted-foreground">Loading courses...</p>
