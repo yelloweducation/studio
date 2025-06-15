@@ -3,24 +3,22 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { DatabaseZap, BookText, FolderKanban, VideoIcon, Users, Loader2, Settings } from 'lucide-react';
+import { DatabaseZap, BookText, FolderKanban, Users, Loader2, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { 
   serverSeedCourses, 
   serverSeedCategories, 
   serverSeedLearningPaths,
-  serverSeedVideos,         // Now uses Prisma via adminDataActions
-  serverSeedPaymentSettings // Now uses Prisma via adminDataActions
+  serverSeedPaymentSettings
 } from '@/actions/adminDataActions'; 
-import { serverSeedInitialUsers } from '@/actions/authActions'; // For seeding users to DB
+import { serverSeedInitialUsers } from '@/actions/authActions'; 
 
-type SeedOperation = 'courses' | 'categories' | 'videos' | 'learningPaths' | 'users' | 'paymentSettings';
+type SeedOperation = 'courses' | 'categories' | 'learningPaths' | 'users' | 'paymentSettings';
 
 export default function DataSeeding() {
   const [loadingStates, setLoadingStates] = useState<Record<SeedOperation, boolean>>({
     courses: false,
     categories: false,
-    videos: false,
     learningPaths: false,
     users: false,
     paymentSettings: false,
@@ -41,17 +39,14 @@ export default function DataSeeding() {
         case 'categories':
           result = await serverSeedCategories(); 
           break;
-        case 'videos':
-          result = await serverSeedVideos(); // Now Prisma-backed
-          break;
         case 'learningPaths':
           result = await serverSeedLearningPaths(); 
           break;
         case 'users':
-          result = await serverSeedInitialUsers(); // Now Prisma-backed via authActions
+          result = await serverSeedInitialUsers(); 
           break;
         case 'paymentSettings':
-          result = await serverSeedPaymentSettings(); // Now Prisma-backed
+          result = await serverSeedPaymentSettings(); 
           break;
         default:
           throw new Error("Invalid seed operation");
@@ -81,7 +76,6 @@ export default function DataSeeding() {
     { operation: 'courses' as SeedOperation, label: 'Seed Courses to DB', Icon: BookText },
     { operation: 'learningPaths' as SeedOperation, label: 'Seed Learning Paths to DB', Icon: DatabaseZap },
     { operation: 'users' as SeedOperation, label: 'Seed Initial Users to DB', Icon: Users },
-    { operation: 'videos' as SeedOperation, label: 'Seed Videos to DB', Icon: VideoIcon },
     { operation: 'paymentSettings' as SeedOperation, label: 'Seed Payment Settings to DB', Icon: Settings },
   ];
 
@@ -126,5 +120,3 @@ export default function DataSeeding() {
     </Card>
   );
 }
-
-    

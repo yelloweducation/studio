@@ -4,12 +4,13 @@ import type { Prisma } from '@prisma/client';
 import {
   mockCoursesForSeeding,
   mockCategoriesForSeeding,
-  mockVideosForSeeding as mockVideosForSeedingData,
   mockLearningPathsForSeeding,
   initialPaymentSettings as mockDefaultPaymentSettingsData,
 } from '@/data/mockData';
-import { QuizType as PrismaQuizTypeEnum, type SitePage, type Course, type Category, type LearningPath, type Module, type Lesson, type Quiz, type Question, type Option, type QuizType as PrismaQuizTypeTypeAlias, type Video, type PaymentSettings, type PaymentSubmission, type Enrollment, type User, type PaymentSubmissionStatus as PrismaPaymentStatus } from '@prisma/client';
+import { QuizType as PrismaQuizTypeEnum, type SitePage, type Course, type Category, type LearningPath, type Module, type Lesson, type Quiz, type Question, type Option, type QuizType as PrismaQuizTypeTypeAlias, type PaymentSettings, type PaymentSubmission, type Enrollment, type User, type PaymentSubmissionStatus as PrismaPaymentStatus } from '@prisma/client';
 import { z } from 'zod';
+
+// Note: The 'Video' type and related functions are removed as the video page is removed.
 
 console.log("[dbUtils-Prisma] Loading dbUtils.ts module. DATABASE_URL from env (initial check):", process.env.DATABASE_URL ? "Exists" : "NOT FOUND/EMPTY");
 if (process.env.DATABASE_URL) {
@@ -18,7 +19,7 @@ if (process.env.DATABASE_URL) {
 
 export type {
     Category, Course, Module, Lesson, Quiz, Question, Option, SitePage,
-    LearningPath, User, Video, PaymentSettings, PaymentSubmission, Enrollment,
+    LearningPath, User, PaymentSettings, PaymentSubmission, Enrollment,
     PrismaPaymentStatus as PaymentSubmissionStatus,
     PrismaQuizTypeTypeAlias as QuizType
 };
@@ -86,16 +87,6 @@ const CourseInputSchema = z.object({
   estimatedTimeToComplete: z.string().optional().nullable(),
   modules: z.array(ModuleInputSchema).optional(),
   quizzes: z.array(QuizInputSchema).optional(),
-});
-
-const VideoInputSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  description: z.string().min(1, "Description is required"),
-  thumbnailUrl: z.string().url("Invalid thumbnail URL").optional().nullable(),
-  embedUrl: z.string().min(1, "Embed URL is required").url("Invalid embed URL").refine(val => val.includes("youtube.com") || val.includes("tiktok.com") || val.includes("drive.google.com"), {
-    message: "Embed URL must be a valid YouTube, TikTok, or Google Drive URL."
-  }),
-  dataAiHint: z.string().max(100, "AI hint too long").optional().nullable(),
 });
 
 const LearningPathInputSchema = z.object({
@@ -265,7 +256,7 @@ export const addCourseToDb = async (
 
     const prismaCourseData: Prisma.CourseCreateInput = {
       ...mainCourseData,
-      instructor: instructorName, // Changed to simple string based on recent schema update
+      instructor: instructorName, 
       category: { connect: { id: category.id } },
       categoryNameCache: category.name,
       learningObjectives: mainCourseData.learningObjectives || [],
@@ -445,7 +436,7 @@ export const updateCourseInDb = async (
 
     const prismaCourseUpdateData: Prisma.CourseUpdateInput = {
       ...mainCourseData,
-      instructor: instructorName, // Changed to simple string
+      instructor: instructorName, 
       learningObjectives: mainCourseData.learningObjectives || [],
       prerequisites: mainCourseData.prerequisites || [],
     };
@@ -797,61 +788,6 @@ export const saveQuizWithQuestionsToDb = async (
     }
 };
 
-// --- Video Functions (Using Prisma) ---
-export const getVideosFromDb = async (): Promise<Video[]> => {
-  console.log("[dbUtils-Prisma] getVideosFromDb: Fetching videos from DB...");
-  try {
-    const videos = await prisma.video.findMany({ orderBy: { createdAt: 'desc' } });
-    console.log("[dbUtils-Prisma] getVideosFromDb: Found videos:", videos.length);
-    return videos;
-  } catch (error) {
-    console.error("[dbUtils-Prisma] getVideosFromDb: Error fetching videos:", error);
-    throw error;
-  }
-};
-export const addVideoToDb = async (videoData: Omit<Video, 'id' | 'createdAt' | 'updatedAt'>): Promise<Video> => {
-  console.log("[dbUtils-Prisma] addVideoToDb: Adding video to DB. Data:", JSON.stringify(videoData, null, 1));
-  const validation = VideoInputSchema.safeParse(videoData);
-  if (!validation.success) {
-    console.error("[dbUtils-Prisma] addVideoToDb: Video validation failed:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
-    throw new Error(validation.error.flatten().fieldErrors._errors?.join(', ') || "Invalid video data.");
-  }
-  try {
-    const newVideo = await prisma.video.create({ data: validation.data });
-    console.log("[dbUtils-Prisma] addVideoToDb: Video created successfully in DB:", JSON.stringify(newVideo, null, 1));
-    return newVideo;
-  } catch (error) {
-    console.error("[dbUtils-Prisma] addVideoToDb: Error creating video in DB:", error);
-    throw error;
-  }
-};
-export const updateVideoInDb = async (videoId: string, videoData: Partial<Omit<Video, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Video> => {
-  console.log(`[dbUtils-Prisma] updateVideoInDb: Updating video ID ${videoId}. Data:`, JSON.stringify(videoData, null, 1));
-  const validation = VideoInputSchema.partial().safeParse(videoData);
-  if (!validation.success) {
-     console.error("[dbUtils-Prisma] updateVideoInDb: Video validation failed:", JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
-    throw new Error(validation.error.flatten().fieldErrors._errors?.join(', ') || "Invalid video data for update.");
-  }
-  try {
-    const updatedVideo = await prisma.video.update({ where: { id: videoId }, data: validation.data });
-    console.log("[dbUtils-Prisma] updateVideoInDb: Video updated successfully in DB:", JSON.stringify(updatedVideo, null, 1));
-    return updatedVideo;
-  } catch (error) {
-    console.error(`[dbUtils-Prisma] updateVideoInDb: Error updating video ID ${videoId} in DB:`, error);
-    throw error;
-  }
-};
-export const deleteVideoFromDb = async (videoId: string): Promise<void> => {
-  console.log(`[dbUtils-Prisma] deleteVideoFromDb: Deleting video ID ${videoId} from DB.`);
-  try {
-    await prisma.video.delete({ where: { id: videoId } });
-    console.log(`[dbUtils-Prisma] deleteVideoFromDb: Video ID ${videoId} deleted successfully from DB.`);
-  } catch (error) {
-    console.error(`[dbUtils-Prisma] deleteVideoFromDb: Error deleting video ID ${videoId} from DB:`, error);
-    throw error;
-  }
-};
-
 // --- PaymentSettings (Using Prisma) ---
 export const getPaymentSettingsFromDb = async (): Promise<PaymentSettings | null> => {
   console.log("[dbUtils-Prisma] getPaymentSettingsFromDb: Fetching payment settings from DB.");
@@ -916,7 +852,6 @@ export const addPaymentSubmissionToDb = async (
   }
   console.log("[dbUtils-Prisma] addPaymentSubmissionToDb: Zod validation successful. Data for Prisma:", JSON.stringify(validation.data, null, 2));
 
-  // Verify user and course existence
   try {
     const userExists = await prisma.user.findUnique({ where: { id: validation.data.userId }, select: {id: true} });
     if (!userExists) {
@@ -934,9 +869,8 @@ export const addPaymentSubmissionToDb = async (
 
   } catch (existenceError: any) {
       console.error("[dbUtils-Prisma] addPaymentSubmissionToDb: Error during existence check:", existenceError);
-      throw existenceError; // Re-throw the specific "User not found" or "Course not found" error
+      throw existenceError; 
   }
-
 
   try {
     const newSubmission = await prisma.paymentSubmission.create({
@@ -946,7 +880,7 @@ export const addPaymentSubmissionToDb = async (
         amount: validation.data.amount,
         currency: validation.data.currency,
         screenshotUrl: validation.data.screenshotUrl,
-        status: 'PENDING', // Default status
+        status: 'PENDING', 
         submittedAt: new Date(),
       },
       include: { user: {select: {id:true, name:true, email:true}}, course: {select: {id:true, title: true}} }
@@ -1143,7 +1077,7 @@ export const seedCoursesToDb = async (): Promise<{ successCount: number; errorCo
         id: cd.id,
         title: cd.title,
         description: cd.description,
-        instructor: cd.instructor, // Instructor as string
+        instructor: cd.instructor, 
         imageUrl: cd.imageUrl,
         dataAiHint: cd.dataAiHint,
         price: cd.price,
@@ -1204,21 +1138,6 @@ export const seedLearningPathsToDb = async (): Promise<{ successCount: number; e
   return {successCount:s,errorCount:e,skippedCount:sk};
 };
 
-export const seedVideosToDb = async (): Promise<{ successCount: number; errorCount: number; skippedCount: number }> => {
-  console.log("[dbUtils-Prisma] seedVideosToDb: Seeding videos to DB.");
-  let s=0,e=0,sk=0;
-  for(const vd of mockVideosForSeedingData){
-    try{
-      const existing = await prisma.video.findUnique({where:{id:vd.id}});
-      if(existing){sk++;continue;}
-      const { createdAt, updatedAt, videoUrl, ...prismaVideoData } = vd;
-      await prisma.video.create({data:{...prismaVideoData, id:vd.id}});s++;
-    }catch(err){console.error(`Err seed Video ${vd.title}:`,err);e++;}
-  }
-  console.log(`[dbUtils-Prisma] seedVideosToDb: Done. Success: ${s}, Errors: ${e}, Skipped: ${sk}`);
-  return {successCount:s,errorCount:e,skippedCount:sk};
-};
-
 export const seedPaymentSettingsToDb = async (): Promise<{ successCount: number; errorCount: number; skippedCount: number }> => {
   console.log("[dbUtils-Prisma] seedPaymentSettingsToDb: Seeding payment settings to DB.");
   try{
@@ -1235,4 +1154,3 @@ export const seedPaymentSettingsToDb = async (): Promise<{ successCount: number;
       return{successCount:0,errorCount:1,skippedCount:0};
     }
 };
-

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home as HomeIcon, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Compass, Layers, Brain, Loader2, VideoIcon as VideoReelsIcon, Settings as SettingsIcon, UserCircle, Menu as MenuIcon } from 'lucide-react';
+import { Home as HomeIcon, LogIn, UserPlus, LayoutDashboard, LogOut, Sun, Moon, Compass, Layers, Brain, Loader2, Settings as SettingsIcon, UserCircle, Menu as MenuIcon } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from "@/lib/utils";
@@ -25,7 +25,6 @@ const headerTranslations = {
     home: "Home",
     all: "ALL",
     explore: "Explore Courses",
-    videos: "Reels",
     flashCards: "Flash Cards",
     personalityTest: "Assessments",
     welcome: "Welcome",
@@ -44,7 +43,6 @@ const headerTranslations = {
     home: "ပင်မ",
     all: "အားလုံး",
     explore: "သင်တန်းများ",
-    videos: "ဗီဒီယို",
     flashCards: "ကတ်ပြားများ",
     personalityTest: "စစ်ဆေးမှုများ",
     welcome: "ကြိုဆိုပါတယ်",
@@ -102,15 +100,13 @@ const Header = () => {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const controlHeaderBackground = () => {
-      if (pathname === '/videos') {
-        setDynamicHeaderBackgroundClasses('bg-transparent border-transparent');
-      } else if (window.scrollY < headerScrollThreshold) {
+      if (window.scrollY < headerScrollThreshold) {
         setDynamicHeaderBackgroundClasses('bg-transparent border-transparent');
       } else {
         setDynamicHeaderBackgroundClasses('bg-background/80 backdrop-blur-md border-b');
       }
     };
-    controlHeaderBackground(); // Call on mount
+    controlHeaderBackground(); 
     window.addEventListener('scroll', controlHeaderBackground, { passive: true });
     return () => window.removeEventListener('scroll', controlHeaderBackground);
   }, [pathname, headerScrollThreshold]);
@@ -131,13 +127,11 @@ const Header = () => {
       }
       lastScrollYLocal = currentScrollY;
     };
-    controlHeaderVisibility(); // Call on mount
+    controlHeaderVisibility(); 
     window.addEventListener('scroll', controlHeaderVisibility, { passive: true });
     return () => window.removeEventListener('scroll', controlHeaderVisibility);
   }, [pathname, useScrollHidingHeader, headerScrollThreshold]);
 
-
-  if (pathname === '/videos') return null;
 
   const handleLogout = useCallback(() => {
     logout();
@@ -154,7 +148,6 @@ const Header = () => {
 
   const commonNavItems = [
     { href: "/courses/search", label: t.explore, Icon: Compass },
-    { href: "/videos", label: t.videos, Icon: VideoReelsIcon },
     { href: "/flash-cards", label: t.flashCards, Icon: Layers },
     { href: "/personality-tests", label: t.personalityTest, Icon: Brain }
   ];
@@ -172,7 +165,6 @@ const Header = () => {
       ? "bg-accent text-accent-foreground font-semibold"
       : "text-foreground hover:text-accent-foreground"
   );
-
 
   const DesktopNav = () => (
     <>
@@ -250,12 +242,12 @@ const Header = () => {
     return (
       <div className="flex items-center justify-between w-full">
         <Link href="/" className="text-sm sm:text-base font-bold text-foreground hover:text-primary/80 transition-colors relative group py-1 mr-auto">
-          ALL {/* Hardcoded for consistency as per previous request, instead of t.all */}
+          ALL
           <span className="absolute bottom-[-2px] left-0 w-full h-[2.5px] sm:h-[3px] bg-primary transform scale-x-100 transition-transform duration-300 ease-out group-hover:scale-x-105"></span>
         </Link>
 
         <div className="flex items-center gap-0.5 sm:gap-1">
-          <Button
+           <Button
             variant="ghost"
             size="icon"
             onClick={toggleTheme}

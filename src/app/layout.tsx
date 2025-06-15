@@ -46,7 +46,7 @@ export const metadata: Metadata = {
       'max-snippet': -1,
     },
   },
-  manifest: '/manifest.json', // Ensure manifest.json exists in /public and icons listed within are correct.
+  manifest: '/manifest.json', 
   openGraph: {
     type: "website",
     locale: "en_US", 
@@ -74,12 +74,6 @@ export const metadata: Metadata = {
     icon: "/favicon.ico", 
     shortcut: "/favicon-16x16.png", 
     apple: "/apple-touch-icon.png", 
-    // Ensure these icons (e.g., icon-192x192.png, icon-512x512.png) exist in your /public/icons folder
-    // if they are referenced by your manifest.json or for PWA purposes.
-    // other: [
-    //   { rel: 'icon', url: '/icons/icon-32x32.png', sizes: '32x32' },
-    //   { rel: 'icon', url: '/icons/icon-192x192.png', sizes: '192x192' }, 
-    // ],
   }
 };
 
@@ -98,34 +92,19 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const requestHeaders = headers();
-  // Read the pathname from the 'next-url' header if it exists, otherwise default to an empty string.
-  // This is a common pattern for accessing the URL in Server Components.
-  const pathname = requestHeaders.get('next-url') || '';
-
-
-  // Conditional rendering for the main layout structure
-  // The /videos page will have its own layout handled by videos-client.tsx (full screen, custom header/footer)
-  const isVideoPage = pathname === '/videos';
-
   return (
     <html lang="en" suppressHydrationWarning className={`${poppins.variable} ${ptSans.variable}`}>
       <head>
-        {/* Any critical head tags can go here, but most are handled by Next.js Metadata API */}
       </head>
-      <body className="font-body antialiased flex flex-col min-h-screen bg-background"> {/* Added bg-background here */}
+      <body className="font-body antialiased flex flex-col min-h-screen bg-background"> 
         <ThemeProvider>
           <AuthProvider>
             <LanguageProvider>
-              {!isVideoPage && <Header />} {/* Render Header only if not on the video page */}
-              {isVideoPage ? (
-                children // Video page takes full control of its layout
-              ) : (
-                <main className="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                  {children}
-                </main>
-              )}
-              {!isVideoPage && <Footer />} {/* Render Footer only if not on the video page */}
+              <Header /> 
+              <main className="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                {children}
+              </main>
+              <Footer /> 
               <Toaster />
             </LanguageProvider>
           </AuthProvider>

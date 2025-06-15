@@ -15,7 +15,6 @@ import {
   type PaymentSubmission,
   type PaymentSubmissionStatus,
   type QuizType as PrismaQuizType,
-  type Video,
   type PaymentSettings,
 } from '@/lib/dbUtils';
 
@@ -34,9 +33,7 @@ import {
   updatePaymentSubmissionInDb as updatePaymentSubmissionDbUtil,
   getEnrollmentsByUserIdFromDb as getEnrollmentsByUserIdDbUtil,
   updateEnrollmentProgressInDb,
-  getVideosFromDb, addVideoToDb, updateVideoInDb, deleteVideoFromDb,
   getPaymentSettingsFromDb, savePaymentSettingsToDb,
-  seedVideosToDb as seedVideosDbUtil,
   seedPaymentSettingsToDb as seedPaymentSettingsDbUtil,
   getSitePageBySlug as getSitePageBySlugDbUtil,
   upsertSitePage as upsertSitePageDbUtil,
@@ -221,7 +218,6 @@ export async function serverDeleteLearningPath(pathId: string): Promise<void> { 
 export async function serverSeedCategories(): Promise<{ successCount: number; errorCount: number; skippedCount: number }> { return seedCategoriesDbUtil(); }
 export async function serverSeedCourses(): Promise<{ successCount: number; errorCount: number; skippedCount: number }> { return seedCoursesDbUtil(); }
 export async function serverSeedLearningPaths(): Promise<{ successCount: number; errorCount: number; skippedCount: number }> { return seedLearningPathsDbUtil(); }
-export async function serverSeedVideos(): Promise<{ successCount: number; errorCount: number; skippedCount: number }> { return seedVideosDbUtil(); }
 export async function serverSeedPaymentSettings(): Promise<{ successCount: number; errorCount: number; skippedCount: number }> { return seedPaymentSettingsDbUtil(); }
 
 // --- User-Specific Data Fetching for Course Display ---
@@ -324,12 +320,6 @@ export async function serverUpdatePaymentSubmissionStatus(
     }
 }
 
-// --- Video Actions (Admin Panel & Public Feed) ---
-export async function serverGetVideos(): Promise<Video[]> { return getVideosFromDb(); }
-export async function serverAddVideo(videoData: Omit<Video, 'id' | 'createdAt' | 'updatedAt'>): Promise<Video> { return addVideoToDb(videoData); }
-export async function serverUpdateVideo(videoId: string, videoData: Partial<Omit<Video, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Video> { return updateVideoInDb(videoId, videoData); }
-export async function serverDeleteVideo(videoId: string): Promise<void> { return deleteVideoFromDb(videoId); }
-
 // --- Payment Settings Actions (Admin Panel & Checkout) ---
 export async function serverGetPaymentSettings(): Promise<PaymentSettings | null> { return getPaymentSettingsFromDb(); }
 export async function serverSavePaymentSettings(settingsData: Omit<PaymentSettings, 'id'| 'updatedAt'>): Promise<PaymentSettings> { return savePaymentSettingsToDb(settingsData); }
@@ -345,7 +335,3 @@ export async function serverUpsertSitePage(
 ): Promise<SitePage> {
   return upsertSitePageDbUtil(slug, title, content);
 }
-    
-    
-    
-    

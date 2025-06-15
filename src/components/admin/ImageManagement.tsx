@@ -1,25 +1,23 @@
 
 "use client";
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, type FormEvent } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { ImageIcon, Save, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { Course, Category, LearningPath, Video as PrismaVideo } from '@prisma/client'; // Use Prisma types
+import type { Course, Category, LearningPath } from '@prisma/client'; 
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
 import { 
   serverGetCourses, serverUpdateCourse,
   serverGetCategories, serverUpdateCategory,
   serverGetLearningPaths, serverUpdateLearningPath,
-  serverGetVideos, serverUpdateVideo 
 } from '@/actions/adminDataActions'; 
 
 export default function ImageManagement() {
   const [courses, setCourses] = useState<Course[]>([]);
-  const [videos, setVideos] = useState<PrismaVideo[]>([]); 
   const [categories, setCategories] = useState<Category[]>([]);
   const [learningPaths, setLearningPaths] = useState<LearningPath[]>([]);
 
@@ -32,15 +30,13 @@ export default function ImageManagement() {
       setIsLoading(true);
       try {
         console.log("[ImageManagement] Fetching all data...");
-        const [dbCourses, dbVideos, dbCategories, dbLearningPaths] = await Promise.all([
+        const [dbCourses, dbCategories, dbLearningPaths] = await Promise.all([
           serverGetCourses().catch(e => { console.error("Failed to fetch courses for img mgmt:", e); throw new Error(`Courses: ${(e as Error).message}`); }),
-          serverGetVideos().catch(e => { console.error("Failed to fetch videos for img mgmt:", e); throw new Error(`Videos: ${(e as Error).message}`); }),    
           serverGetCategories().catch(e => { console.error("Failed to fetch categories for img mgmt:", e); throw new Error(`Categories: ${(e as Error).message}`); }), 
           serverGetLearningPaths().catch(e => { console.error("Failed to fetch learning paths for img mgmt:", e); throw new Error(`Learning Paths: ${(e as Error).message}`); }), 
         ]);
         console.log("[ImageManagement] Data fetched successfully.");
         setCourses(dbCourses);
-        setVideos(dbVideos);
         setCategories(dbCategories);
         setLearningPaths(dbLearningPaths); 
       } catch (error) {
@@ -66,11 +62,11 @@ export default function ImageManagement() {
   };
 
   const handleSaveItemImage = async (
-    itemType: 'course' | 'video' | 'category' | 'learningPath',
+    itemType: 'course' | 'category' | 'learningPath',
     itemId: string
   ) => {
     setIsSaving(prev => ({ ...prev, [itemId]: true }));
-    let itemToSave: Course | PrismaVideo | Category | LearningPath | undefined;
+    let itemToSave: Course | Category | LearningPath | undefined;
     let updateFunction: (id: string, data: Partial<any>) => Promise<any>; 
     let itemName = '';
 
@@ -80,11 +76,6 @@ export default function ImageManagement() {
           itemToSave = courses.find(c => c.id === itemId);
           updateFunction = serverUpdateCourse; 
           itemName = itemToSave?.title || 'Course';
-          break;
-        case 'video': 
-          itemToSave = videos.find(v => v.id === itemId);
-          updateFunction = serverUpdateVideo; 
-          itemName = itemToSave?.title || 'Video';
           break;
         case 'category':
           itemToSave = categories.find(cat => cat.id === itemId);
@@ -101,14 +92,10 @@ export default function ImageManagement() {
       }
 
       if (itemToSave) {
-        const dataToUpdate: { imageUrl?: string | null; dataAiHint?: string | null; thumbnailUrl?: string | null } = { 
+        const dataToUpdate: { imageUrl?: string | null; dataAiHint?: string | null; } = { 
+          imageUrl: (itemToSave as Course | Category | LearningPath).imageUrl || null,
           dataAiHint: itemToSave.dataAiHint || null,
         };
-        if (itemType === 'video') {
-            dataToUpdate.thumbnailUrl = (itemToSave as PrismaVideo).thumbnailUrl || null;
-        } else {
-            dataToUpdate.imageUrl = (itemToSave as Course | Category | LearningPath).imageUrl || null;
-        }
         console.log(`[ImageManagement] Saving ${itemType} ID ${itemId}, Data:`, dataToUpdate);
         await updateFunction(itemId, dataToUpdate);
         toast({ title: `${itemType.charAt(0).toUpperCase() + itemType.slice(1)} Image Updated`, description: `Image details for "${itemName}" saved.` });
@@ -123,16 +110,16 @@ export default function ImageManagement() {
     }
   };
 
-  const renderImageForm = <T extends { id: string, title?: string | null, name?: string | null, imageUrl?: string | null, thumbnailUrl?: string | null, dataAiHint?: string | null }>(
+  const renderImageForm = <T extends { id: string, title?: string | null, name?: string | null, imageUrl?: string | null, dataAiHint?: string | null }>(
     item: T,
-    itemType: 'course' | 'video' | 'category' | 'learningPath',
+    itemType: 'course' | 'category' | 'learningPath',
     setStateFunc: React.Dispatch<React.SetStateAction<T[]>>
   ) => {
     const title = item.title || item.name || 'Item';
-    const currentImageUrl = itemType === 'video' ? item.thumbnailUrl : item.imageUrl;
-    const aspectClass = itemType === 'video' ? 'aspect-[9/16]' : 'aspect-video';
-    const placeholderImage = itemType === 'video' ? 'https://placehold.co/360x640.png' : 'https://placehold.co/600x400.png';
-    const imageFieldKey = itemType === 'video' ? 'thumbnailUrl' : 'imageUrl';
+    const currentImageUrl = item.imageUrl;
+    const aspectClass = 'aspect-video';
+    const placeholderImage = 'https://placehold.co/600x400.png';
+    const imageFieldKey = 'imageUrl';
 
     return (
       <Card key={item.id}>
@@ -142,7 +129,7 @@ export default function ImageManagement() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-4 items-start">
-              <div className={`w-full sm:w-1/3 flex-shrink-0 ${itemType === 'video' ? 'max-w-[150px] sm:max-w-full' : ''}`}>
+              <div className={`w-full sm:w-1/3 flex-shrink-0`}>
                 <Label htmlFor={`${itemType}ImageUrl-${item.id}`}>Current Image</Label>
                 <div className={`mt-1 w-full relative border rounded-md overflow-hidden bg-muted ${aspectClass}`}>
                   {(currentImageUrl || placeholderImage) && (
@@ -152,7 +139,7 @@ export default function ImageManagement() {
               </div>
               <div className="w-full sm:w-2/3 space-y-4">
                 <div>
-                  <Label htmlFor={`${itemType}ImageUrlInput-${item.id}`}>{itemType === 'video' ? 'Thumbnail URL' : 'Image URL'}</Label>
+                  <Label htmlFor={`${itemType}ImageUrlInput-${item.id}`}>Image URL</Label>
                   <Input
                     id={`${itemType}ImageUrlInput-${item.id}`}
                     value={currentImageUrl || ''}
@@ -223,15 +210,6 @@ export default function ImageManagement() {
             </section>
 
             <section>
-              <h3 className="text-xl font-semibold mb-4 font-headline">Video Thumbnails</h3>
-              {videos.length > 0 ? (
-                <div className="space-y-6">
-                  {videos.map(video => renderImageForm(video, 'video', setVideos))}
-                </div>
-              ) : (<p className="text-muted-foreground">No videos found.</p>)}
-            </section>
-
-            <section>
               <h3 className="text-xl font-semibold mb-4 font-headline">Category Images</h3>
               {categories.length > 0 ? (
                 <div className="space-y-6">
@@ -254,4 +232,3 @@ export default function ImageManagement() {
     </Card>
   );
 }
-    

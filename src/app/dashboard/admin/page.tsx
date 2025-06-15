@@ -1,12 +1,11 @@
 
 "use client";
-import React, { useState } from 'react'; // Added useState
+import React, { useState } from 'react';
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { Settings as SettingsIcon } from "lucide-react";
 import CourseManagement from "@/components/admin/CourseManagement";
 import UserManagement from "@/components/admin/UserManagement";
 import EnrollmentStats from "@/components/admin/EnrollmentStats";
-import VideoManagement from "@/components/admin/VideoManagement";
 import ImageManagement from "@/components/admin/ImageManagement";
 import CategoryManagement from "@/components/admin/CategoryManagement";
 import PaymentSubmissions from "@/components/admin/PaymentSubmissions";
@@ -15,7 +14,7 @@ import LearningPathManagement from "@/components/admin/LearningPathManagement";
 import DataSeeding from "@/components/admin/DataSeeding";
 import SiteContentManagement from "@/components/admin/SiteContentManagement";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, BarChart3, Video as VideoIcon, Image as ImageIconLucide, Shapes, GraduationCap, Menu as MenuIcon, CreditCard, BookOpenCheck, DatabaseZap, FileText } from "lucide-react";
+import { Users, BarChart3, ImageIcon as ImageIconLucide, Shapes, GraduationCap, Menu as MenuIcon, CreditCard, BookOpenCheck, DatabaseZap, FileText, VideoOff } from "lucide-react";
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,6 +24,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useLanguage, type Language } from '@/contexts/LanguageContext';
+import VideoManagement from "@/components/admin/VideoManagement";
+
 
 const adminDashboardTranslations = {
   en: {
@@ -35,7 +36,7 @@ const adminDashboardTranslations = {
     learningPaths: "Paths",
     payments: "Payments",
     paymentConfig: "Payment Config",
-    videos: "Videos",
+    videos: "Videos (Disabled)",
     images: "Images",
     users: "Users",
     stats: "Stats",
@@ -50,7 +51,7 @@ const adminDashboardTranslations = {
     learningPaths: "လမ်းကြောင်းများ",
     payments: "ငွေပေးချေမှုများ",
     paymentConfig: "ငွေပေးချေမှု ဆက်တင်",
-    videos: "ဗီဒီယိုများ",
+    videos: "ဗီဒီယိုများ (ပိတ်ထားသည်)",
     images: "ပုံများ",
     users: "အသုံးပြုသူများ",
     stats: "စာရင်းအင်း",
@@ -65,7 +66,7 @@ const adminTabsConfig = (t: typeof adminDashboardTranslations.en) => [
   { value: "learningPaths", label: t.learningPaths, Icon: BookOpenCheck, Component: LearningPathManagement },
   { value: "payments", label: t.payments, Icon: CreditCard, Component: PaymentSubmissions },
   { value: "paymentSettings", label: t.paymentConfig, Icon: SettingsIcon, Component: PaymentSettingsManagement },
-  { value: "videos", label: t.videos, Icon: VideoIcon, Component: VideoManagement },
+  { value: "videos", label: t.videos, Icon: VideoOff, Component: VideoManagement },
   { value: "images", label: t.images, Icon: ImageIconLucide, Component: ImageManagement },
   { value: "siteContent", label: t.siteContent, Icon: FileText, Component: SiteContentManagement },
   { value: "users", label: t.users, Icon: Users, Component: UserManagement },
@@ -124,7 +125,7 @@ export default function AdminDashboardPage() {
                 <TabsTrigger
                   key={tab.value}
                   value={tab.value}
-                  className="py-2 px-2.5 md:py-2.5 md:px-3 text-xs sm:text-sm h-auto whitespace-normal" // Adjusted padding and text size
+                  className="py-2 px-2.5 md:py-2.5 md:px-3 text-xs sm:text-sm h-auto whitespace-normal" 
                 >
                   <tab.Icon className="mr-1.5 h-4 w-4"/> {tab.label}
                 </TabsTrigger>

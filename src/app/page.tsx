@@ -3,10 +3,9 @@
 import React, { useState, type FormEvent, useEffect, Suspense, lazy } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-// import Image from 'next/image'; // Removed Image import
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Video as VideoIcon, Search, Compass, Brain, Layers, Circle } from 'lucide-react'; // Added Circle back
+import { Search, Compass, Brain, Layers, Circle } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from "@/lib/utils";
@@ -17,7 +16,6 @@ const homePageTranslations = {
     subtitle: "Your Future Tech Infused Education.",
     searchPlaceholder: "Search courses, e.g., Web Development",
     coursesButton: "Courses",
-    reelsButton: "Reels",
     flashCardsButton: "Flash Cards",
     personalityTestLink: "Discover Your Strengths",
     privacyPolicy: "Privacy Policy",
@@ -29,11 +27,10 @@ const homePageTranslations = {
     myanmar: "Myanmar"
   },
   my: {
-    title: "Yellow Institute", // Kept as "Yellow Institute"
+    title: "Yellow Institute", 
     subtitle: "သင့်အတွက် အနာဂတ်နည်းပညာပညာရေး。",
     searchPlaceholder: "အတန်းများရှာပါ၊ ဥပမာ - Web Development",
     coursesButton: "အတန်း",
-    reelsButton: "ဗီဒီယို",
     flashCardsButton: "ကတ်ပြားများ",
     personalityTestLink: "သင်၏ အားသာချက်များကို ရှာဖွေပါ",
     privacyPolicy: "ကိုယ်ရေးအချက်အလက်မူဝါဒ",
@@ -66,10 +63,9 @@ export default function Home() {
       <section className="w-full max-w-2xl md:max-w-3xl lg:max-w-4xl text-center pt-12 md:pt-16 lg:pt-24 mb-10">
         <div className={cn(
           "flex items-center justify-center space-x-2 lg:space-x-3 font-bold font-headline text-foreground mb-4",
-          // Consistent font size for both languages, based on Burmese reference
           'text-2xl sm:text-3xl lg:text-4xl' 
         )}>
-          <Circle size={language === 'my' ? 28 : 32} className="text-primary" /> {/* Adjusted sizes for Circle icon */}
+          <Circle size={language === 'my' ? 28 : 32} className="text-primary" /> 
           <span>{t.title}</span>
         </div>
         <p className={cn(
@@ -92,7 +88,7 @@ export default function Home() {
           </Button>
         </form>
         
-        <div className="mt-8 grid grid-cols-2 items-center justify-center gap-3 sm:gap-4 w-full max-w-xs sm:max-w-md lg:max-w-lg mx-auto">
+        <div className="mt-8 flex items-center justify-center gap-3 sm:gap-4 w-full max-w-xs sm:max-w-md lg:max-w-lg mx-auto">
             <Button 
               asChild 
               size="lg" 
@@ -106,22 +102,9 @@ export default function Home() {
                     <Compass className="mr-2 h-5 w-5" /> {t.coursesButton}
                 </Link>
             </Button>
-            <Button 
-              asChild 
-              size="lg" 
-              variant="accent"
-              className={cn(
-                "w-full", 
-                language === 'my' ? 'text-xs sm:text-sm' : 'text-sm'
-              )}
-            >
-                <Link href="/videos"> 
-                    <VideoIcon className="mr-2 h-5 w-5" /> {t.reelsButton}
-                </Link>
-            </Button>
         </div>
 
-        <div className="mt-8 text-center space-y-3"> {/* Increased spacing with mt-8 and space-y-3 */}
+        <div className="mt-8 text-center space-y-3">
           <Link href="/personality-tests" className={cn(
             "inline-flex items-center text-sm font-medium text-foreground hover:text-primary transition-colors py-1 group",
             language === 'my' ? 'text-xs sm:text-sm' : 'text-sm'
