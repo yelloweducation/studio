@@ -215,13 +215,10 @@ const QuizForm = ({
           </div>
         </div>
       </ScrollArea>
-      <DialogFooter className="pt-4 border-t">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>Cancel</Button>
-        <Button type="submit" disabled={isSubmitting}>
+      <DialogFooter className="pt-4 border-t"><Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>Cancel</Button><Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           {quiz?.id ? 'Save Quiz Changes' : 'Add Quiz'}
-        </Button>
-      </DialogFooter>
+        </Button></DialogFooter>
     </form>
     {editingQuestion && <QuestionEditDialog questionToEdit={editingQuestion} onSaveQuestion={handleSaveQuestionFromDialog} onCancel={() => setEditingQuestion(null)} isSubmitting={isSubmitting} />}
     </>
