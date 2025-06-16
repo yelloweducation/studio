@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Label } from '@/components/ui/label';
 import { Settings, Save, Banknote, UserCircle, ClipboardList, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { serverGetPaymentSettings, serverSavePaymentSettings } from '@/actions/adminDataActions'; // Use Server Actions
+import { serverGetPaymentSettings, serverSavePaymentSettings } from '@/actions/adminDataActions'; 
 
 const defaultPaymentSettingsData: PaymentSettings = {
   id: 'global', 
@@ -62,7 +62,7 @@ export default function PaymentSettingsManagement() {
           additionalInstructions: settings.additionalInstructions || null,
       };
       const savedSettings = await serverSavePaymentSettings(dataToSave); 
-      setSettings(savedSettings); // Update state with potentially new updatedAt from server
+      setSettings(savedSettings); 
       toast({
         title: "Settings Saved",
         description: "Your payment configuration has been updated.",
@@ -156,7 +156,7 @@ export default function PaymentSettingsManagement() {
               name="additionalInstructions"
               value={settings.additionalInstructions || ''}
               onChange={handleChange}
-              placeholder="e.g., Please include your User ID or Course Name in the payment reference. Payments are typically verified within 24 hours."
+              placeholder="e.g., Please include your User ID or Course Name in the payment reference. Payments are typically verified within 24 business hours."
               rows={4}
               disabled={isSaving}
             />
@@ -173,3 +173,5 @@ export default function PaymentSettingsManagement() {
     </Card>
   );
 }
+
+    

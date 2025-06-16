@@ -13,8 +13,8 @@ import { PlusCircle, Trash2, Award, User as UserIcon, BookOpen, Loader2, Externa
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { serverGetCertificates, serverIssueCertificate, serverDeleteCertificate } from '@/actions/adminDataActions';
-import { getAllUsersServerAction } from '@/actions/authActions'; // To get users for dropdown
-import { serverGetCourses } from '@/actions/adminDataActions'; // To get courses for dropdown
+import { getAllUsersServerAction } from '@/actions/authActions'; 
+import { serverGetCourses } from '@/actions/adminDataActions'; 
 
 const IssueCertificateForm = ({
   users,
@@ -266,3 +266,5 @@ export default function CertificateManagement() {
     </Card>
   );
 }
+
+    

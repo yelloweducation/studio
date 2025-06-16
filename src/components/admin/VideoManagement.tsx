@@ -2,7 +2,7 @@
 "use client";
 import { useState, useEffect, type FormEvent } from 'react';
 import Image from 'next/image';
-import type { Video } from '@/lib/dbUtils'; // Using the localStorage-based Video type
+import type { Video } from '@/lib/dbUtils'; 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -270,3 +270,5 @@ export default function VideoManagement() {
     </Card>
   );
 }
+
+    

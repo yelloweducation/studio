@@ -16,10 +16,9 @@ import { Label } from '../ui/label';
 import { Checkbox } from '../ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { serverGetQuizzes, serverAddQuiz, serverUpdateQuiz, serverDeleteQuiz, serverGetCourses } from '@/actions/adminDataActions';
-import type { QuizType as MockQuizEnumType } from '@/data/mockData'; // For Quiz Type Enum values 'practice' | 'graded'
-import type { QuizType as PrismaQuizTypeEnum } from '@prisma/client'; // For Prisma enum QuizType.PRACTICE | QuizType.GRADED
+import type { QuizType as MockQuizEnumType } from '@/data/mockData'; 
+import type { QuizType as PrismaQuizTypeEnum } from '@prisma/client'; 
 
-// Re-using QuestionEditDialog logic, might need adjustments for standalone context
 const generateQuestionId = () => `q-new-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 const generateOptionId = () => `opt-new-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
@@ -80,6 +79,7 @@ const QuestionEditDialog = ({
       <DialogContent className="sm:max-w-lg md:max-w-xl">
         <DialogHeader>
           <DialogTitle>{questionToEdit.id && !questionToEdit.id.startsWith('q-new-') ? 'Edit Question' : 'Add New Question'}</DialogTitle>
+          <DialogDescription>Modify the question details and its options.</DialogDescription>
         </DialogHeader>
         <ScrollArea className="h-[60vh] pr-3"><div className="space-y-4 py-2">
           <div><Label htmlFor="questionText">Question Text</Label><Input id="questionText" value={questionText} onChange={e => setQuestionText(e.target.value)} disabled={isSubmitting}/></div>
@@ -233,8 +233,8 @@ export default function QuizManagement() {
         const [dbQuizzes, dbCourses] = await Promise.all([serverGetQuizzes(), serverGetCourses()]);
         setQuizzes(dbQuizzes.map(q => ({
             ...q,
-            quizType: q.quizType.toLowerCase() as MockQuizEnumType, // Align with FormQuiz type
-            // @ts-ignore // Prisma includes `courseQuizzes` with nested `course`
+            quizType: q.quizType.toLowerCase() as MockQuizEnumType, 
+            // @ts-ignore 
             courseIdsToConnect: (q.courseQuizzes || []).map(cq => cq.course.id) 
         })));
         setAllCourses(dbCourses);
@@ -253,16 +253,16 @@ export default function QuizManagement() {
         quizType: quizData.quizType.toUpperCase() as PrismaQuizTypeEnum,
         questions: quizData.questions?.map(q => ({
           ...q,
-          options: q.options || [], // Ensure options is an array
+          options: q.options || [], 
         })),
-        questionIdsToDelete: questionIdsToDelete.filter(id => !id.startsWith('q-new-')), // Only send existing IDs
+        questionIdsToDelete: questionIdsToDelete.filter(id => !id.startsWith('q-new-')), 
     };
     try {
-      if (quizData.id && !quizData.id.startsWith('quiz-new-')) { // Editing existing quiz
+      if (quizData.id && !quizData.id.startsWith('quiz-new-')) { 
         const updatedQuiz = await serverUpdateQuiz(quizData.id, payload);
         setQuizzes(prev => prev.map(q => (q.id === updatedQuiz.id ? {...updatedQuiz, quizType: updatedQuiz.quizType.toLowerCase() as MockQuizEnumType, courseIdsToConnect: (updatedQuiz as any).courseQuizzes?.map((cq:any) => cq.courseId) || [] } : q)));
         toast({ title: "Quiz Updated", description: `"${updatedQuiz.title}" updated.` });
-      } else { // Adding new quiz
+      } else { 
         // @ts-ignore
         const newQuiz = await serverAddQuiz(payload);
         setQuizzes(prev => [ {...newQuiz, quizType: newQuiz.quizType.toLowerCase() as MockQuizEnumType, courseIdsToConnect: (newQuiz as any).courseQuizzes?.map((cq:any) => cq.courseId) || [] } , ...prev].sort((a, b) => a.title.localeCompare(b.title)));
@@ -291,7 +291,7 @@ export default function QuizManagement() {
     setEditingQuiz(quiz ? JSON.parse(JSON.stringify({
         ...quiz,
         // @ts-ignore
-        courseIdsToConnect: (quiz.courseQuizzes || []).map(cq => cq.course.id) 
+        courseIdsToConnect: (quiz.courseQuizzes || []).map(cq => cq.courseId || cq.course?.id) 
     })) : undefined);
     setIsFormOpen(true);
   };
@@ -308,7 +308,12 @@ export default function QuizManagement() {
           <Dialog open={isFormOpen} onOpenChange={(isOpen) => { if(!isOpen) closeForm(); else setIsFormOpen(true);}}>
             <DialogTrigger asChild><Button onClick={() => openForm()} className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-md"><PlusCircle className="mr-2 h-5 w-5"/>Add New Quiz</Button></DialogTrigger>
             <DialogContent className="sm:max-w-2xl md:max-w-3xl">
-              <DialogHeader className="pb-4"><DialogTitle className="font-headline text-xl">{editingQuiz ? 'Edit Quiz' : 'Add New Quiz'}</DialogTitle></DialogHeader>
+              <DialogHeader className="pb-4">
+                <DialogTitle className="font-headline text-xl">{editingQuiz ? 'Edit Quiz' : 'Add New Quiz'}</DialogTitle>
+                <DialogDescription>
+                  {editingQuiz ? 'Modify the quiz details, questions, and course links.' : 'Define a new quiz, add questions, and link to courses.'}
+                </DialogDescription>
+              </DialogHeader>
               {isFormOpen && <QuizForm quiz={editingQuiz} allCourses={allCourses} onSubmit={handleAddOrUpdateQuiz} onCancel={closeForm} isSubmitting={isSubmittingForm} />}
             </DialogContent>
           </Dialog>
@@ -321,16 +326,25 @@ export default function QuizManagement() {
               <li key={q.id} className="p-3 border rounded-lg bg-card flex flex-col sm:flex-row sm:items-center sm:justify-between shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex-grow mb-2 sm:mb-0">
                   <h3 className="font-semibold text-md">{q.title} <Badge variant="outline" className="ml-2 capitalize text-xs">{(q as any).quizType.toLowerCase()}</Badge></h3>
+                  { /* @ts-ignore */ }
                   <p className="text-xs text-muted-foreground">Questions: {(q as any).questions?.length || 0} | Linked Courses: {(q as any).courseQuizzes?.length || 0}</p>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:space-x-2 gap-2 sm:gap-0 w-full sm:w-auto">
                   <Button variant="outline" size="sm" onClick={() => openForm(q)} className="w-full sm:w-auto"><Edit3 className="mr-1 h-4 w-4"/>Edit</Button>
                   <Dialog><DialogTrigger asChild><Button variant="destructive" size="sm" className="w-full sm:w-auto"><Trash2 className="mr-1 h-4 w-4"/>Delete</Button></DialogTrigger>
-                    <DialogContent className="sm:max-w-xs"><DialogHeader><DialogTitle>Confirm Deletion</DialogTitle><DialogDescription>Delete quiz "{q.title}"?</DialogDescription></DialogHeader>
-                    <DialogFooter className="pt-2"><DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose><DialogClose asChild><Button variant="destructive" onClick={() => handleDeleteQuiz(q.id)}>Delete</Button></DialogClose></DialogFooter></DialogContent></Dialog>
+                    <DialogContent className="sm:max-w-xs">
+                      <DialogHeader>
+                        <DialogTitle>Confirm Deletion</DialogTitle>
+                        <DialogDescription>Delete quiz "{q.title}"?</DialogDescription>
+                      </DialogHeader>
+                      <DialogFooter className="pt-2"><DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose><DialogClose asChild><Button variant="destructive" onClick={() => handleDeleteQuiz(q.id)}>Delete</Button></DialogClose></DialogFooter>
+                    </DialogContent>
+                  </Dialog>
                 </div></li>))}</ul>
         ) : <p className="text-center text-muted-foreground py-4">No quizzes found.</p>}
       </CardContent>
     </Card>
   );
 }
+
+    

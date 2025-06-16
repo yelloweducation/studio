@@ -1,7 +1,7 @@
 
 "use client";
 import React, { useState, useEffect, type FormEvent } from 'react';
-import type { User, Role as PrismaRoleType } from '@prisma/client'; // Use Prisma types
+import type { User, Role as PrismaRoleType } from '@prisma/client'; 
 import {
   getAllUsersServerAction,
   serverAdminUpdateUserRole,
@@ -27,6 +27,8 @@ import { Switch } from "@/components/ui/switch";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+
 
 const addUserSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
@@ -175,13 +177,15 @@ export default function UserManagement() {
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-md">
                         <DialogHeader><DialogTitle>Add New User</DialogTitle><DialogDescription>Create a new user account and assign a role.</DialogDescription></DialogHeader>
-                        <form onSubmit={addUserForm.handleSubmit(handleAddUserSubmit)} className="space-y-4 py-2">
-                            <FormField control={addUserForm.control} name="name" render={({ field }) => (<FormItem><FormLabel>Full Name</FormLabel><Input {...field} placeholder="John Doe" disabled={addUserForm.formState.isSubmitting} /><FormMessage /></FormItem>)} />
-                            <FormField control={addUserForm.control} name="email" render={({ field }) => (<FormItem><FormLabel>Email</FormLabel><Input type="email" {...field} placeholder="user@example.com" disabled={addUserForm.formState.isSubmitting} /><FormMessage /></FormItem>)} />
-                            <FormField control={addUserForm.control} name="password" render={({ field }) => (<FormItem><FormLabel>Password</FormLabel><Input type="password" {...field} placeholder="••••••••" disabled={addUserForm.formState.isSubmitting} /><FormMessage /></FormItem>)} />
-                            <FormField control={addUserForm.control} name="role" render={({ field }) => (<FormItem><FormLabel>Role</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={addUserForm.formState.isSubmitting}><SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger><SelectContent><SelectItem value="STUDENT">Student</SelectItem><SelectItem value="ADMIN">Admin</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
-                            <DialogFooter className="pt-4"><DialogClose asChild><Button type="button" variant="outline" disabled={addUserForm.formState.isSubmitting}>Cancel</Button></DialogClose><Button type="submit" disabled={addUserForm.formState.isSubmitting}>{addUserForm.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}Add User</Button></DialogFooter>
-                        </form>
+                        <Form {...addUserForm}>
+                            <form onSubmit={addUserForm.handleSubmit(handleAddUserSubmit)} className="space-y-4 py-2">
+                                <FormField control={addUserForm.control} name="name" render={({ field }) => (<FormItem><FormLabel>Full Name</FormLabel><Input {...field} placeholder="John Doe" disabled={addUserForm.formState.isSubmitting} /><FormMessage /></FormItem>)} />
+                                <FormField control={addUserForm.control} name="email" render={({ field }) => (<FormItem><FormLabel>Email</FormLabel><Input type="email" {...field} placeholder="user@example.com" disabled={addUserForm.formState.isSubmitting} /><FormMessage /></FormItem>)} />
+                                <FormField control={addUserForm.control} name="password" render={({ field }) => (<FormItem><FormLabel>Password</FormLabel><Input type="password" {...field} placeholder="••••••••" disabled={addUserForm.formState.isSubmitting} /><FormMessage /></FormItem>)} />
+                                <FormField control={addUserForm.control} name="role" render={({ field }) => (<FormItem><FormLabel>Role</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={addUserForm.formState.isSubmitting}><SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger><SelectContent><SelectItem value="STUDENT">Student</SelectItem><SelectItem value="ADMIN">Admin</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
+                                <DialogFooter className="pt-4"><DialogClose asChild><Button type="button" variant="outline" disabled={addUserForm.formState.isSubmitting}>Cancel</Button></DialogClose><Button type="submit" disabled={addUserForm.formState.isSubmitting}>{addUserForm.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}Add User</Button></DialogFooter>
+                            </form>
+                        </Form>
                     </DialogContent>
                 </Dialog>
             )}
@@ -241,13 +245,17 @@ export default function UserManagement() {
         <Dialog open={isResetPasswordDialogOpen} onOpenChange={setIsResetPasswordDialogOpen}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader><DialogTitle>Reset Password for {userToResetPassword.name}</DialogTitle><DialogDescription>Enter a new password for this user.</DialogDescription></DialogHeader>
-                <form onSubmit={resetPasswordForm.handleSubmit(handleResetPasswordSubmit)} className="space-y-4 py-2">
-                    <FormField control={resetPasswordForm.control} name="newPassword" render={({ field }) => (<FormItem><FormLabel>New Password</FormLabel><Input type="password" {...field} placeholder="••••••••" disabled={resetPasswordForm.formState.isSubmitting} /><FormMessage /></FormItem>)} />
-                    <DialogFooter className="pt-4"><DialogClose asChild><Button type="button" variant="outline" disabled={resetPasswordForm.formState.isSubmitting}>Cancel</Button></DialogClose><Button type="submit" disabled={resetPasswordForm.formState.isSubmitting}>{resetPasswordForm.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}Reset Password</Button></DialogFooter>
-                </form>
+                <Form {...resetPasswordForm}>
+                    <form onSubmit={resetPasswordForm.handleSubmit(handleResetPasswordSubmit)} className="space-y-4 py-2">
+                        <FormField control={resetPasswordForm.control} name="newPassword" render={({ field }) => (<FormItem><FormLabel>New Password</FormLabel><Input type="password" {...field} placeholder="••••••••" disabled={resetPasswordForm.formState.isSubmitting} /><FormMessage /></FormItem>)} />
+                        <DialogFooter className="pt-4"><DialogClose asChild><Button type="button" variant="outline" disabled={resetPasswordForm.formState.isSubmitting}>Cancel</Button></DialogClose><Button type="submit" disabled={resetPasswordForm.formState.isSubmitting}>{resetPasswordForm.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}Reset Password</Button></DialogFooter>
+                    </form>
+                </Form>
             </DialogContent>
         </Dialog>
       )}
     </>
   );
 }
+
+    

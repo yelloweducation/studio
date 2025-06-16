@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-// Import Server Actions instead of direct dbUtils
 import { serverGetAllPaymentSubmissions, serverUpdatePaymentSubmissionStatus } from '@/actions/adminDataActions';
 
 export default function PaymentSubmissions() {
@@ -36,7 +35,6 @@ export default function PaymentSubmissions() {
     const loadData = async () => {
       setIsLoading(true);
       try {
-        // Use Server Action to fetch submissions
         const submissionsFromDb = await serverGetAllPaymentSubmissions();
         setSubmissions(submissionsFromDb);
       } catch (error) {
@@ -54,7 +52,6 @@ export default function PaymentSubmissions() {
   const handleUpdateStatus = async (submissionId: string, newStatus: PaymentSubmissionStatus, notes?: string | null) => {
     setIsUpdating(true);
     try {
-      // Use Server Action to update status
       const updatedSubmission = await serverUpdatePaymentSubmissionStatus(submissionId, newStatus, notes);
       setSubmissions(prev => prev.map(sub => 
         sub.id === submissionId 
@@ -240,3 +237,4 @@ export default function PaymentSubmissions() {
   );
 }
 
+    

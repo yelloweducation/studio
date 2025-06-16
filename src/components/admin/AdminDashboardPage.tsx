@@ -11,13 +11,13 @@ import CategoryManagement from "@/components/admin/CategoryManagement";
 import PaymentSubmissions from "@/components/admin/PaymentSubmissions";
 import PaymentSettingsManagement from "@/components/admin/PaymentSettingsManagement";
 import LearningPathManagement from "@/components/admin/LearningPathManagement";
-import QuizManagement from "@/components/admin/QuizManagement"; // New
+import QuizManagement from "@/components/admin/QuizManagement";
 import DataSeeding from "@/components/admin/DataSeeding";
 import SiteContentManagement from "@/components/admin/SiteContentManagement";
 import VideoManagement from "@/components/admin/VideoManagement";
 import CertificateManagement from "@/components/admin/CertificateManagement";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, BarChart3, ImageIcon as ImageIconLucide, Shapes, GraduationCap, Menu as MenuIcon, CreditCard, BookOpenCheck, DatabaseZap, FileText, PlaySquare, Award, FileQuestion } from "lucide-react"; // Added FileQuestion
+import { Users, BarChart3, ImageIcon as ImageIconLucide, Shapes, GraduationCap, Menu as MenuIcon, CreditCard, BookOpenCheck, DatabaseZap, FileText, PlaySquare, Award, FileQuestion } from "lucide-react";
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import {
@@ -36,7 +36,7 @@ const adminDashboardTranslations = {
     courses: "Courses",
     categories: "Categories",
     learningPaths: "Paths",
-    quizzes: "Quizzes", // New
+    quizzes: "Quizzes",
     payments: "Payments",
     paymentConfig: "Payment Config",
     videos: "Videos",
@@ -53,7 +53,7 @@ const adminDashboardTranslations = {
     courses: "အတန်းများ",
     categories: "အမျိုးအစားများ",
     learningPaths: "လမ်းကြောင်းများ",
-    quizzes: "စာမေးပွဲငယ်များ", // New
+    quizzes: "စာမေးပွဲငယ်များ",
     payments: "ငွေပေးချေမှုများ",
     paymentConfig: "ငွေပေးချေမှု ဆက်တင်",
     videos: "ဗီဒီယိုများ",
@@ -70,7 +70,7 @@ const adminTabsConfig = (t: typeof adminDashboardTranslations.en) => [
   { value: "courses", label: t.courses, Icon: GraduationCap, Component: CourseManagement },
   { value: "categories", label: t.categories, Icon: Shapes, Component: CategoryManagement },
   { value: "learningPaths", label: t.learningPaths, Icon: BookOpenCheck, Component: LearningPathManagement },
-  { value: "quizzes", label: t.quizzes, Icon: FileQuestion, Component: QuizManagement }, // New
+  { value: "quizzes", label: t.quizzes, Icon: FileQuestion, Component: QuizManagement },
   { value: "videos", label: t.videos, Icon: PlaySquare, Component: VideoManagement },
   { value: "images", label: t.images, Icon: ImageIconLucide, Component: ImageManagement },
   { value: "siteContent", label: t.siteContent, Icon: FileText, Component: SiteContentManagement },
@@ -151,3 +151,5 @@ export default function AdminDashboardPage() {
     </ProtectedRoute>
   );
 }
+
+    

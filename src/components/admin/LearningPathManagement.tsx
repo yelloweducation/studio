@@ -323,3 +323,5 @@ export default function LearningPathManagement() {
     </Card>
   );
 }
+
+    

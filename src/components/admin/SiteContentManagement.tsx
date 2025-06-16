@@ -111,7 +111,7 @@ const generatePlaceholderContent = (slug: string): string => {
 export default function SiteContentManagement() {
   const [selectedSlug, setSelectedSlug] = useState<string>(pageSlugs[0].slug);
   const [currentPage, setCurrentPage] = useState<SitePage | null>(null);
-  const [content, setContent] = useState<string>(''); // Store as string (HTML) for textarea
+  const [content, setContent] = useState<string>('');
   const [title, setTitle] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -126,13 +126,12 @@ export default function SiteContentManagement() {
         if (pageData) {
           setCurrentPage(pageData);
           setTitle(pageData.title);
-          // Assuming content is stored as a string (HTML)
           setContent(typeof pageData.content === 'string' ? pageData.content : JSON.stringify(pageData.content) || '');
         } else {
           const defaultTitle = pageSlugs.find(p => p.slug === selectedSlug)?.defaultTitle || 'New Page';
           setTitle(defaultTitle);
           setContent(generatePlaceholderContent(selectedSlug));
-          setCurrentPage(null); // No existing page
+          setCurrentPage(null);
         }
       } catch (error) {
         toast({ variant: "destructive", title: "Error", description: `Could not load content for ${selectedSlug}.` });
@@ -149,10 +148,6 @@ export default function SiteContentManagement() {
     e.preventDefault();
     setIsSaving(true);
     try {
-      // For Prisma.JsonValue, if storing HTML string, it should be fine.
-      // If you intend to store structured JSON, then `content` should be an object.
-      // Here, we assume `content` (from textarea) is the HTML string itself.
-      // Prisma's `Json` type can store strings, numbers, booleans, arrays, and objects.
       const updatedPage = await serverUpsertSitePage(selectedSlug, title, content as unknown as Prisma.JsonValue);
       setCurrentPage(updatedPage);
       toast({ title: "Content Saved", description: `Content for "${updatedPage.title}" has been updated.` });
@@ -232,4 +227,5 @@ export default function SiteContentManagement() {
     </Card>
   );
 }
+
     
