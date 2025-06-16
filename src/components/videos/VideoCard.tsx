@@ -29,50 +29,48 @@ const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
     }
   }, [video.embedUrl, title]);
 
-  // Adjusted classes for responsive width and aspect ratio
-  const containerClasses = "relative w-full max-w-[280px] aspect-[18/23] bg-black rounded-xl shadow-2xl overflow-hidden flex flex-col";
+  // Container for the card itself, centered by its parent in VideosClient.tsx
+  // It has a max-width and a specific aspect ratio to mimic reels.
+  // bg-black provides the "black layer" background.
+  const cardContainerClasses = "relative w-full max-w-[280px] aspect-[9/16.5] bg-black rounded-xl shadow-2xl overflow-hidden flex flex-col";
 
   return (
-    <div className={containerClasses}>
+    <div className={cardContainerClasses}>
       {embedSrc ? (
         <iframe
           src={embedSrc}
           title={title}
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
           allowFullScreen
-          className="w-full h-full border-0"
+          className="w-full h-full border-0" // Iframe will fill the card container
         ></iframe>
       ) : thumbnailUrl ? (
-        <div className="relative w-full h-full">
+        <div className="relative w-full h-full"> {/* Image container also fills the card */}
           <Image
             src={thumbnailUrl}
             alt={title}
             layout="fill"
-            objectFit="cover"
+            objectFit="cover" // Cover will fill and crop if aspect ratios differ
             data-ai-hint={dataAiHintVal}
-            priority // Consider adding if this is often the first visible item
           />
-          <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-            <PlayCircle className="h-16 w-16 text-white/80" />
+          <div className="absolute inset-0 flex items-center justify-center bg-black/40 cursor-pointer group">
+            <PlayCircle className="h-16 w-16 text-white/70 group-hover:text-white/90 transition-opacity" />
           </div>
         </div>
       ) : (
-        <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground bg-muted p-4">
+        <div className="w-full h-full flex flex-col items-center justify-center text-neutral-400 bg-neutral-800 p-4">
           <AlertTriangle className="h-12 w-12 mb-2" />
           <p className="text-sm text-center">Video content not available.</p>
         </div>
       )}
       
-      {/* Overlay for title and description if not an iframe or if you want it over thumbnail */}
-      {(!embedSrc || thumbnailUrl) && ( // Show if it's a thumbnail or if embed failed but there's text
-        <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/70 to-transparent">
-          <h3 className="text-white font-semibold text-md truncate" title={title}>{title}</h3>
-          <p className="text-white/80 text-xs line-clamp-2" title={description}>{description}</p>
-        </div>
-      )}
+      {/* Overlay for title and description - always shown at the bottom */}
+      <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none">
+        <h3 className="text-white font-semibold text-md truncate" title={title}>{title}</h3>
+        <p className="text-white/80 text-xs line-clamp-2" title={description}>{description}</p>
+      </div>
     </div>
   );
 };
 
 export default React.memo(VideoCard);
-

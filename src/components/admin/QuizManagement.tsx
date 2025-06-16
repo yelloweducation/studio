@@ -5,11 +5,10 @@ import type { Quiz, Question as FormQuestionType, Option as FormOptionType, Cour
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Edit3, Trash2, FileQuestion, Settings2, Loader2, ListChecks } from 'lucide-react';
+import { PlusCircle, Edit3, Trash2, FileQuestion, Settings2, Loader2, ListChecks, Badge } from 'lucide-react'; // Added Badge
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose,
 } from "@/components/ui/dialog";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '../ui/label';
@@ -24,7 +23,9 @@ const generateOptionId = () => `opt-new-${Date.now()}-${Math.random().toString(3
 
 type FormOption = Partial<Omit<FormOptionType, 'questionId'|'createdAt'|'updatedAt'>>;
 type FormQuestion = Partial<Omit<FormQuestionType, 'quizId'|'createdAt'|'updatedAt'|'options'|'correctOptionId'>> & { options?: FormOption[], correctOptionText?: string, correctOptionId?: string | null, order?: number };
-type FormQuiz = Partial<Omit<Quiz, 'createdAt'|'updatedAt'|'questions'|'courseQuizzes'>> & { quizType: MockQuizEnumType, questions?: FormQuestion[], courseIdsToConnect?: string[] };
+// Ensures quizType on FormQuiz matches the lowercase expected by the Select component,
+// while the payload to server actions will convert it back to uppercase Prisma enum.
+type FormQuiz = Partial<Omit<Quiz, 'createdAt'|'updatedAt'|'questions'|'courseQuizzes'|'quizType'>> & { quizType: MockQuizEnumType, questions?: FormQuestion[], courseIdsToConnect?: string[] };
 
 
 const QuestionEditDialog = ({
@@ -119,7 +120,12 @@ const QuizForm = ({
   const [questionIdsToDelete, setQuestionIdsToDelete] = useState<string[]>([]);
 
   useEffect(() => {
-    setCurrentQuizState(JSON.parse(JSON.stringify(quiz || { title: '', quizType: 'practice', questions: [], courseIdsToConnect: [] })));
+    // Ensure quizType is lowercase for the Select component
+    const initialQuizState = JSON.parse(JSON.stringify(quiz || { title: '', quizType: 'practice', questions: [], courseIdsToConnect: [] }));
+    if (initialQuizState.quizType) {
+      initialQuizState.quizType = initialQuizState.quizType.toLowerCase();
+    }
+    setCurrentQuizState(initialQuizState);
     setQuestionIdsToDelete([]);
   }, [quiz]);
 
@@ -161,7 +167,12 @@ const QuizForm = ({
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    await onSubmit(currentQuizState, questionIdsToDelete);
+    // Convert quizType to uppercase for Prisma before submitting
+    const submitData = {
+        ...currentQuizState,
+        quizType: currentQuizState.quizType.toUpperCase() as PrismaQuizTypeEnum,
+    };
+    await onSubmit(submitData, questionIdsToDelete);
   };
 
   return (
@@ -218,7 +229,7 @@ const QuizForm = ({
 };
 
 export default function QuizManagement() {
-  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [quizzes, setQuizzes] = useState<FormQuiz[]>([]); // Use FormQuiz type here
   const [allCourses, setAllCourses] = useState<PrismaCourse[]>([]);
   const [editingQuiz, setEditingQuiz] = useState<FormQuiz | undefined>(undefined);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -234,8 +245,8 @@ export default function QuizManagement() {
         setQuizzes(dbQuizzes.map(q => ({
             ...q,
             quizType: q.quizType.toLowerCase() as MockQuizEnumType, 
-            // @ts-ignore 
-            courseIdsToConnect: (q.courseQuizzes || []).map(cq => cq.course.id) 
+            // @ts-ignore
+            courseIdsToConnect: (q.courseQuizzes || []).map(cq => cq.course?.id).filter(Boolean)
         })));
         setAllCourses(dbCourses);
       } catch (error) {
@@ -250,7 +261,7 @@ export default function QuizManagement() {
     setIsSubmittingForm(true);
     const payload = {
         ...quizData,
-        quizType: quizData.quizType.toUpperCase() as PrismaQuizTypeEnum,
+        quizType: quizData.quizType.toUpperCase() as PrismaQuizTypeEnum, // Convert back for Prisma
         questions: quizData.questions?.map(q => ({
           ...q,
           options: q.options || [], 
@@ -259,13 +270,14 @@ export default function QuizManagement() {
     };
     try {
       if (quizData.id && !quizData.id.startsWith('quiz-new-')) { 
+        // @ts-ignore
         const updatedQuiz = await serverUpdateQuiz(quizData.id, payload);
-        setQuizzes(prev => prev.map(q => (q.id === updatedQuiz.id ? {...updatedQuiz, quizType: updatedQuiz.quizType.toLowerCase() as MockQuizEnumType, courseIdsToConnect: (updatedQuiz as any).courseQuizzes?.map((cq:any) => cq.courseId) || [] } : q)));
+        setQuizzes(prev => prev.map(q => (q.id === updatedQuiz.id ? {...updatedQuiz, quizType: updatedQuiz.quizType.toLowerCase() as MockQuizEnumType, courseIdsToConnect: (updatedQuiz as any).courseQuizzes?.map((cq:any) => cq.course?.id).filter(Boolean) } : q)));
         toast({ title: "Quiz Updated", description: `"${updatedQuiz.title}" updated.` });
       } else { 
         // @ts-ignore
         const newQuiz = await serverAddQuiz(payload);
-        setQuizzes(prev => [ {...newQuiz, quizType: newQuiz.quizType.toLowerCase() as MockQuizEnumType, courseIdsToConnect: (newQuiz as any).courseQuizzes?.map((cq:any) => cq.courseId) || [] } , ...prev].sort((a, b) => a.title.localeCompare(b.title)));
+        setQuizzes(prev => [ {...newQuiz, quizType: newQuiz.quizType.toLowerCase() as MockQuizEnumType, courseIdsToConnect: (newQuiz as any).courseQuizzes?.map((cq:any) => cq.course?.id).filter(Boolean) } , ...prev].sort((a, b) => a.title!.localeCompare(b.title!)));
         toast({ title: "Quiz Added", description: `"${newQuiz.title}" added.` });
       }
       closeForm();
@@ -287,11 +299,11 @@ export default function QuizManagement() {
     }
   };
 
-  const openForm = (quiz?: Quiz) => {
+  const openForm = (quiz?: FormQuiz) => { // Use FormQuiz type
     setEditingQuiz(quiz ? JSON.parse(JSON.stringify({
         ...quiz,
-        // @ts-ignore
-        courseIdsToConnect: (quiz.courseQuizzes || []).map(cq => cq.courseId || cq.course?.id) 
+        quizType: quiz.quizType.toLowerCase(), // Ensure lowercase for form
+        courseIdsToConnect: (quiz.courseIdsToConnect || [])
     })) : undefined);
     setIsFormOpen(true);
   };
@@ -301,7 +313,7 @@ export default function QuizManagement() {
     <Card className="shadow-lg">
       <CardHeader>
         <CardTitle className="flex items-center text-xl md:text-2xl font-headline"><FileQuestion className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary"/>Quiz Management</CardTitle>
-        <CardDescription>Create, edit, and manage standalone quizzes. Link them to courses.</CardDescription>
+        <DialogDescription>Create, edit, and manage standalone quizzes. Link them to courses.</DialogDescription>
       </CardHeader>
       <CardContent>
         <div className="mb-6 text-right">
@@ -325,9 +337,8 @@ export default function QuizManagement() {
             {quizzes.map(q => (
               <li key={q.id} className="p-3 border rounded-lg bg-card flex flex-col sm:flex-row sm:items-center sm:justify-between shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex-grow mb-2 sm:mb-0">
-                  <h3 className="font-semibold text-md">{q.title} <Badge variant="outline" className="ml-2 capitalize text-xs">{(q as any).quizType.toLowerCase()}</Badge></h3>
-                  { /* @ts-ignore */ }
-                  <p className="text-xs text-muted-foreground">Questions: {(q as any).questions?.length || 0} | Linked Courses: {(q as any).courseQuizzes?.length || 0}</p>
+                  <h3 className="font-semibold text-md">{q.title} <Badge variant="outline" className="ml-2 capitalize text-xs">{q.quizType.toLowerCase()}</Badge></h3>
+                  <p className="text-xs text-muted-foreground">Questions: {(q.questions || []).length} | Linked Courses: {(q.courseIdsToConnect || []).length}</p>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:space-x-2 gap-2 sm:gap-0 w-full sm:w-auto">
                   <Button variant="outline" size="sm" onClick={() => openForm(q)} className="w-full sm:w-auto"><Edit3 className="mr-1 h-4 w-4"/>Edit</Button>
@@ -337,7 +348,7 @@ export default function QuizManagement() {
                         <DialogTitle>Confirm Deletion</DialogTitle>
                         <DialogDescription>Delete quiz "{q.title}"?</DialogDescription>
                       </DialogHeader>
-                      <DialogFooter className="pt-2"><DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose><DialogClose asChild><Button variant="destructive" onClick={() => handleDeleteQuiz(q.id)}>Delete</Button></DialogClose></DialogFooter>
+                      <DialogFooter className="pt-2"><DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose><DialogClose asChild><Button variant="destructive" onClick={() => handleDeleteQuiz(q.id!)}>Delete</Button></DialogClose></DialogFooter>
                     </DialogContent>
                   </Dialog>
                 </div></li>))}</ul>
@@ -346,5 +357,3 @@ export default function QuizManagement() {
     </Card>
   );
 }
-
-    

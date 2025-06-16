@@ -98,9 +98,7 @@ const VideoForm = ({
         </div>
       </ScrollArea>
       <DialogFooter className="pt-6 border-t">
-        <DialogClose asChild>
-          <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>Cancel</Button>
-        </DialogClose>
+        <DialogClose asChild><Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>Cancel</Button></DialogClose>
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           {video ? 'Save Changes' : 'Add Video'}
@@ -188,7 +186,7 @@ export default function VideoManagement() {
         <CardTitle className="flex items-center text-xl md:text-2xl font-headline">
           <PlaySquare className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Video Management
         </CardTitle>
-        <CardDescription>Add, edit, or delete video reels. Videos are stored in localStorage.</CardDescription>
+        <DialogDescription>Add, edit, or delete video reels. Videos are stored in localStorage.</DialogDescription>
       </CardHeader>
       <CardContent>
         <div className="mb-6 text-right">
@@ -270,5 +268,3 @@ export default function VideoManagement() {
     </Card>
   );
 }
-
-    

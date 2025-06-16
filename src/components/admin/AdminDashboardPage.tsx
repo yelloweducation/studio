@@ -11,11 +11,11 @@ import CategoryManagement from "@/components/admin/CategoryManagement";
 import PaymentSubmissions from "@/components/admin/PaymentSubmissions";
 import PaymentSettingsManagement from "@/components/admin/PaymentSettingsManagement";
 import LearningPathManagement from "@/components/admin/LearningPathManagement";
-import QuizManagement from "@/components/admin/QuizManagement";
+import QuizManagement from "@/components/admin/QuizManagement"; // Ensure this is imported
 import DataSeeding from "@/components/admin/DataSeeding";
 import SiteContentManagement from "@/components/admin/SiteContentManagement";
-import VideoManagement from "@/components/admin/VideoManagement";
-import CertificateManagement from "@/components/admin/CertificateManagement";
+import VideoManagement from "@/components/admin/VideoManagement"; // Ensure this is imported
+import CertificateManagement from "@/components/admin/CertificateManagement"; // Ensure this is imported
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Users, BarChart3, ImageIcon as ImageIconLucide, Shapes, GraduationCap, Menu as MenuIcon, CreditCard, BookOpenCheck, DatabaseZap, FileText, PlaySquare, Award, FileQuestion } from "lucide-react";
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -151,5 +151,3 @@ export default function AdminDashboardPage() {
     </ProtectedRoute>
   );
 }
-
-    

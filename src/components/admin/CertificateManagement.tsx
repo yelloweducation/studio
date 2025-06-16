@@ -161,7 +161,7 @@ export default function CertificateManagement() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center text-xl md:text-2xl font-headline"><Award className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Certificate Management</CardTitle>
-          <CardDescription>Loading certificate data...</CardDescription>
+          <DialogDescription>Loading certificate data...</DialogDescription>
         </CardHeader>
         <CardContent className="py-10"><div className="flex justify-center items-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></CardContent>
       </Card>
@@ -174,7 +174,7 @@ export default function CertificateManagement() {
         <CardTitle className="flex items-center text-xl md:text-2xl font-headline">
           <Award className="mr-2 md:mr-3 h-6 w-6 md:h-7 md:w-7 text-primary" /> Certificate Management
         </CardTitle>
-        <CardDescription>Issue, view, and revoke course completion certificates.</CardDescription>
+        <DialogDescription>Issue, view, and revoke course completion certificates.</DialogDescription>
       </CardHeader>
       <CardContent>
         <div className="mb-6 text-right">
@@ -266,5 +266,3 @@ export default function CertificateManagement() {
     </Card>
   );
 }
-
-    
